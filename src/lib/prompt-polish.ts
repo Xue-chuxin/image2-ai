@@ -1,3 +1,5 @@
+import { getDeepSeekRuntimeConfig } from "@/lib/settings";
+
 export type PromptPolishInput = {
   input: string;
   mode: string;
@@ -104,13 +106,13 @@ export function createLocalPolishResult({ input, mode, ratio }: PromptPolishInpu
 }
 
 export async function polishPromptWithDeepSeek(input: PromptPolishInput): Promise<PolishResult> {
-  const apiKey = process.env.DEEPSEEK_API_KEY;
-  if (!apiKey) {
+  const config = await getDeepSeekRuntimeConfig();
+
+  if (!config.apiKey) {
     return createLocalPolishResult(input);
   }
 
-  const baseUrl = (process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com").replace(/\/$/, "");
-  const model = process.env.DEEPSEEK_MODEL || "deepseek-v4-flash";
+  const baseUrl = config.baseUrl.replace(/\/$/, "");
   const fallback = createLocalPolishResult(input);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), Number(process.env.DEEPSEEK_TIMEOUT_MS || 30000));
@@ -119,11 +121,11 @@ export async function polishPromptWithDeepSeek(input: PromptPolishInput): Promis
     const response = await fetch(`${baseUrl}/chat/completions`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${config.apiKey}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model,
+        model: config.model,
         temperature: 0.7,
         response_format: { type: "json_object" },
         messages: [

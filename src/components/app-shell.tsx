@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Clock3, Home, ImagePlus, Library, Palette, UserRound } from "lucide-react";
+import { Clock3, Home, ImagePlus, Library, Palette, Settings, UserRound } from "lucide-react";
 import { clsx } from "clsx";
+import type { PublicAppSettings } from "@/lib/settings";
 
 const navItems = [
   { href: "/", label: "首页", icon: Home },
@@ -13,7 +14,7 @@ const navItems = [
   { href: "/signin", label: "账户", icon: UserRound }
 ];
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({ children, settings }: { children: React.ReactNode; settings: PublicAppSettings }) {
   const pathname = usePathname();
 
   return (
@@ -25,8 +26,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Palette className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-base font-black leading-none tracking-tight text-slate-950">造图台</p>
-              <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Image Studio</p>
+              <p className="text-base font-black leading-none tracking-tight text-slate-950">{settings.siteTitle}</p>
+              <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">{settings.siteSubtitle}</p>
             </div>
           </Link>
 
@@ -52,10 +53,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </nav>
 
           <div className="flex items-center gap-3">
-            <div className="hidden items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-500 sm:flex">
-              <span className="h-2 w-2 rounded-full bg-emerald-400" />
-              草稿箱
-            </div>
+            <Link
+              href="/admin/settings"
+              className="hidden items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-500 shadow-card sm:flex"
+            >
+              <Settings className="h-3.5 w-3.5" />
+              后台
+            </Link>
             <Link href="/signin" className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-700 shadow-card">
               登录
             </Link>

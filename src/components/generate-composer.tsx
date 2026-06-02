@@ -25,6 +25,21 @@ type PolishResponse = {
   source?: "deepseek" | "local";
 };
 
+export type GenerationJobResult = {
+  id: string;
+  status: string;
+  provider: string;
+  errorMessage?: string | null;
+  creditCost: number;
+  images: Array<{ id: string; url: string }>;
+};
+
+type GenerationResponse = {
+  ok: boolean;
+  job?: GenerationJobResult;
+  error?: string;
+};
+
 const quickIdeas = [
   "蓝白色极简产品海报，玻璃质感咖啡机，柔和晨光，干净留白，适合电商首图",
   "雨夜街头人像写真，透明雨伞反射霓虹，电影感构图，浅景深",
@@ -38,16 +53,20 @@ function isKnownRatio(value: string): value is (typeof ratios)[number] {
 
 export function GenerateComposer({
   compact = false,
-  initialPrompt = ""
+  initialPrompt = "",
+  onJobChange
 }: {
   compact?: boolean;
   initialPrompt?: string;
+  onJobChange?: (job: GenerationJobResult | null) => void;
 }) {
   const [style, setStyle] = useState<(typeof styles)[number]>("商品");
   const [ratio, setRatio] = useState<(typeof ratios)[number]>("1:1");
   const [description, setDescription] = useState(initialPrompt);
   const [polishResult, setPolishResult] = useState<PolishResult | null>(null);
+  const [generationJob, setGenerationJob] = useState<GenerationJobResult | null>(null);
   const [isPolishing, setIsPolishing] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [ideaIndex, setIdeaIndex] = useState(0);
@@ -94,11 +113,59 @@ export function GenerateComposer({
     }
   }
 
+  async function startGeneration() {
+    const promptZh = (polishResult?.promptZh || description).trim();
+
+    setError("");
+    setNotice("");
+    setGenerationJob(null);
+    onJobChange?.(null);
+
+    if (!promptZh) {
+      setError("请先输入画面描述。");
+      return;
+    }
+
+    setIsGenerating(true);
+
+    try {
+      const response = await fetch("/api/generation/jobs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          promptZh,
+          promptEn: polishResult?.promptEn,
+          negativePrompt: polishResult?.negativePrompt,
+          ratio,
+          quality: "standard",
+          imageCount: 1
+        })
+      });
+      const data = (await response.json()) as GenerationResponse;
+
+      if (data.job) {
+        setGenerationJob(data.job);
+        onJobChange?.(data.job);
+      }
+
+      if (!response.ok || !data.ok || !data.job) {
+        throw new Error(data.error || data.job?.errorMessage || "生图任务创建失败。");
+      }
+
+      setNotice("生图任务已完成。");
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "生图任务创建失败。");
+    } finally {
+      setIsGenerating(false);
+    }
+  }
+
   function useNextIdea() {
     const nextIndex = (ideaIndex + 1) % quickIdeas.length;
     setIdeaIndex(nextIndex);
     setDescription(quickIdeas[nextIndex]);
     setPolishResult(null);
+    setGenerationJob(null);
     setError("");
     setNotice("");
   }
@@ -221,10 +288,37 @@ export function GenerateComposer({
           <button type="button" className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-600">
             保存草稿
           </button>
-          <button type="button" className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white shadow-card transition hover:bg-slate-800">
-            <Send className="h-4 w-4" /> 开始生成
+          <button
+            type="button"
+            onClick={startGeneration}
+            disabled={isGenerating}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white shadow-card transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            {isGenerating ? "生成中" : "开始生成"}
           </button>
         </div>
+
+        {generationJob ? (
+          <div className="mt-5 rounded-[24px] border border-slate-200 bg-white/86 p-4 shadow-card">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">{generationJob.provider}</p>
+                <h3 className="mt-1 text-lg font-black text-slate-950">任务 {generationJob.status}</h3>
+              </div>
+              <span className="rounded-full bg-ocean-50 px-3 py-1 text-xs font-black text-ocean-800">{generationJob.creditCost} 积分</span>
+            </div>
+            {generationJob.images.length > 0 ? (
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {generationJob.images.map((image) => (
+                  <img key={image.id} src={image.url} alt="生成结果" className="aspect-square w-full rounded-[20px] border border-slate-200 object-cover" />
+                ))}
+              </div>
+            ) : (
+              <p className="mt-3 text-sm font-bold text-slate-500">{generationJob.errorMessage || "任务已记录，等待结果。"}</p>
+            )}
+          </div>
+        ) : null}
       </div>
     </section>
   );

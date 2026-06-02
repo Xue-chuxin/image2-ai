@@ -1,17 +1,26 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AppShell } from "@/components/app-shell";
+import { getPublicAppSettings } from "@/lib/settings";
 
-export const metadata: Metadata = {
-  title: "Image2 Studio",
-  description: "A mobile-first AI image prompt and generation studio."
-};
+export const dynamic = "force-dynamic";
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getPublicAppSettings();
+
+  return {
+    title: settings.browserTitle,
+    description: settings.siteSubtitle
+  };
+}
+
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const settings = await getPublicAppSettings();
+
   return (
     <html lang="zh-CN">
       <body>
-        <AppShell>{children}</AppShell>
+        <AppShell settings={settings}>{children}</AppShell>
       </body>
     </html>
   );

@@ -7,6 +7,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  USER
+  ADMIN
+}
+
 enum GenerationStatus {
   QUEUED
   POLISHING
@@ -32,6 +37,9 @@ model User {
   phone              String?             @unique
   displayName        String?
   avatarUrl          String?
+  passwordHash       String?
+  role               UserRole            @default(USER)
+  lastLoginAt        DateTime?
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   creditAccount      CreditAccount?
@@ -153,4 +161,13 @@ model CreditTransaction {
   createdAt DateTime              @default(now())
 
   @@index([userId, createdAt])
+}
+
+model AppSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  isEncrypted Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
