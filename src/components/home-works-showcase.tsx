@@ -17,7 +17,6 @@ export function HomeWorksShowcase({
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("全部");
   const [selectedPrompt, setSelectedPrompt] = useState<PromptCardData | null>(null);
-  const [popupPosition, setPopupPosition] = useState({ left: 12, top: 12 });
 
   const visiblePrompts = useMemo(() => {
     const keyword = query.trim().toLowerCase();
@@ -31,17 +30,7 @@ export function HomeWorksShowcase({
   }, [category, prompts, query]);
 
   function openPrompt(event: React.MouseEvent<HTMLButtonElement>, prompt: PromptCardData) {
-    const rect = event.currentTarget.getBoundingClientRect();
-    const popupWidth = Math.min(920, window.innerWidth - 24);
-    const popupHeight = Math.min(620, window.innerHeight - 24);
-    const cardCenterX = rect.left + rect.width / 2;
-    const cardCenterY = rect.top + rect.height / 2;
-    const targetLeft = cardCenterX - popupWidth / 2;
-    const targetTop = cardCenterY - popupHeight / 2;
-    const left = Math.min(Math.max(12, targetLeft), window.innerWidth - popupWidth - 12);
-    const top = Math.min(Math.max(12, targetTop), window.innerHeight - popupHeight - 12);
-
-    setPopupPosition({ left, top });
+    event.currentTarget.blur();
     setSelectedPrompt(prompt);
   }
 
@@ -117,10 +106,9 @@ export function HomeWorksShowcase({
       )}
 
       {selectedPrompt ? createPortal(
-        <div className="fixed inset-0 z-[9999] bg-slate-950/18 backdrop-blur-[2px]" onClick={() => setSelectedPrompt(null)}>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/18 p-3 backdrop-blur-[2px]" onClick={() => setSelectedPrompt(null)}>
           <div
-            className="absolute grid max-h-[calc(100vh-24px)] w-[min(920px,calc(100vw-24px))] overflow-hidden rounded-[28px] border border-white/80 bg-white shadow-app md:grid-cols-[1.25fr_.9fr]"
-            style={{ left: popupPosition.left, top: popupPosition.top }}
+            className="grid max-h-[calc(100vh-24px)] w-[min(920px,calc(100vw-24px))] overflow-hidden rounded-[28px] border border-white/80 bg-white shadow-app md:grid-cols-[1.25fr_.9fr]"
             onClick={(event) => event.stopPropagation()}
           >
             <button
