@@ -30,11 +30,13 @@ export function HomeWorksShowcase({
   }, [category, prompts, query]);
 
   function openPrompt(event: React.MouseEvent<HTMLButtonElement>, prompt: PromptCardData) {
-    const gap = 18;
-    const popupWidth = Math.min(1000, window.innerWidth - 24);
-    const popupHeight = Math.min(660, window.innerHeight - 24);
-    const targetLeft = event.clientX + gap;
-    const targetTop = event.clientY - 120;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const popupWidth = Math.min(920, window.innerWidth - 24);
+    const popupHeight = Math.min(620, window.innerHeight - 24);
+    const cardCenterX = rect.left + rect.width / 2;
+    const cardCenterY = rect.top + rect.height / 2;
+    const targetLeft = cardCenterX - popupWidth / 2;
+    const targetTop = cardCenterY - popupHeight / 2;
     const left = Math.min(Math.max(12, targetLeft), window.innerWidth - popupWidth - 12);
     const top = Math.min(Math.max(12, targetTop), window.innerHeight - popupHeight - 12);
 
@@ -116,7 +118,7 @@ export function HomeWorksShowcase({
       {selectedPrompt ? (
         <div className="fixed inset-0 z-[80] bg-slate-950/18 backdrop-blur-[2px]" onClick={() => setSelectedPrompt(null)}>
           <div
-            className="absolute grid max-h-[calc(100vh-24px)] w-[calc(100vw-24px)] max-w-5xl overflow-hidden rounded-[28px] border border-white/80 bg-white shadow-app md:grid-cols-[1.35fr_.9fr]"
+            className="absolute grid max-h-[calc(100vh-24px)] w-[min(920px,calc(100vw-24px))] overflow-hidden rounded-[28px] border border-white/80 bg-white shadow-app md:grid-cols-[1.25fr_.9fr]"
             style={{ left: popupPosition.left, top: popupPosition.top }}
             onClick={(event) => event.stopPropagation()}
           >
