@@ -8,15 +8,17 @@ export function generateStaticParams() {
   return promptCards.map((prompt) => ({ slug: prompt.slug }));
 }
 
-export function generateMetadata({ params }: { params: { slug: string } }) {
-  const prompt = getPromptBySlug(params.slug);
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const prompt = getPromptBySlug(slug);
   return {
     title: prompt ? `${prompt.title} - 灵感详情` : "灵感详情"
   };
 }
 
-export default function PromptDetailPage({ params }: { params: { slug: string } }) {
-  const prompt = getPromptBySlug(params.slug);
+export default async function PromptDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const prompt = getPromptBySlug(slug);
   if (!prompt) notFound();
 
   return (

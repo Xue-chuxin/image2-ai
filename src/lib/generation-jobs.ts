@@ -1,4 +1,6 @@
-import { Prisma, prisma } from "./db";
+import type { Prisma } from "@prisma/client";
+
+import { prisma } from "./db";
 import {
   getImageGenerationProvider,
   type ImageGenerationRequest,
@@ -155,12 +157,7 @@ export async function createAndRunGenerationJob(userId: string, input: CreateGen
     const result = await provider.generate(request);
 
     for (const [index, image] of result.images.entries()) {
-      const storedImage = await saveGeneratedImage({
-        jobId: job.id,
-        index,
-        buffer: image.buffer,
-        mimeType: image.mimeType,
-      });
+      const storedImage = await saveGeneratedImage(job.id, index, image.buffer, image.mimeType);
 
       await prisma.generatedImage.create({
         data: {

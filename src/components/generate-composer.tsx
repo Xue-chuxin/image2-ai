@@ -42,6 +42,7 @@ type PolishResult = {
     promptZh?: string;
     promptEn?: string;
     negativePrompt?: string;
+    provider?: string;
   };
   source?: "deepseek" | "local";
   warning?: string;
@@ -54,6 +55,7 @@ type GenerationResult = {
 type GenerateComposerProps = {
   initialPrompt?: string;
   onJobChange?: (job: GenerationJobResult | null) => void;
+  compact?: boolean;
 };
 
 const styles = ["写实", "商品", "角色", "界面", "插画", "建筑"] as const;
@@ -79,7 +81,7 @@ async function readApiJson<T>(response: Response): Promise<ApiResult<T>> {
   } as ApiResult<T>;
 }
 
-export function GenerateComposer({ initialPrompt = "", onJobChange }: GenerateComposerProps) {
+export function GenerateComposer({ initialPrompt = "", onJobChange, compact = false }: GenerateComposerProps) {
   const [prompt, setPrompt] = useState(initialPrompt);
   const [selectedStyle, setSelectedStyle] = useState<(typeof styles)[number]>("写实");
   const [ratio, setRatio] = useState<(typeof ratios)[number]>("1:1");
@@ -202,7 +204,7 @@ export function GenerateComposer({ initialPrompt = "", onJobChange }: GenerateCo
   }
 
   return (
-    <section className="composer-panel">
+    <section className={clsx("composer-panel", compact && "composer-panel-compact")}>
       <div className="composer-head">
         <div>
           <span className="eyebrow">Create</span>
