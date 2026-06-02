@@ -30,18 +30,18 @@ function getAuthSecret() {
   return process.env.AUTH_SECRET || "change-me";
 }
 
+function assertDatabaseConfigured() {
+  if (!process.env.DATABASE_URL) {
+    throw new Error("缺少 DATABASE_URL，无法使用管理员登录。请先配置数据库连接并同步 Prisma schema。");
+  }
+}
+
 function encodePayload(payload: AdminSession) {
   return Buffer.from(JSON.stringify(payload)).toString("base64url");
 }
 
 function signPayload(payload: string) {
   return createHmac("sha256", getAuthSecret()).update(payload).digest("base64url");
-}
-
-function assertDatabaseConfigured() {
-  if (!process.env.DATABASE_URL) {
-    throw new Error("缺少 DATABASE_URL，无法使用管理员登录。请先配置数据库连接并执行 Prisma 迁移。");
-  }
 }
 
 export function hashPassword(password: string) {

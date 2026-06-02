@@ -13,10 +13,20 @@ export type PublicAppSettings = {
   openaiImageModel: string;
 };
 
+export type AdminDiagnosticStatus = "ok" | "warning" | "error";
+
+export type AdminDiagnosticItem = {
+  key: string;
+  label: string;
+  status: AdminDiagnosticStatus;
+  message: string;
+};
+
 export type AdminAppSettings = PublicAppSettings & {
   deepseekApiKeyConfigured: boolean;
   openaiApiKeyConfigured: boolean;
   encryptionReady: boolean;
+  diagnostics: AdminDiagnosticItem[];
 };
 
 export type SaveAdminSettingsInput = Partial<PublicAppSettings> & {
@@ -94,6 +104,76 @@ async function upsertSetting(key: string, value: string, isEncrypted = false) {
   );
 }
 
+async function checkDatabase(): Promise<AdminDiagnosticItem> {
+  if (!process.env.DATABASE_URL) {
+    return {
+      key: "database",
+      label: "数据库连接",
+      status: "error",
+      message: "缺少 DATABASE_URL，后台配置、登录和任务落库不可用。"
+    };
+  }
+
+  try {
+    const { Prisma } = await import("@prisma/client");
+    const { prisma } = await import("@/lib/db");
+    await prisma.$queryRaw(Prisma.sql`SELECT 1`);
+    return {
+      key: "database",
+      label: "数据库连接",
+      status: "ok",
+      message: "PostgreSQL 已连接，后台数据可读写。"
+    };
+  } catch (error) {
+    return {
+      key: "database",
+      label: "数据库连接",
+      status: "error",
+      message: error instanceof Error ? error.message : "数据库连接失败。"
+    };
+  }
+}
+
+async function buildDiagnostics(
+  settings: PublicAppSettings,
+  deepseekApiKeyConfigured: boolean,
+  openaiApiKeyConfigured: boolean
+): Promise<AdminDiagnosticItem[]> {
+  const encryptionReady = hasSettingsEncryptionKey();
+  const providerIsOpenAI = settings.defaultGenerationProvider === "openai";
+
+  return [
+    await checkDatabase(),
+    {
+      key: "encryption",
+      label: "密钥加密",
+      status: encryptionReady ? "ok" : "error",
+      message: encryptionReady ? "SETTINGS_ENCRYPTION_KEY 已配置，API Key 可加密保存。" : "缺少 SETTINGS_ENCRYPTION_KEY，不能保存新的 API Key。"
+    },
+    {
+      key: "deepseek",
+      label: "DeepSeek 润色",
+      status: deepseekApiKeyConfigured ? "ok" : "warning",
+      message: deepseekApiKeyConfigured ? `已配置 ${settings.deepseekModel}。` : "未配置 DeepSeek API Key，润色会使用本地兜底结果。"
+    },
+    {
+      key: "openai",
+      label: "OpenAI 生图",
+      status: openaiApiKeyConfigured ? "ok" : providerIsOpenAI ? "error" : "warning",
+      message: openaiApiKeyConfigured ? `已配置 ${settings.openaiImageModel}。` : "未配置 OpenAI API Key，真实生图不可用。"
+    },
+    {
+      key: "provider",
+      label: "默认 Provider",
+      status: settings.defaultGenerationProvider === "chatgpt_web" ? "warning" : "ok",
+      message:
+        settings.defaultGenerationProvider === "chatgpt_web"
+          ? "ChatGPT Web 目前只是预留接口，默认会返回未启用。"
+          : "默认使用 OpenAI 官方 API。"
+    }
+  ];
+}
+
 export async function getPublicAppSettings(): Promise<PublicAppSettings> {
   const map = toMap(await readSettingRows());
 
@@ -111,12 +191,15 @@ export async function getPublicAppSettings(): Promise<PublicAppSettings> {
 export async function getAdminAppSettings(): Promise<AdminAppSettings> {
   const map = toMap(await readSettingRows());
   const publicSettings = await getPublicAppSettings();
+  const deepseekApiKeyConfigured = Boolean(map.get("deepseekApiKey")?.value || process.env.DEEPSEEK_API_KEY);
+  const openaiApiKeyConfigured = Boolean(map.get("openaiApiKey")?.value || process.env.OPENAI_API_KEY);
 
   return {
     ...publicSettings,
-    deepseekApiKeyConfigured: Boolean(map.get("deepseekApiKey")?.value || process.env.DEEPSEEK_API_KEY),
-    openaiApiKeyConfigured: Boolean(map.get("openaiApiKey")?.value || process.env.OPENAI_API_KEY),
-    encryptionReady: hasSettingsEncryptionKey()
+    deepseekApiKeyConfigured,
+    openaiApiKeyConfigured,
+    encryptionReady: hasSettingsEncryptionKey(),
+    diagnostics: await buildDiagnostics(publicSettings, deepseekApiKeyConfigured, openaiApiKeyConfigured)
   };
 }
 
