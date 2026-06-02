@@ -38,6 +38,13 @@ type PolishResult = {
     negativePrompt?: string;
     provider?: string;
   };
+  result?: {
+    promptZh?: string;
+    promptEn?: string;
+    negativePrompt?: string;
+  };
+  source?: string;
+  warning?: string;
 };
 
 type GenerationResult = {
@@ -113,8 +120,8 @@ export function GenerateComposer({ initialPrompt = "", onJobChange }: GenerateCo
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          prompt: rawPrompt,
-          style: selectedStyle,
+          input: rawPrompt,
+          mode: selectedStyle,
           ratio,
         }),
       });
@@ -124,11 +131,11 @@ export function GenerateComposer({ initialPrompt = "", onJobChange }: GenerateCo
         throw new Error(result.error || "润色失败");
       }
 
-      const data = result.data || {};
+      const data = result.data || result.result || {};
       setPolishedPrompt(data.promptEn || data.promptZh || "");
       setNegativePrompt(data.negativePrompt || "");
-      setPolishProvider(data.provider || "DeepSeek");
-      setNotice("提示词已润色，可以直接开始生成");
+      setPolishProvider(result.source === "local" ? "本地兜底" : data.provider || "DeepSeek");
+      setNotice(result.warning || "提示词已润色，可以直接开始生成");
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "润色失败");
     } finally {
