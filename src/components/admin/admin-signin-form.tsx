@@ -3,6 +3,25 @@
 import { useState } from "react";
 import { Loader2, LockKeyhole, Mail } from "lucide-react";
 
+type ApiResponse = {
+  ok: boolean;
+  error?: string;
+};
+
+async function readApiResponse(response: Response): Promise<ApiResponse> {
+  const contentType = response.headers.get("content-type") || "";
+
+  if (contentType.includes("application/json")) {
+    return (await response.json()) as ApiResponse;
+  }
+
+  const text = await response.text();
+  return {
+    ok: false,
+    error: text.includes("<!DOCTYPE") ? "接口返回了 HTML 错误页，请查看服务端日志。" : text || "接口返回格式异常。"
+  };
+}
+
 export function AdminSignInForm({ nextPath = "/admin/settings" }: { nextPath?: string }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -20,7 +39,7 @@ export function AdminSignInForm({ nextPath = "/admin/settings" }: { nextPath?: s
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password })
       });
-      const data = (await response.json()) as { ok: boolean; error?: string };
+      const data = await readApiResponse(response);
 
       if (!response.ok || !data.ok) {
         throw new Error(data.error || "登录失败。");

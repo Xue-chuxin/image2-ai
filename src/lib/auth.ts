@@ -2,8 +2,6 @@ import { createHmac, pbkdf2Sync, randomBytes } from "crypto";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { redirect } from "next/navigation";
-import { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/db";
 import { safeEqual } from "@/lib/app-crypto";
 
 export const ADMIN_SESSION_COOKIE = "image2_admin_session";
@@ -135,6 +133,8 @@ export async function ensureInitialAdmin() {
     return;
   }
 
+  const { Prisma } = await import("@prisma/client");
+  const { prisma } = await import("@/lib/db");
   const users = await prisma.$queryRaw<AdminUser[]>(
     Prisma.sql`SELECT id, email, "displayName", role, "passwordHash" FROM "User" WHERE email = ${email} LIMIT 1`
   );
@@ -155,6 +155,8 @@ export async function ensureInitialAdmin() {
 }
 
 export async function findAdminByEmail(email: string) {
+  const { Prisma } = await import("@prisma/client");
+  const { prisma } = await import("@/lib/db");
   const users = await prisma.$queryRaw<AdminUser[]>(
     Prisma.sql`SELECT id, email, "displayName", role, "passwordHash" FROM "User" WHERE email = ${email.trim().toLowerCase()} LIMIT 1`
   );
@@ -168,5 +170,7 @@ export async function findAdminByEmail(email: string) {
 }
 
 export async function markAdminLoggedIn(userId: string) {
+  const { Prisma } = await import("@prisma/client");
+  const { prisma } = await import("@/lib/db");
   await prisma.$executeRaw(Prisma.sql`UPDATE "User" SET "lastLoginAt" = now(), "updatedAt" = now() WHERE id = ${userId}`);
 }

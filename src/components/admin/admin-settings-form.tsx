@@ -4,6 +4,26 @@ import { useState } from "react";
 import { CheckCircle2, Loader2, Save, ShieldAlert } from "lucide-react";
 import type { AdminAppSettings, GenerationProviderName } from "@/lib/settings";
 
+type SettingsResponse = {
+  ok: boolean;
+  settings?: AdminAppSettings;
+  error?: string;
+};
+
+async function readSettingsResponse(response: Response): Promise<SettingsResponse> {
+  const contentType = response.headers.get("content-type") || "";
+
+  if (contentType.includes("application/json")) {
+    return (await response.json()) as SettingsResponse;
+  }
+
+  const text = await response.text();
+  return {
+    ok: false,
+    error: text.includes("<!DOCTYPE") ? "接口返回了 HTML 错误页，请查看服务端日志。" : text || "接口返回格式异常。"
+  };
+}
+
 export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminAppSettings }) {
   const [settings, setSettings] = useState(initialSettings);
   const [deepseekApiKey, setDeepseekApiKey] = useState("");
@@ -38,7 +58,7 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
           openaiApiKey
         })
       });
-      const data = (await response.json()) as { ok: boolean; settings?: AdminAppSettings; error?: string };
+      const data = await readSettingsResponse(response);
 
       if (!response.ok || !data.ok || !data.settings) {
         throw new Error(data.error || "保存失败。");
