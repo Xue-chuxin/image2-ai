@@ -1,0 +1,156 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum GenerationStatus {
+  QUEUED
+  POLISHING
+  GENERATING
+  UPLOADING
+  COMPLETED
+  FAILED
+  CANCELED
+}
+
+enum CreditTransactionType {
+  GRANT
+  FREEZE
+  SPEND
+  REFUND
+  PURCHASE
+  ADJUSTMENT
+}
+
+model User {
+  id                 String              @id @default(cuid())
+  email              String?             @unique
+  phone              String?             @unique
+  displayName        String?
+  avatarUrl          String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  creditAccount      CreditAccount?
+  generationJobs     GenerationJob[]
+  promptFavorites    PromptFavorite[]
+  creditTransactions CreditTransaction[]
+}
+
+model PromptCategory {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  sortOrder   Int      @default(0)
+  prompts     Prompt[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Prompt {
+  id             String           @id @default(cuid())
+  categoryId     String?
+  title          String
+  slug           String           @unique
+  summary        String
+  promptZh       String
+  promptEn       String
+  negativePrompt String?
+  coverUrl       String?
+  sourceName     String?
+  sourceUrl      String?
+  authorName     String?
+  licenseNote    String?
+  viewCount      Int              @default(0)
+  favoriteCount  Int              @default(0)
+  weight         Int              @default(0)
+  tags           PromptTag[]
+  favorites      PromptFavorite[]
+  category       PromptCategory?  @relation(fields: [categoryId], references: [id])
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+}
+
+model PromptTag {
+  id       String @id @default(cuid())
+  promptId String
+  name     String
+  prompt   Prompt @relation(fields: [promptId], references: [id], onDelete: Cascade)
+
+  @@index([name])
+}
+
+model PromptFavorite {
+  id       String   @id @default(cuid())
+  userId   String
+  promptId String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prompt   Prompt   @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, promptId])
+}
+
+model GenerationJob {
+  id                String           @id @default(cuid())
+  userId            String
+  status            GenerationStatus @default(QUEUED)
+  originalInput     String
+  polishedPromptZh  String?
+  polishedPromptEn  String?
+  negativePrompt    String?
+  ratio             String           @default("1:1")
+  quality           String           @default("standard")
+  imageCount        Int              @default(1)
+  creditCost        Int              @default(0)
+  errorMessage      String?
+  provider          String           @default("openai")
+  providerRequestId String?
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  images            GeneratedImage[]
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([status])
+}
+
+model GeneratedImage {
+  id        String        @id @default(cuid())
+  jobId     String
+  url       String
+  width     Int?
+  height    Int?
+  seed      String?
+  job       GenerationJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  createdAt DateTime      @default(now())
+}
+
+model CreditAccount {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  available      Int      @default(0)
+  frozen         Int      @default(0)
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model CreditTransaction {
+  id        String                @id @default(cuid())
+  userId    String
+  type      CreditTransactionType
+  amount    Int
+  balance   Int
+  memo      String?
+  jobId     String?
+  orderId   String?
+  user      User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime              @default(now())
+
+  @@index([userId, createdAt])
+}

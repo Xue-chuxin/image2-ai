@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #fbfdff;
+  --foreground: #101828;
+  --primary: #2563eb;
+  --accent: #bfdbfe;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  background: var(--background);
+}
+
+body {
+  min-height: 100%;
+  margin: 0;
+  color: var(--foreground);
+  background:
+    url("/liquid-app-background.png") center top / cover fixed no-repeat,
+    linear-gradient(rgba(96, 165, 250, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(96, 165, 250, 0.055) 1px, transparent 1px),
+    radial-gradient(circle at 16% 8%, rgba(219, 234, 254, 0.72), transparent 28rem),
+    radial-gradient(circle at 92% 0%, rgba(224, 242, 254, 0.8), transparent 30rem),
+    linear-gradient(180deg, #fbfdff 0%, #f7fbff 58%, #ffffff 100%);
+  background-size: cover, 56px 56px, 56px 56px, auto, auto, auto;
+  background-position: center top, 0 0, 0 0, center, center, center;
+  font-family: "MiSans", "Source Han Sans SC", "Noto Sans CJK SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+.liquid-glass {
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.38)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.5));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -1px 0 rgba(148, 163, 184, 0.12),
+    0 26px 80px rgba(15, 23, 42, 0.10);
+  backdrop-filter: blur(28px) saturate(1.35);
+  -webkit-backdrop-filter: blur(28px) saturate(1.35);
+}
+
+.liquid-glass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(255, 255, 255, 0.78), transparent 24%),
+    radial-gradient(circle at 86% 14%, rgba(186, 230, 253, 0.28), transparent 28%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.55), transparent 34%);
+  mix-blend-mode: screen;
+}
+
+.liquid-mask {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    radial-gradient(ellipse at 16% 0%, rgba(255, 255, 255, 0.64), transparent 34%),
+    radial-gradient(ellipse at 88% 14%, rgba(125, 211, 252, 0.18), transparent 36%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22), transparent 44%);
+  mask-image: linear-gradient(180deg, #000, rgba(0, 0, 0, 0.82) 52%, transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, #000, rgba(0, 0, 0, 0.82) 52%, transparent 100%);
+}
+
+button,
+a,
+input,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

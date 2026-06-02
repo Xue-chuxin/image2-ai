@@ -1,0 +1,11 @@
+node_modules/
+.next/
+.npm-cache/
+.env
+.env.local
+.env.*.local
+dev-server.out.log
+dev-server.err.log
+*.log
+.DS_Store
+Thumbs.db
