@@ -23,11 +23,10 @@ export function PromptLibrary({ categories, prompts }: { categories: string[]; p
     return prompts
       .filter((prompt) => {
         const matchesCategory = category === "全部" || prompt.category === category;
-        const matchesQuery = !keyword || [prompt.title, prompt.summary, prompt.category, ...prompt.tags, ...prompt.useCases]
+        const haystack = [prompt.title, prompt.summary, prompt.category, ...prompt.tags, ...prompt.useCases]
           .join(" ")
-          .toLowerCase()
-          .includes(keyword);
-        return matchesCategory && matchesQuery;
+          .toLowerCase();
+        return matchesCategory && (!keyword || haystack.includes(keyword));
       })
       .sort((a, b) => {
         if (sort === "浏览最多") return parseMetric(b.views) - parseMetric(a.views);

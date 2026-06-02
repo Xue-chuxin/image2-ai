@@ -3,19 +3,30 @@ import { categories, promptCards } from "../src/lib/mock-data";
 
 const prisma = new PrismaClient();
 
+function slugifyCategory(name: string) {
+  return encodeURIComponent(name).replace(/%/g, "").toLowerCase();
+}
+
+function parseMetric(value: string) {
+  const normalized = value.toLowerCase().replace("k", "");
+  const number = Number.parseFloat(normalized);
+  if (Number.isNaN(number)) return 0;
+  return value.toLowerCase().includes("k") ? Math.round(number * 1000) : Math.round(number);
+}
+
 async function main() {
   const categoryRecords = new Map<string, string>();
 
   for (const [index, name] of categories.filter((name) => name !== "全部").entries()) {
     const record = await prisma.promptCategory.upsert({
-      where: { slug: name.toLowerCase().replace(/\s+/g, "-") },
+      where: { slug: slugifyCategory(name) },
       update: {
         name,
         sortOrder: index
       },
       create: {
         name,
-        slug: name.toLowerCase().replace(/\s+/g, "-"),
+        slug: slugifyCategory(name),
         sortOrder: index
       }
     });
@@ -24,7 +35,7 @@ async function main() {
 
   for (const prompt of promptCards) {
     const categoryId = categoryRecords.get(prompt.category);
-    await prisma.prompt.upsert({
+    const promptRecord = await prisma.prompt.upsert({
       where: { slug: prompt.slug },
       update: {
         categoryId,
@@ -37,8 +48,8 @@ async function main() {
         sourceUrl: prompt.sourceUrl || null,
         authorName: prompt.authorName,
         licenseNote: prompt.licenseNote,
-        viewCount: Number.parseInt(prompt.views.replace(/\D/g, ""), 10) || 0,
-        favoriteCount: Number.parseInt(prompt.likes.replace(/\D/g, ""), 10) || 0
+        viewCount: parseMetric(prompt.views),
+        favoriteCount: parseMetric(prompt.likes)
       },
       create: {
         categoryId,
@@ -52,12 +63,14 @@ async function main() {
         sourceUrl: prompt.sourceUrl || null,
         authorName: prompt.authorName,
         licenseNote: prompt.licenseNote,
-        viewCount: Number.parseInt(prompt.views.replace(/\D/g, ""), 10) || 0,
-        favoriteCount: Number.parseInt(prompt.likes.replace(/\D/g, ""), 10) || 0,
-        tags: {
-          create: prompt.tags.map((name) => ({ name }))
-        }
+        viewCount: parseMetric(prompt.views),
+        favoriteCount: parseMetric(prompt.likes)
       }
+    });
+
+    await prisma.promptTag.deleteMany({ where: { promptId: promptRecord.id } });
+    await prisma.promptTag.createMany({
+      data: prompt.tags.map((name) => ({ promptId: promptRecord.id, name }))
     });
   }
 }
