@@ -16,6 +16,7 @@ export function HomeWorksShowcase({
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("全部");
   const [selectedPrompt, setSelectedPrompt] = useState<PromptCardData | null>(null);
+  const [popupPosition, setPopupPosition] = useState({ left: 12, top: 12 });
 
   const visiblePrompts = useMemo(() => {
     const keyword = query.trim().toLowerCase();
@@ -27,6 +28,19 @@ export function HomeWorksShowcase({
       return matchesCategory && (!keyword || haystack.includes(keyword));
     });
   }, [category, prompts, query]);
+
+  function openPrompt(event: React.MouseEvent<HTMLButtonElement>, prompt: PromptCardData) {
+    const gap = 18;
+    const popupWidth = Math.min(1000, window.innerWidth - 24);
+    const popupHeight = Math.min(660, window.innerHeight - 24);
+    const targetLeft = event.clientX + gap;
+    const targetTop = event.clientY - 120;
+    const left = Math.min(Math.max(12, targetLeft), window.innerWidth - popupWidth - 12);
+    const top = Math.min(Math.max(12, targetTop), window.innerHeight - popupHeight - 12);
+
+    setPopupPosition({ left, top });
+    setSelectedPrompt(prompt);
+  }
 
   return (
     <>
@@ -66,7 +80,7 @@ export function HomeWorksShowcase({
             <div key={prompt.slug} className="break-inside-avoid">
               <button
                 type="button"
-                onClick={() => setSelectedPrompt(prompt)}
+                onClick={(event) => openPrompt(event, prompt)}
                 className="liquid-glass group mb-4 inline-block w-full overflow-hidden rounded-[24px] text-left transition duration-300 hover:-translate-y-1"
               >
                 <div className="liquid-mask" />
@@ -100,8 +114,12 @@ export function HomeWorksShowcase({
       )}
 
       {selectedPrompt ? (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/24 p-3 backdrop-blur-sm">
-          <div className="relative grid max-h-[88vh] w-full max-w-5xl overflow-hidden rounded-[28px] border border-white/80 bg-white shadow-app md:grid-cols-[1.35fr_.9fr]">
+        <div className="fixed inset-0 z-[80] bg-slate-950/18 backdrop-blur-[2px]" onClick={() => setSelectedPrompt(null)}>
+          <div
+            className="absolute grid max-h-[calc(100vh-24px)] w-[calc(100vw-24px)] max-w-5xl overflow-hidden rounded-[28px] border border-white/80 bg-white shadow-app md:grid-cols-[1.35fr_.9fr]"
+            style={{ left: popupPosition.left, top: popupPosition.top }}
+            onClick={(event) => event.stopPropagation()}
+          >
             <button
               type="button"
               onClick={() => setSelectedPrompt(null)}
@@ -121,7 +139,7 @@ export function HomeWorksShowcase({
               </div>
             </div>
 
-            <aside className="max-h-[88vh] space-y-4 overflow-y-auto p-5">
+            <aside className="max-h-[calc(100vh-24px)] space-y-4 overflow-y-auto p-5">
               <div className="flex items-center gap-3">
                 <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-100 to-slate-50" />
                 <div>
