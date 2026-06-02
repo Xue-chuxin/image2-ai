@@ -21,13 +21,13 @@ export function AppShell({ children, settings }: { children: React.ReactNode; se
     <div className="min-h-screen">
       <header className="liquid-glass sticky inset-x-0 top-0 z-40 w-full border-b border-white/60 px-4 py-3 md:px-8">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-[14px] border border-slate-200 bg-white text-ocean-700 shadow-card">
+          <Link href="/" className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] border border-slate-200 bg-white text-ocean-700 shadow-card">
               <Palette className="h-5 w-5" />
             </div>
-            <div>
-              <p className="text-base font-black leading-none tracking-tight text-slate-950">{settings.siteTitle}</p>
-              <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">{settings.siteSubtitle}</p>
+            <div className="min-w-0">
+              <p className="truncate text-base font-black leading-none tracking-tight text-slate-950">{settings.siteTitle}</p>
+              <p className="mt-1 truncate text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">{settings.siteSubtitle}</p>
             </div>
           </Link>
 
@@ -52,7 +52,7 @@ export function AppShell({ children, settings }: { children: React.ReactNode; se
             })}
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2">
             <Link
               href="/admin/settings"
               className="hidden items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-500 shadow-card sm:flex"
@@ -67,7 +67,7 @@ export function AppShell({ children, settings }: { children: React.ReactNode; se
         </div>
       </header>
 
-      <div className="mx-auto flex min-h-[calc(100vh-4.75rem)] max-w-7xl flex-col px-3 py-4 md:px-6">
+      <div className="mx-auto flex min-h-[calc(100vh-4.75rem)] max-w-7xl flex-col px-3 pb-28 pt-4 md:px-6 md:pb-4">
         <div className="liquid-glass relative flex-1 overflow-hidden rounded-[34px] p-3 md:p-5">
           <div className="liquid-mask" />
           <div className="pointer-events-none absolute inset-x-8 top-0 h-28 rounded-full bg-white/40 blur-3xl" />
@@ -87,8 +87,11 @@ export function AppShell({ children, settings }: { children: React.ReactNode; se
           </div>
         </div>
 
-        <nav className="liquid-glass fixed inset-x-3 bottom-3 z-50 mx-auto max-w-md rounded-[26px] px-3 py-2 md:hidden">
-          <div className="grid grid-cols-5 items-center gap-1">
+        <nav
+          className="fixed left-1/2 z-50 w-[min(420px,calc(100vw-32px))] -translate-x-1/2 rounded-[26px] border border-white/70 bg-white/72 px-2 py-2 shadow-[0_20px_60px_rgba(15,23,42,0.16)] backdrop-blur-2xl md:hidden"
+          style={{ bottom: "max(14px, env(safe-area-inset-bottom))" }}
+        >
+          <div className="grid grid-cols-5 items-end gap-1">
             {navItems.map((item) => {
               const Icon = item.icon;
               const active = pathname === item.href;
@@ -97,10 +100,10 @@ export function AppShell({ children, settings }: { children: React.ReactNode; se
                   key={item.href}
                   href={item.href}
                   className={clsx(
-                    "flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-bold transition",
+                    "flex min-h-12 flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-bold transition",
                     item.primary && "-mt-7 h-16 rounded-[22px] bg-slate-950 text-white shadow-card",
                     !item.primary && active && "bg-ocean-50 text-ocean-800",
-                    !item.primary && !active && "text-slate-400"
+                    !item.primary && !active && "text-slate-400 hover:text-slate-600"
                   )}
                 >
                   <Icon className="h-4 w-4" />
