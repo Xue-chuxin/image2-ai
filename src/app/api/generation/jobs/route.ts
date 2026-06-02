@@ -5,6 +5,7 @@ import {
   listRecentGenerationJobs,
   type CreateGenerationJobInput,
 } from "@/lib/generation-jobs";
+import { getUserSession } from "@/lib/auth";
 import type { GenerationProviderName } from "@/lib/settings";
 
 function normalizeProvider(value: unknown): GenerationProviderName | undefined {
@@ -25,8 +26,13 @@ function normalizeNumber(value: unknown) {
 }
 
 export async function GET() {
+  const session = await getUserSession();
+  if (!session) {
+    return NextResponse.json({ ok: false, error: "请先登录普通用户账号。" }, { status: 401 });
+  }
+
   try {
-    const jobs = await listRecentGenerationJobs(20);
+    const jobs = await listRecentGenerationJobs(session.userId, 20);
     return NextResponse.json({
       ok: true,
       jobs,
@@ -45,6 +51,11 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const session = await getUserSession();
+  if (!session) {
+    return NextResponse.json({ ok: false, error: "请先登录普通用户账号再生成图片。" }, { status: 401 });
+  }
+
   try {
     const body = (await request.json()) as Record<string, unknown>;
     const promptZh = normalizeString(body.promptZh);
@@ -71,7 +82,7 @@ export async function POST(request: Request) {
       provider: normalizeProvider(body.provider),
     };
 
-    const job = await createAndRunGenerationJob(input);
+    const job = await createAndRunGenerationJob(session.userId, input);
     const failed = job.status === "FAILED";
 
     return NextResponse.json(

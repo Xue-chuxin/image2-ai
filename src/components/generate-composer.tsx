@@ -43,7 +43,7 @@ type PolishResult = {
     promptEn?: string;
     negativePrompt?: string;
   };
-  source?: string;
+  source?: "deepseek" | "local";
   warning?: string;
 };
 
@@ -85,7 +85,7 @@ export function GenerateComposer({ initialPrompt = "", onJobChange }: GenerateCo
   const [ratio, setRatio] = useState<(typeof ratios)[number]>("1:1");
   const [quality, setQuality] = useState<(typeof qualities)[number]["value"]>("standard");
   const [imageCount, setImageCount] = useState<(typeof imageCounts)[number]>(1);
-  const [polishedPrompt, setPolishedPrompt] = useState("");
+  const [polishedPromptEn, setPolishedPromptEn] = useState("");
   const [negativePrompt, setNegativePrompt] = useState("");
   const [polishProvider, setPolishProvider] = useState("DeepSeek");
   const [currentJob, setCurrentJob] = useState<GenerationJobResult | null>(null);
@@ -132,10 +132,12 @@ export function GenerateComposer({ initialPrompt = "", onJobChange }: GenerateCo
       }
 
       const data = result.data || result.result || {};
-      setPolishedPrompt(data.promptEn || data.promptZh || "");
+      const polishedZh = data.promptZh || data.promptEn || rawPrompt;
+      setPrompt(polishedZh);
+      setPolishedPromptEn(data.promptEn || "");
       setNegativePrompt(data.negativePrompt || "");
       setPolishProvider(result.source === "local" ? "本地兜底" : data.provider || "DeepSeek");
-      setNotice(result.warning || "提示词已润色，可以直接开始生成");
+      setNotice(result.warning || "DeepSeek 已润色并回填到输入框");
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "润色失败");
     } finally {
@@ -164,7 +166,7 @@ export function GenerateComposer({ initialPrompt = "", onJobChange }: GenerateCo
         },
         body: JSON.stringify({
           promptZh: rawPrompt,
-          promptEn: polishedPrompt || undefined,
+          promptEn: polishedPromptEn || undefined,
           negativePrompt: negativePrompt || undefined,
           ratio,
           quality,
@@ -182,7 +184,7 @@ export function GenerateComposer({ initialPrompt = "", onJobChange }: GenerateCo
         throw new Error(result.error || result.job?.errorMessage || "生成失败");
       }
 
-      setNotice("生成完成，结果已保存到历史记录");
+      setNotice("生成完成，积分已扣除，结果已保存到历史记录");
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "生成失败");
     } finally {
@@ -192,7 +194,7 @@ export function GenerateComposer({ initialPrompt = "", onJobChange }: GenerateCo
 
   function resetComposer() {
     setPrompt("");
-    setPolishedPrompt("");
+    setPolishedPromptEn("");
     setNegativePrompt("");
     setNotice("");
     setError("");
@@ -205,7 +207,7 @@ export function GenerateComposer({ initialPrompt = "", onJobChange }: GenerateCo
         <div>
           <span className="eyebrow">Create</span>
           <h1>一句话生成你的视觉草图</h1>
-          <p>输入想法后可先润色提示词，再调用后台配置的 OpenAI 生图通道。</p>
+          <p>输入想法后可先让 DeepSeek 润色，润色结果会直接回填到输入框。</p>
         </div>
         <button className="icon-button" type="button" onClick={resetComposer} aria-label="重置">
           <RotateCcw size={18} />
@@ -215,7 +217,7 @@ export function GenerateComposer({ initialPrompt = "", onJobChange }: GenerateCo
       <div className="upload-card" aria-label="参考图上传占位">
         <ImageUp size={24} />
         <span>拖入参考图</span>
-        <small>阶段 4B 暂不处理图生图，先保留入口</small>
+        <small>阶段 5 暂不处理图生图，先保留入口</small>
       </div>
 
       <label className="field-block">
@@ -223,7 +225,7 @@ export function GenerateComposer({ initialPrompt = "", onJobChange }: GenerateCo
         <textarea
           value={prompt}
           onChange={(event) => setPrompt(event.target.value)}
-          placeholder="例如：蓝白色玻璃质感的移动端应用启动页，柔和自然光，简洁高级"
+          placeholder="例如：一位穿黑色风衣的年轻女性站在雨夜霓虹街头，电影级打光，浅景深，35mm 镜头"
           rows={5}
         />
       </label>
@@ -249,12 +251,7 @@ export function GenerateComposer({ initialPrompt = "", onJobChange }: GenerateCo
           <span>画幅比例</span>
           <div className="chip-row">
             {ratios.map((item) => (
-              <button
-                key={item}
-                className={clsx("chip", ratio === item && "active")}
-                type="button"
-                onClick={() => setRatio(item)}
-              >
+              <button key={item} className={clsx("chip", ratio === item && "active")} type="button" onClick={() => setRatio(item)}>
                 {item}
               </button>
             ))}
@@ -281,12 +278,7 @@ export function GenerateComposer({ initialPrompt = "", onJobChange }: GenerateCo
           <span>张数</span>
           <div className="chip-row">
             {imageCounts.map((item) => (
-              <button
-                key={item}
-                className={clsx("chip", imageCount === item && "active")}
-                type="button"
-                onClick={() => setImageCount(item)}
-              >
+              <button key={item} className={clsx("chip", imageCount === item && "active")} type="button" onClick={() => setImageCount(item)}>
                 {item} 张
               </button>
             ))}
@@ -294,13 +286,13 @@ export function GenerateComposer({ initialPrompt = "", onJobChange }: GenerateCo
         </div>
       </div>
 
-      {polishedPrompt ? (
+      {polishedPromptEn || negativePrompt ? (
         <div className="prompt-preview">
           <div>
             <span>{polishProvider}</span>
-            <strong>润色后的提示词</strong>
+            <strong>已回填中文润色结果</strong>
           </div>
-          <p>{polishedPrompt}</p>
+          {polishedPromptEn ? <p>{polishedPromptEn}</p> : null}
           {negativePrompt ? <small>避免：{negativePrompt}</small> : null}
         </div>
       ) : null}

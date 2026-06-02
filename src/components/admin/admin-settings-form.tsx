@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { CheckCircle2, Loader2, LogOut, Save, ShieldAlert, XCircle } from "lucide-react";
+
 import type { AdminAppSettings, AdminDiagnosticStatus, GenerationProviderName } from "@/lib/settings";
 
 type SettingsResponse = {
@@ -20,7 +21,7 @@ async function readSettingsResponse(response: Response): Promise<SettingsRespons
   const text = await response.text();
   return {
     ok: false,
-    error: text.includes("<!DOCTYPE") ? "接口返回了 HTML 错误页，请查看服务端日志。" : text || "接口返回格式异常。"
+    error: text.includes("<!DOCTYPE") ? "接口返回了 HTML 错误页，请查看服务端日志。" : text || "接口返回格式异常。",
   };
 }
 
@@ -28,18 +29,20 @@ function statusStyle(status: AdminDiagnosticStatus) {
   if (status === "ok") {
     return {
       icon: <CheckCircle2 className="h-4 w-4 text-emerald-500" />,
-      card: "border-emerald-100 bg-emerald-50/70 text-emerald-800"
+      card: "border-emerald-100 bg-emerald-50/70 text-emerald-800",
     };
   }
+
   if (status === "warning") {
     return {
       icon: <ShieldAlert className="h-4 w-4 text-amber-500" />,
-      card: "border-amber-100 bg-amber-50/70 text-amber-800"
+      card: "border-amber-100 bg-amber-50/70 text-amber-800",
     };
   }
+
   return {
     icon: <XCircle className="h-4 w-4 text-red-500" />,
-    card: "border-red-100 bg-red-50/70 text-red-700"
+    card: "border-red-100 bg-red-50/70 text-red-700",
   };
 }
 
@@ -65,7 +68,9 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
     try {
       const response = await fetch("/api/admin/settings", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           browserTitle: settings.browserTitle,
           siteTitle: settings.siteTitle,
@@ -73,10 +78,11 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
           defaultGenerationProvider: settings.defaultGenerationProvider,
           deepseekBaseUrl: settings.deepseekBaseUrl,
           deepseekModel: settings.deepseekModel,
+          deepseekPolishPrompt: settings.deepseekPolishPrompt,
           openaiImageModel: settings.openaiImageModel,
           deepseekApiKey,
-          openaiApiKey
-        })
+          openaiApiKey,
+        }),
       });
       const data = await readSettingsResponse(response);
 
@@ -98,7 +104,7 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
   async function logout() {
     setIsLoggingOut(true);
     await fetch("/api/auth/logout", { method: "POST" }).catch(() => null);
-    window.location.href = "/signin";
+    window.location.href = "/signin?mode=admin";
   }
 
   return (
@@ -234,6 +240,18 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
                 placeholder={settings.deepseekApiKeyConfigured ? "已配置，留空表示不修改" : "未配置"}
                 type="password"
               />
+            </label>
+            <label className="block">
+              <span className="text-sm font-bold text-slate-700">润色系统提示词</span>
+              <textarea
+                value={settings.deepseekPolishPrompt}
+                onChange={(event) => update("deepseekPolishPrompt", event.target.value)}
+                rows={9}
+                className="mt-2 w-full resize-y rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 outline-none focus:border-ocean-400"
+              />
+              <span className="mt-2 block text-xs font-bold leading-5 text-slate-400">
+                点击前台“AI 润色”时，会把这里的提示词和用户输入一起提交给 DeepSeek。
+              </span>
             </label>
           </div>
           {message ? <p className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{message}</p> : null}

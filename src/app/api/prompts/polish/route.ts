@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { createLocalPolishResult, polishPromptWithDeepSeek } from "@/lib/prompt-polish";
+
+import { polishPrompt } from "@/lib/prompt-polish";
 
 export const runtime = "nodejs";
 
@@ -19,7 +20,7 @@ export async function POST(request: Request) {
   }
 
   const input = typeof payload.input === "string" ? payload.input.trim() : "";
-  const mode = typeof payload.mode === "string" ? payload.mode.trim() : "商品";
+  const mode = typeof payload.mode === "string" ? payload.mode.trim() : "写实";
   const ratio = typeof payload.ratio === "string" ? payload.ratio.trim() : undefined;
 
   if (!input) {
@@ -30,25 +31,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "画面描述过长，请控制在 2000 字以内。" }, { status: 400 });
   }
 
-  const requestInput = { input, mode, ratio };
+  const output = await polishPrompt({
+    input,
+    mode,
+    ratio,
+  });
 
-  if (!process.env.DEEPSEEK_API_KEY) {
-    return NextResponse.json({
-      ok: true,
-      source: "local",
-      result: createLocalPolishResult(requestInput)
-    });
-  }
-
-  try {
-    const result = await polishPromptWithDeepSeek(requestInput);
-    return NextResponse.json({ ok: true, source: "deepseek", result });
-  } catch (error) {
-    return NextResponse.json({
-      ok: true,
-      source: "local",
-      warning: error instanceof Error ? `DeepSeek 调用失败，已使用本地兜底：${error.message}` : "DeepSeek 调用失败，已使用本地兜底。",
-      result: createLocalPolishResult(requestInput)
-    });
-  }
+  return NextResponse.json({
+    ok: true,
+    source: output.source,
+    warning: output.warning,
+    result: output.result,
+    data: output.result,
+  });
 }

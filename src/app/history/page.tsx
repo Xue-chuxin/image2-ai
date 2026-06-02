@@ -1,5 +1,7 @@
 import Image from "next/image";
+import Link from "next/link";
 
+import { getUserSession } from "@/lib/auth";
 import { listRecentGenerationJobs, type GenerationJobView } from "@/lib/generation-jobs";
 
 export const dynamic = "force-dynamic";
@@ -83,7 +85,7 @@ function HistoryItem({ job }: { job: GenerationJobView }) {
             <dd>{job.imageCount}</dd>
           </div>
           <div>
-            <dt>预计积分</dt>
+            <dt>积分</dt>
             <dd>{job.creditCost}</dd>
           </div>
           <div>
@@ -97,10 +99,31 @@ function HistoryItem({ job }: { job: GenerationJobView }) {
 }
 
 export default async function HistoryPage() {
+  const session = await getUserSession();
+
+  if (!session) {
+    return (
+      <main className="history-page">
+        <section className="section-heading">
+          <span className="eyebrow">History</span>
+          <h1>生成历史</h1>
+          <p>登录普通用户账号后，只会看到你自己的生成任务和图片结果。</p>
+        </section>
+        <section className="empty-state">
+          <span>请先登录</span>
+          <p>用户历史记录已按账号隔离，未登录时不会读取任何任务。</p>
+          <Link className="primary-button mt-3 px-6" href="/signin?next=/history">
+            去登录
+          </Link>
+        </section>
+      </main>
+    );
+  }
+
   let jobs: GenerationJobView[] = [];
 
   try {
-    jobs = await listRecentGenerationJobs(30);
+    jobs = await listRecentGenerationJobs(session.userId, 30);
   } catch {
     jobs = [];
   }
@@ -110,7 +133,7 @@ export default async function HistoryPage() {
       <section className="section-heading">
         <span className="eyebrow">History</span>
         <h1>生成历史</h1>
-        <p>这里展示最近创建的生图任务，包括成功图片和失败原因。</p>
+        <p>这里展示当前账号最近创建的生图任务，包括成功图片和失败原因。</p>
       </section>
 
       {jobs.length ? (
@@ -123,6 +146,9 @@ export default async function HistoryPage() {
         <section className="empty-state">
           <span>暂无生成记录</span>
           <p>去创作页提交第一个生图任务后，结果会出现在这里。</p>
+          <Link className="primary-button mt-3 px-6" href="/generate">
+            去创作
+          </Link>
         </section>
       )}
     </main>

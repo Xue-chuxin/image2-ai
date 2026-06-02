@@ -44,7 +44,7 @@ function getStatusLabel(status?: string) {
     return "生成中";
   }
 
-  return "待开始";
+  return "等待生成";
 }
 
 function getQualityLabel(quality?: string) {
@@ -75,7 +75,7 @@ export function GenerateWorkbench({ initialPrompt = "" }: GenerateWorkbenchProps
             <div className="preview-empty">
               <Sparkles size={28} />
               <span>生成结果会显示在这里</span>
-              <small>未配置 OpenAI Key 时会返回明确错误，不会吞掉失败状态。</small>
+              <small>生成前会先检查积分。成功后扣除积分，失败会返还冻结积分。</small>
             </div>
           )}
         </div>
@@ -113,7 +113,7 @@ export function GenerateWorkbench({ initialPrompt = "" }: GenerateWorkbenchProps
                   <dd>{job.imageCount}</dd>
                 </div>
                 <div>
-                  <dt>预计积分</dt>
+                  <dt>积分</dt>
                   <dd>{job.creditCost}</dd>
                 </div>
               </dl>
@@ -121,18 +121,18 @@ export function GenerateWorkbench({ initialPrompt = "" }: GenerateWorkbenchProps
               {job.errorMessage ? <p className="job-error">{job.errorMessage}</p> : null}
             </>
           ) : (
-            <p className="muted-copy">输入提示词并点击“开始生成”后，这里会展示任务信息。</p>
+            <p className="muted-copy">输入提示词并点击“开始生成”后，这里会展示当前任务信息。</p>
           )}
         </div>
 
         <div className="job-card compact">
           <div className="rule-row">
             <Coins size={18} />
-            <span>标准 5 积分 / 张，高清 12 积分 / 张</span>
+            <span>标准 5 积分 / 张，高清 12 积分 / 张，省积分 3 积分 / 张</span>
           </div>
           <div className="rule-row">
             <Clock size={18} />
-            <span>阶段 4B 为同步生成，队列会放到后续阶段</span>
+            <span>阶段 5 为同步生成，队列和充值会放到后续阶段</span>
           </div>
         </div>
       </aside>
