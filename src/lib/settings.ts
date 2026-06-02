@@ -57,6 +57,10 @@ function normalizeText(value: unknown, fallback: string, maxLength = 120) {
 }
 
 async function readSettingRows() {
+  if (!process.env.DATABASE_URL) {
+    return [];
+  }
+
   try {
     const { Prisma } = await import("@prisma/client");
     const { prisma } = await import("@/lib/db");
@@ -75,6 +79,10 @@ function getStoredSetting(map: Map<string, SettingRow>, key: keyof PublicAppSett
 }
 
 async function upsertSetting(key: string, value: string, isEncrypted = false) {
+  if (!process.env.DATABASE_URL) {
+    throw new Error("缺少 DATABASE_URL，无法保存后台配置。");
+  }
+
   const { Prisma } = await import("@prisma/client");
   const { prisma } = await import("@/lib/db");
 

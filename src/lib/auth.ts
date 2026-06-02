@@ -38,6 +38,12 @@ function signPayload(payload: string) {
   return createHmac("sha256", getAuthSecret()).update(payload).digest("base64url");
 }
 
+function assertDatabaseConfigured() {
+  if (!process.env.DATABASE_URL) {
+    throw new Error("缺少 DATABASE_URL，无法使用管理员登录。请先配置数据库连接并执行 Prisma 迁移。");
+  }
+}
+
 export function hashPassword(password: string) {
   const iterations = 120000;
   const salt = randomBytes(16).toString("hex");
@@ -126,6 +132,8 @@ export async function requireAdmin() {
 }
 
 export async function ensureInitialAdmin() {
+  assertDatabaseConfigured();
+
   const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
   const password = process.env.ADMIN_PASSWORD;
 
@@ -155,6 +163,8 @@ export async function ensureInitialAdmin() {
 }
 
 export async function findAdminByEmail(email: string) {
+  assertDatabaseConfigured();
+
   const { Prisma } = await import("@prisma/client");
   const { prisma } = await import("@/lib/db");
   const users = await prisma.$queryRaw<AdminUser[]>(
@@ -170,6 +180,8 @@ export async function findAdminByEmail(email: string) {
 }
 
 export async function markAdminLoggedIn(userId: string) {
+  assertDatabaseConfigured();
+
   const { Prisma } = await import("@prisma/client");
   const { prisma } = await import("@/lib/db");
   await prisma.$executeRaw(Prisma.sql`UPDATE "User" SET "lastLoginAt" = now(), "updatedAt" = now() WHERE id = ${userId}`);
