@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { ImageIcon, Search, X } from "lucide-react";
 import { CopyPromptButton } from "@/components/copy-prompt-button";
@@ -115,8 +116,8 @@ export function HomeWorksShowcase({
         </section>
       )}
 
-      {selectedPrompt ? (
-        <div className="fixed inset-0 z-[80] bg-slate-950/18 backdrop-blur-[2px]" onClick={() => setSelectedPrompt(null)}>
+      {selectedPrompt ? createPortal(
+        <div className="fixed inset-0 z-[9999] bg-slate-950/18 backdrop-blur-[2px]" onClick={() => setSelectedPrompt(null)}>
           <div
             className="absolute grid max-h-[calc(100vh-24px)] w-[min(920px,calc(100vw-24px))] overflow-hidden rounded-[28px] border border-white/80 bg-white shadow-app md:grid-cols-[1.25fr_.9fr]"
             style={{ left: popupPosition.left, top: popupPosition.top }}
@@ -187,7 +188,8 @@ export function HomeWorksShowcase({
               </div>
             </aside>
           </div>
-        </div>
+        </div>,
+        document.body
       ) : null}
     </>
   );
