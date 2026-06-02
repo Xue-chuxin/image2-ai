@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { ArrowRight, BookOpen, CheckCircle2, Search, SlidersHorizontal } from "lucide-react";
+import { ArrowRight, BookOpen, CheckCircle2 } from "lucide-react";
 import { GenerateComposer } from "@/components/generate-composer";
-import { PromptCard } from "@/components/prompt-card";
+import { HomeWorksShowcase } from "@/components/home-works-showcase";
 import { categories, promptCards } from "@/lib/mock-data";
 
 const steps = [
@@ -45,33 +45,7 @@ export default function HomePage() {
         <GenerateComposer compact />
       </section>
 
-      <section className="rounded-[26px] border border-slate-200 bg-white p-4 shadow-card md:p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-400">Works</p>
-            <h2 className="mt-1 text-3xl font-black tracking-tight text-slate-950">作品展示</h2>
-          </div>
-          <div className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 lg:max-w-md">
-            <Search className="h-4 w-4 shrink-0 text-slate-500" />
-            <span className="truncate text-sm font-bold text-slate-400">搜索风格、场景或用途</span>
-          </div>
-        </div>
-        <div className="mt-5 flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-          {categories.map((category, index) => (
-            <span key={category} className={`shrink-0 rounded-full border px-4 py-2 text-sm font-black ${index === 0 ? "border-slate-950 bg-slate-950 text-white shadow-card" : "border-slate-200 bg-white text-slate-600"}`}>
-              {category}
-            </span>
-          ))}
-        </div>
-      </section>
-
-      <section className="columns-1 gap-4 md:columns-2 xl:columns-3">
-        {promptCards.map((prompt) => (
-          <div key={prompt.slug} className="break-inside-avoid">
-            <PromptCard prompt={prompt} />
-          </div>
-        ))}
-      </section>
+      <HomeWorksShowcase categories={categories} prompts={promptCards} />
 
       <section className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-card md:p-6">
         <div className="mb-5 flex items-center justify-between gap-4">

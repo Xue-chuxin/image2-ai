@@ -3,7 +3,15 @@
 import { useState } from "react";
 import { Check, Copy } from "lucide-react";
 
-export function CopyPromptButton({ text, label = "复制", className = "" }: { text: string; label?: string; className?: string }) {
+export function CopyPromptButton({
+  text,
+  label = "复制",
+  className = ""
+}: {
+  text: string;
+  label?: string;
+  className?: string;
+}) {
   const [copied, setCopied] = useState(false);
 
   async function copyText() {
