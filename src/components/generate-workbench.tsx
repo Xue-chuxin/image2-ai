@@ -1,45 +1,141 @@
 "use client";
 
 import { useState } from "react";
-import { ImageIcon } from "lucide-react";
-import { GenerateComposer, type GenerationJobResult } from "@/components/generate-composer";
+import { Clock, Coins, ImageIcon, Sparkles } from "lucide-react";
 
-export function GenerateWorkbench({ initialPrompt }: { initialPrompt: string }) {
+import { GenerateComposer } from "./generate-composer";
+
+type GenerationJobResult = {
+  id: string;
+  status: string;
+  provider: "openai" | "chatgpt_web";
+  model: string | null;
+  promptZh: string;
+  promptEn: string | null;
+  negativePrompt: string | null;
+  ratio: string;
+  quality: string;
+  imageCount: number;
+  creditCost: number;
+  errorMessage: string | null;
+  createdAt: string;
+  images: Array<{
+    id: string;
+    url: string;
+    width: number | null;
+    height: number | null;
+  }>;
+};
+
+type GenerateWorkbenchProps = {
+  initialPrompt?: string;
+};
+
+function getStatusLabel(status?: string) {
+  if (status === "COMPLETED") {
+    return "已完成";
+  }
+
+  if (status === "FAILED") {
+    return "失败";
+  }
+
+  if (status === "GENERATING") {
+    return "生成中";
+  }
+
+  return "待开始";
+}
+
+function getQualityLabel(quality?: string) {
+  if (quality === "high") {
+    return "高清";
+  }
+
+  if (quality === "low") {
+    return "省积分";
+  }
+
+  return "标准";
+}
+
+export function GenerateWorkbench({ initialPrompt = "" }: GenerateWorkbenchProps) {
   const [job, setJob] = useState<GenerationJobResult | null>(null);
+  const firstImage = job?.images[0];
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[1.1fr_.9fr]">
+    <section className="generate-workbench">
       <GenerateComposer initialPrompt={initialPrompt} onJobChange={setJob} />
-      <aside className="space-y-5">
-        <div className="rounded-[28px] border border-slate-200 bg-white/86 p-5 shadow-card backdrop-blur">
-          <h2 className="text-lg font-black text-slate-950">任务预览</h2>
-          <div className="mt-4 aspect-square rounded-[24px] border border-dashed border-slate-200 bg-gradient-to-br from-slate-50 via-white to-blue-50 p-4">
-            {job?.images.length ? (
-              <img src={job.images[0].url} alt="任务预览" className="h-full w-full rounded-[20px] object-cover" />
-            ) : (
-              <div className="flex h-full flex-col items-center justify-center rounded-[20px] bg-white/72 text-center text-sm font-semibold text-slate-500">
-                <ImageIcon className="mb-3 h-8 w-8 text-slate-300" />
-                {job ? job.errorMessage || `任务状态：${job.status}` : "生成结果会在这里显示"}
-              </div>
-            )}
-          </div>
-          {job ? (
-            <div className="mt-4 rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-sm font-bold text-slate-600">
-              <p>状态：{job.status}</p>
-              <p className="mt-1">Provider：{job.provider}</p>
-              <p className="mt-1">预计积分：{job.creditCost}</p>
+
+      <aside className="preview-panel">
+        <div className="preview-card">
+          {firstImage ? (
+            <img src={firstImage.url} alt={job?.promptZh || "生成结果"} />
+          ) : (
+            <div className="preview-empty">
+              <Sparkles size={28} />
+              <span>生成结果会显示在这里</span>
+              <small>未配置 OpenAI Key 时会返回明确错误，不会吞掉失败状态。</small>
             </div>
-          ) : null}
+          )}
         </div>
-        <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-card">
-          <h2 className="text-lg font-black text-slate-950">积分规则草稿</h2>
-          <div className="mt-4 space-y-3 text-sm text-slate-500">
-            <p>标准图：5 积分 / 张</p>
-            <p>高清图：12 积分 / 张</p>
-            <p>任务失败：自动回滚冻结积分</p>
+
+        <div className="job-card">
+          <div className="job-card-head">
+            <div>
+              <span className="eyebrow">Task</span>
+              <h2>{job ? getStatusLabel(job.status) : "等待生成"}</h2>
+            </div>
+            <ImageIcon size={20} />
+          </div>
+
+          {job ? (
+            <>
+              <dl className="meta-list">
+                <div>
+                  <dt>Provider</dt>
+                  <dd>{job.provider}</dd>
+                </div>
+                <div>
+                  <dt>模型</dt>
+                  <dd>{job.model || "未返回"}</dd>
+                </div>
+                <div>
+                  <dt>比例</dt>
+                  <dd>{job.ratio}</dd>
+                </div>
+                <div>
+                  <dt>质量</dt>
+                  <dd>{getQualityLabel(job.quality)}</dd>
+                </div>
+                <div>
+                  <dt>张数</dt>
+                  <dd>{job.imageCount}</dd>
+                </div>
+                <div>
+                  <dt>预计积分</dt>
+                  <dd>{job.creditCost}</dd>
+                </div>
+              </dl>
+
+              {job.errorMessage ? <p className="job-error">{job.errorMessage}</p> : null}
+            </>
+          ) : (
+            <p className="muted-copy">输入提示词并点击“开始生成”后，这里会展示任务信息。</p>
+          )}
+        </div>
+
+        <div className="job-card compact">
+          <div className="rule-row">
+            <Coins size={18} />
+            <span>标准 5 积分 / 张，高清 12 积分 / 张</span>
+          </div>
+          <div className="rule-row">
+            <Clock size={18} />
+            <span>阶段 4B 为同步生成，队列会放到后续阶段</span>
           </div>
         </div>
       </aside>
-    </div>
+    </section>
   );
 }

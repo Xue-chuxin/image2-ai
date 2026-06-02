@@ -1,59 +1,98 @@
 import { NextResponse } from "next/server";
-import { createAndRunGenerationJob, listRecentGenerationJobs } from "@/lib/generation-jobs";
-import type { GenerationProviderName } from "@/lib/settings";
 
-export const runtime = "nodejs";
+import {
+  createAndRunGenerationJob,
+  listRecentGenerationJobs,
+  type CreateGenerationJobInput,
+} from "@/lib/generation-jobs";
+import type { GenerationProviderName } from "@/lib/settings";
 
 function normalizeProvider(value: unknown): GenerationProviderName | undefined {
   if (value === "openai" || value === "chatgpt_web") {
     return value;
   }
+
   return undefined;
+}
+
+function normalizeString(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeNumber(value: unknown) {
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) ? numberValue : undefined;
 }
 
 export async function GET() {
   try {
-    return NextResponse.json({ ok: true, jobs: await listRecentGenerationJobs() });
+    const jobs = await listRecentGenerationJobs(20);
+    return NextResponse.json({
+      ok: true,
+      jobs,
+    });
   } catch (error) {
     return NextResponse.json(
-      { ok: false, error: error instanceof Error ? error.message : "读取生成历史失败。" },
-      { status: 500 }
+      {
+        ok: false,
+        error: error instanceof Error ? error.message : "读取生成任务失败",
+      },
+      {
+        status: 500,
+      },
     );
   }
 }
 
 export async function POST(request: Request) {
-  const payload = (await request.json().catch(() => null)) as {
-    promptZh?: string;
-    promptEn?: string;
-    negativePrompt?: string;
-    ratio?: string;
-    quality?: string;
-    imageCount?: number;
-    provider?: string;
-  } | null;
-
-  const promptZh = payload?.promptZh?.trim();
-  if (!promptZh) {
-    return NextResponse.json({ ok: false, error: "请先输入或整理画面描述。" }, { status: 400 });
-  }
-
   try {
-    const job = await createAndRunGenerationJob({
-      promptZh,
-      promptEn: payload?.promptEn?.trim() || undefined,
-      negativePrompt: payload?.negativePrompt?.trim() || undefined,
-      ratio: payload?.ratio || "1:1",
-      quality: payload?.quality || "standard",
-      imageCount: payload?.imageCount || 1,
-      provider: normalizeProvider(payload?.provider)
-    });
+    const body = (await request.json()) as Record<string, unknown>;
+    const promptZh = normalizeString(body.promptZh);
 
-    return NextResponse.json({ ok: job.status !== "FAILED", job, error: job.errorMessage || undefined }, { status: job.status === "FAILED" ? 500 : 200 });
+    if (!promptZh) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "请输入中文提示词",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
+    const input: CreateGenerationJobInput = {
+      promptZh,
+      promptEn: normalizeString(body.promptEn) || undefined,
+      negativePrompt: normalizeString(body.negativePrompt) || undefined,
+      ratio: normalizeString(body.ratio) || "1:1",
+      quality: normalizeString(body.quality) || "standard",
+      imageCount: normalizeNumber(body.imageCount),
+      provider: normalizeProvider(body.provider),
+    };
+
+    const job = await createAndRunGenerationJob(input);
+    const failed = job.status === "FAILED";
+
+    return NextResponse.json(
+      {
+        ok: !failed,
+        job,
+        error: failed ? job.errorMessage || "生成任务失败" : undefined,
+      },
+      {
+        status: failed ? 500 : 200,
+      },
+    );
   } catch (error) {
     return NextResponse.json(
-      { ok: false, error: error instanceof Error ? error.message : "创建生图任务失败。" },
-      { status: 500 }
+      {
+        ok: false,
+        error: error instanceof Error ? error.message : "创建生成任务失败",
+      },
+      {
+        status: 500,
+      },
     );
   }
 }

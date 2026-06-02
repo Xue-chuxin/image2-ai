@@ -1,22 +1,25 @@
-import { getOpenAIRuntimeConfig, getPublicAppSettings, type GenerationProviderName } from "@/lib/settings";
+import { getOpenAIRuntimeConfig, getPublicAppSettings, type GenerationProviderName } from "./settings";
+
+export type ImageQuality = "standard" | "high" | "low";
 
 export type ImageGenerationRequest = {
-  promptZh: string;
+  promptZh?: string;
   promptEn?: string;
   negativePrompt?: string;
-  ratio: string;
-  quality: string;
-  imageCount: number;
+  ratio?: string;
+  quality?: ImageQuality | string;
+  imageCount?: number;
+};
+
+export type GeneratedImagePayload = {
+  buffer: Buffer;
+  mimeType: "image/png" | "image/jpeg" | "image/webp";
 };
 
 export type ImageGenerationResult = {
-  providerRequestId?: string;
-  images: Array<{
-    buffer: Buffer;
-    mimeType: "image/png" | "image/jpeg" | "image/webp";
-    width?: number;
-    height?: number;
-  }>;
+  provider: GenerationProviderName;
+  model: string;
+  images: GeneratedImagePayload[];
 };
 
 export interface ImageGenerationProvider {
@@ -25,107 +28,161 @@ export interface ImageGenerationProvider {
 }
 
 type OpenAIImageResponse = {
-  id?: string;
   data?: Array<{
     b64_json?: string;
     url?: string;
   }>;
+  error?: {
+    message?: string;
+  };
 };
 
-function mapSize(ratio: string) {
+function buildPrompt(request: ImageGenerationRequest) {
+  const prompt = (request.promptEn || request.promptZh || "").trim();
+  const negativePrompt = request.negativePrompt?.trim();
+
+  if (!prompt) {
+    throw new Error("请输入生成提示词");
+  }
+
+  if (!negativePrompt) {
+    return prompt;
+  }
+
+  return `${prompt}\n\nAvoid: ${negativePrompt}`;
+}
+
+function normalizeImageCount(imageCount?: number) {
+  if (!Number.isFinite(imageCount)) {
+    return 1;
+  }
+
+  return Math.min(Math.max(Math.floor(Number(imageCount)), 1), 4);
+}
+
+function mapOpenAISize(ratio?: string) {
   if (ratio === "16:9") {
     return "1536x1024";
   }
+
   if (ratio === "3:4" || ratio === "9:16") {
     return "1024x1536";
   }
+
   return "1024x1024";
 }
 
-function mapQuality(quality: string) {
+function mapOpenAIQuality(quality?: ImageQuality | string) {
   if (quality === "high") {
     return "high";
   }
+
   if (quality === "low") {
     return "low";
   }
+
   return "medium";
 }
 
-function buildPrompt(request: ImageGenerationRequest) {
-  const prompt = request.promptEn?.trim() || request.promptZh.trim();
-  const negative = request.negativePrompt?.trim();
+async function readOpenAIError(response: Response) {
+  const bodyText = await response.text();
 
-  return negative ? `${prompt}\n\nAvoid: ${negative}` : prompt;
+  if (!bodyText) {
+    return `OpenAI 生图请求失败，状态码 ${response.status}`;
+  }
+
+  try {
+    const data = JSON.parse(bodyText) as OpenAIImageResponse;
+    return data.error?.message || bodyText;
+  } catch {
+    return bodyText;
+  }
 }
 
-async function imageFromUrl(url: string) {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`图片下载失败：${response.status}`);
-  }
-  const arrayBuffer = await response.arrayBuffer();
-  const contentType = response.headers.get("content-type") || "image/png";
+function imageFromBase64(value: string): GeneratedImagePayload {
+  return {
+    buffer: Buffer.from(value, "base64"),
+    mimeType: "image/png",
+  };
+}
 
+async function imageFromUrl(url: string): Promise<GeneratedImagePayload> {
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(`下载 OpenAI 生成图片失败，状态码 ${response.status}`);
+  }
+
+  const contentType = response.headers.get("content-type") || "image/png";
+  const mimeType =
+    contentType.includes("jpeg") || contentType.includes("jpg")
+      ? "image/jpeg"
+      : contentType.includes("webp")
+        ? "image/webp"
+        : "image/png";
+
+  const arrayBuffer = await response.arrayBuffer();
   return {
     buffer: Buffer.from(arrayBuffer),
-    mimeType: contentType.includes("webp") ? "image/webp" : contentType.includes("jpeg") || contentType.includes("jpg") ? "image/jpeg" : "image/png"
-  } as ImageGenerationResult["images"][number];
+    mimeType,
+  };
 }
 
 class OpenAIImageProvider implements ImageGenerationProvider {
   name: GenerationProviderName = "openai";
 
   async generate(request: ImageGenerationRequest): Promise<ImageGenerationResult> {
-    const config = await getOpenAIRuntimeConfig();
+    const runtimeConfig = await getOpenAIRuntimeConfig();
 
-    if (!config.apiKey) {
-      throw new Error("未配置 OpenAI API Key，请先在后台配置页填写。");
+    if (!runtimeConfig.apiKey) {
+      throw new Error("后台尚未配置 OpenAI API Key，请先到后台配置页保存密钥");
     }
 
+    const prompt = buildPrompt(request);
     const response = await fetch("https://api.openai.com/v1/images/generations", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${config.apiKey}`,
-        "Content-Type": "application/json"
+        Authorization: `Bearer ${runtimeConfig.apiKey}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: config.model,
-        prompt: buildPrompt(request),
-        size: mapSize(request.ratio),
-        quality: mapQuality(request.quality),
-        n: Math.min(Math.max(request.imageCount, 1), 4)
-      })
+        model: runtimeConfig.model,
+        prompt,
+        n: normalizeImageCount(request.imageCount),
+        size: mapOpenAISize(request.ratio),
+        quality: mapOpenAIQuality(request.quality),
+      }),
     });
 
     if (!response.ok) {
-      const message = await response.text();
-      throw new Error(message || `OpenAI 生图请求失败：${response.status}`);
+      throw new Error(await readOpenAIError(response));
     }
 
-    const data = (await response.json()) as OpenAIImageResponse;
+    const payload = (await response.json()) as OpenAIImageResponse;
+    const data = payload.data || [];
+
+    if (!data.length) {
+      throw new Error("OpenAI 未返回生成图片");
+    }
+
     const images = await Promise.all(
-      (data.data || []).map(async (item) => {
+      data.map((item) => {
         if (item.b64_json) {
-          return {
-            buffer: Buffer.from(item.b64_json, "base64"),
-            mimeType: "image/png" as const
-          };
+          return Promise.resolve(imageFromBase64(item.b64_json));
         }
+
         if (item.url) {
           return imageFromUrl(item.url);
         }
-        throw new Error("OpenAI 返回了空图片。");
-      })
+
+        throw new Error("OpenAI 返回的图片数据为空");
+      }),
     );
 
-    if (images.length === 0) {
-      throw new Error("OpenAI 没有返回图片结果。");
-    }
-
     return {
-      providerRequestId: data.id,
-      images
+      provider: this.name,
+      model: runtimeConfig.model,
+      images,
     };
   }
 }
@@ -134,18 +191,17 @@ class ChatGPTWebProvider implements ImageGenerationProvider {
   name: GenerationProviderName = "chatgpt_web";
 
   async generate(): Promise<ImageGenerationResult> {
-    throw new Error("chatgpt_web Provider 暂未启用。当前只预留接口，不保存账号、cookie 或 token。");
+    throw new Error("ChatGPT 网页版生图通道尚未启用，请在后台切换为 OpenAI Provider");
   }
 }
 
-export async function getDefaultGenerationProviderName() {
-  const settings = await getPublicAppSettings();
-  return settings.defaultGenerationProvider;
-}
+export async function getImageGenerationProvider(name?: GenerationProviderName): Promise<ImageGenerationProvider> {
+  const publicSettings = await getPublicAppSettings();
+  const providerName = name || publicSettings.defaultGenerationProvider;
 
-export function getImageGenerationProvider(name: GenerationProviderName): ImageGenerationProvider {
-  if (name === "chatgpt_web") {
+  if (providerName === "chatgpt_web") {
     return new ChatGPTWebProvider();
   }
+
   return new OpenAIImageProvider();
 }

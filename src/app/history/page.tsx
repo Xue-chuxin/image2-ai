@@ -1,47 +1,130 @@
-import { listRecentGenerationJobs } from "@/lib/generation-jobs";
+import Image from "next/image";
 
-export default async function HistoryPage() {
-  const jobs = await listRecentGenerationJobs().catch(() => []);
+import { listRecentGenerationJobs, type GenerationJobView } from "@/lib/generation-jobs";
+
+export const dynamic = "force-dynamic";
+
+function getStatusLabel(status: string) {
+  if (status === "COMPLETED") {
+    return "已完成";
+  }
+
+  if (status === "FAILED") {
+    return "失败";
+  }
+
+  if (status === "GENERATING") {
+    return "生成中";
+  }
+
+  return status;
+}
+
+function getQualityLabel(quality: string) {
+  if (quality === "high") {
+    return "高清";
+  }
+
+  if (quality === "low") {
+    return "省积分";
+  }
+
+  return "标准";
+}
+
+function formatTime(value: string) {
+  return new Intl.DateTimeFormat("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+function HistoryItem({ job }: { job: GenerationJobView }) {
+  const firstImage = job.images[0];
 
   return (
-    <main className="space-y-6 pb-28">
-      <section className="rounded-app border border-ocean-100 bg-white/86 p-5 shadow-card backdrop-blur">
-        <p className="text-xs font-bold uppercase tracking-[0.24em] text-ocean-500">History</p>
-        <h1 className="mt-2 text-3xl font-black text-slate-950">生成历史</h1>
-        <p className="mt-2 text-sm leading-6 text-slate-500">
-          展示最近的生成任务和结果。当前阶段使用演示用户记录，登录用户历史会在阶段 5 接入。
-        </p>
+    <article className="history-card">
+      <div className="history-image">
+        {firstImage ? (
+          <Image src={firstImage.url} alt={job.promptZh} width={640} height={640} />
+        ) : (
+          <div className="history-placeholder">
+            <span>{getStatusLabel(job.status)}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="history-body">
+        <div className="history-title-row">
+          <div>
+            <span className="eyebrow">{job.provider}</span>
+            <h2>{job.promptZh}</h2>
+          </div>
+          <span className={`status-pill ${job.status.toLowerCase()}`}>{getStatusLabel(job.status)}</span>
+        </div>
+
+        {job.promptEn ? <p className="history-prompt">{job.promptEn}</p> : null}
+        {job.errorMessage ? <p className="history-error">{job.errorMessage}</p> : null}
+
+        <dl className="history-meta">
+          <div>
+            <dt>比例</dt>
+            <dd>{job.ratio}</dd>
+          </div>
+          <div>
+            <dt>质量</dt>
+            <dd>{getQualityLabel(job.quality)}</dd>
+          </div>
+          <div>
+            <dt>张数</dt>
+            <dd>{job.imageCount}</dd>
+          </div>
+          <div>
+            <dt>预计积分</dt>
+            <dd>{job.creditCost}</dd>
+          </div>
+          <div>
+            <dt>时间</dt>
+            <dd>{formatTime(job.createdAt)}</dd>
+          </div>
+        </dl>
+      </div>
+    </article>
+  );
+}
+
+export default async function HistoryPage() {
+  let jobs: GenerationJobView[] = [];
+
+  try {
+    jobs = await listRecentGenerationJobs(30);
+  } catch {
+    jobs = [];
+  }
+
+  return (
+    <main className="history-page">
+      <section className="section-heading">
+        <span className="eyebrow">History</span>
+        <h1>生成历史</h1>
+        <p>这里展示最近创建的生图任务，包括成功图片和失败原因。</p>
       </section>
 
-      <div className="space-y-4">
-        {jobs.length === 0 ? (
-          <section className="rounded-panel border border-ocean-100 bg-white/86 p-6 text-center shadow-card backdrop-blur">
-            <p className="text-sm font-bold text-slate-500">还没有生成记录。</p>
-          </section>
-        ) : null}
-        {jobs.map((job) => (
-          <article key={job.id} className="rounded-panel border border-ocean-100 bg-white/86 p-4 shadow-card backdrop-blur">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-ocean-500">{job.status}</p>
-                <h2 className="mt-2 text-lg font-black text-slate-950">{job.polishedPromptZh || job.originalInput}</h2>
-                <p className="mt-1 text-sm leading-6 text-slate-500">
-                  {job.provider} · {job.ratio} · {job.quality}
-                </p>
-              </div>
-              <span className="rounded-full bg-ocean-50 px-3 py-1 text-xs font-bold text-ocean-800">{job.creditCost} 积分</span>
-            </div>
-            {job.errorMessage ? <p className="mt-3 text-sm font-bold text-red-500">{job.errorMessage}</p> : null}
-            {job.images.length > 0 ? (
-              <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                {job.images.map((image) => (
-                  <img key={image.id} src={image.url} alt="生成历史" className="aspect-square rounded-[18px] border border-slate-200 object-cover" />
-                ))}
-              </div>
-            ) : null}
-          </article>
-        ))}
-      </div>
+      {jobs.length ? (
+        <section className="history-list">
+          {jobs.map((job) => (
+            <HistoryItem key={job.id} job={job} />
+          ))}
+        </section>
+      ) : (
+        <section className="empty-state">
+          <span>暂无生成记录</span>
+          <p>去创作页提交第一个生图任务后，结果会出现在这里。</p>
+        </section>
+      )}
     </main>
   );
 }

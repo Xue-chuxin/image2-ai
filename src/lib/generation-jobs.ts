@@ -1,194 +1,253 @@
-import { randomBytes } from "crypto";
-import { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/db";
-import { getDefaultGenerationProviderName, getImageGenerationProvider, type ImageGenerationRequest } from "@/lib/image-generation";
-import { saveGeneratedImage } from "@/lib/storage";
-import type { GenerationProviderName } from "@/lib/settings";
+import { Prisma, prisma } from "./db";
+import {
+  getImageGenerationProvider,
+  type ImageGenerationRequest,
+  type ImageQuality,
+} from "./image-generation";
+import { saveGeneratedImage } from "./storage";
+import { getPublicAppSettings, type GenerationProviderName } from "./settings";
+
+type GeneratedImageRecord = {
+  id: string;
+  url: string;
+  width: number | null;
+  height: number | null;
+};
 
 export type GenerationJobView = {
   id: string;
   status: string;
-  originalInput: string;
-  polishedPromptZh?: string | null;
-  polishedPromptEn?: string | null;
-  negativePrompt?: string | null;
+  provider: GenerationProviderName;
+  model: string | null;
+  promptZh: string;
+  promptEn: string | null;
+  negativePrompt: string | null;
   ratio: string;
   quality: string;
   imageCount: number;
   creditCost: number;
-  provider: string;
-  errorMessage?: string | null;
+  errorMessage: string | null;
   createdAt: string;
-  images: Array<{
-    id: string;
-    url: string;
-    width?: number | null;
-    height?: number | null;
-  }>;
+  images: GeneratedImageRecord[];
 };
 
-type GenerationJobRecord = {
-  id: string;
-  status: string;
-  originalInput: string;
-  polishedPromptZh?: string | null;
-  polishedPromptEn?: string | null;
-  negativePrompt?: string | null;
-  ratio: string;
-  quality: string;
-  imageCount: number;
-  creditCost: number;
-  provider: string;
-  errorMessage?: string | null;
-  createdAt: Date;
-  images?: Array<{
-    id: string;
-    url: string;
-    width?: number | null;
-    height?: number | null;
-  }>;
-};
+type GenerationJobRecord = Prisma.GenerationJobGetPayload<{
+  include: {
+    images: true;
+  };
+}>;
 
-export type CreateGenerationJobInput = ImageGenerationRequest & {
+export type CreateGenerationJobInput = {
+  promptZh: string;
+  promptEn?: string;
+  negativePrompt?: string;
+  ratio?: string;
+  quality?: ImageQuality | string;
+  imageCount?: number;
   provider?: GenerationProviderName;
 };
 
-function createId(prefix: string) {
-  return `${prefix}_${randomBytes(12).toString("hex")}`;
-}
-
-function calculateCreditCost(quality: string, imageCount: number) {
-  const unitCost = quality === "high" ? 12 : quality === "low" ? 3 : 5;
-  return unitCost * Math.min(Math.max(imageCount, 1), 4);
+function serializeDate(value: Date | string) {
+  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
 }
 
 function serializeJob(job: GenerationJobRecord): GenerationJobView {
   return {
     id: job.id,
     status: job.status,
-    originalInput: job.originalInput,
-    polishedPromptZh: job.polishedPromptZh,
-    polishedPromptEn: job.polishedPromptEn,
+    provider: job.provider as GenerationProviderName,
+    model: job.model,
+    promptZh: job.promptZh,
+    promptEn: job.promptEn,
     negativePrompt: job.negativePrompt,
     ratio: job.ratio,
     quality: job.quality,
     imageCount: job.imageCount,
     creditCost: job.creditCost,
-    provider: job.provider,
     errorMessage: job.errorMessage,
-    createdAt: job.createdAt.toISOString(),
-    images: (job.images || []).map((image) => ({
+    createdAt: serializeDate(job.createdAt),
+    images: job.images.map((image) => ({
       id: image.id,
       url: image.url,
       width: image.width,
-      height: image.height
-    }))
+      height: image.height,
+    })),
   };
 }
 
-export async function ensureDemoUser() {
-  const email = "demo@image2.local";
-  const users = await prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`SELECT id FROM "User" WHERE email = ${email} LIMIT 1`);
+function normalizePrompt(value: string) {
+  return value.trim();
+}
 
-  if (users[0]) {
-    return users[0].id;
+function normalizeImageCount(value?: number) {
+  if (!Number.isFinite(value)) {
+    return 1;
   }
 
-  const id = createId("usr");
-  await prisma.$executeRaw(
-    Prisma.sql`INSERT INTO "User" (id, email, "displayName", role, "createdAt", "updatedAt") VALUES (${id}, ${email}, '演示用户', 'USER', now(), now())`
-  );
-  return id;
+  return Math.min(Math.max(Math.floor(Number(value)), 1), 4);
+}
+
+function normalizeQuality(value?: ImageQuality | string) {
+  if (value === "high" || value === "low" || value === "standard") {
+    return value;
+  }
+
+  return "standard";
+}
+
+function estimateCreditCost(quality: string, imageCount: number) {
+  const singleCost = quality === "high" ? 12 : quality === "low" ? 3 : 5;
+  return singleCost * imageCount;
+}
+
+async function ensureDemoUser() {
+  const email = "demo@image2.local";
+  const existingUser = await prisma.user.findUnique({
+    where: {
+      email,
+    },
+  });
+
+  if (existingUser) {
+    return existingUser;
+  }
+
+  return prisma.user.create({
+    data: {
+      email,
+      displayName: "演示用户",
+      role: "USER",
+      credits: 100,
+    },
+  });
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "生成任务执行失败";
 }
 
 export async function createAndRunGenerationJob(input: CreateGenerationJobInput) {
-  const userId = await ensureDemoUser();
-  const providerName = input.provider || (await getDefaultGenerationProviderName());
-  const imageCount = Math.min(Math.max(Number(input.imageCount) || 1, 1), 4);
-  const quality = input.quality || "standard";
-  const creditCost = calculateCreditCost(quality, imageCount);
-  const provider = getImageGenerationProvider(providerName);
+  const promptZh = normalizePrompt(input.promptZh);
 
-  const job = (await (prisma as any).generationJob.create({
+  if (!promptZh) {
+    throw new Error("请输入中文提示词");
+  }
+
+  const publicSettings = await getPublicAppSettings();
+  const providerName = input.provider || publicSettings.defaultGenerationProvider;
+  const imageCount = normalizeImageCount(input.imageCount);
+  const quality = normalizeQuality(input.quality);
+  const ratio = input.ratio || "1:1";
+  const creditCost = estimateCreditCost(quality, imageCount);
+  const user = await ensureDemoUser();
+
+  const job = await prisma.generationJob.create({
     data: {
-      userId,
+      userId: user.id,
       status: "GENERATING",
-      originalInput: input.promptZh,
-      polishedPromptZh: input.promptZh,
-      polishedPromptEn: input.promptEn || null,
-      negativePrompt: input.negativePrompt || null,
-      ratio: input.ratio || "1:1",
+      provider: providerName,
+      promptZh,
+      promptEn: input.promptEn?.trim() || null,
+      negativePrompt: input.negativePrompt?.trim() || null,
+      ratio,
       quality,
       imageCount,
       creditCost,
-      provider: providerName
     },
-    include: { images: true }
-  })) as GenerationJobRecord;
+    include: {
+      images: true,
+    },
+  });
+
+  const request: ImageGenerationRequest = {
+    promptZh,
+    promptEn: input.promptEn,
+    negativePrompt: input.negativePrompt,
+    ratio,
+    quality,
+    imageCount,
+  };
 
   try {
-    const result = await provider.generate({
-      promptZh: input.promptZh,
-      promptEn: input.promptEn,
-      negativePrompt: input.negativePrompt,
-      ratio: input.ratio || "1:1",
-      quality,
-      imageCount
-    });
+    const provider = await getImageGenerationProvider(providerName);
+    const result = await provider.generate(request);
 
     for (const [index, image] of result.images.entries()) {
-      const stored = await saveGeneratedImage(job.id, index, image.buffer, image.mimeType);
-      await (prisma as any).generatedImage.create({
+      const storedImage = await saveGeneratedImage({
+        jobId: job.id,
+        index,
+        buffer: image.buffer,
+        mimeType: image.mimeType,
+      });
+
+      await prisma.generatedImage.create({
         data: {
+          userId: user.id,
           jobId: job.id,
-          url: stored.url,
-          width: image.width || stored.width || null,
-          height: image.height || stored.height || null
-        }
+          url: storedImage.url,
+          storageKey: storedImage.storageKey,
+          mimeType: image.mimeType,
+        },
       });
     }
 
-    const completedJob = (await (prisma as any).generationJob.update({
-      where: { id: job.id },
+    const completedJob = await prisma.generationJob.update({
+      where: {
+        id: job.id,
+      },
       data: {
         status: "COMPLETED",
-        providerRequestId: result.providerRequestId || null
+        provider: result.provider,
+        model: result.model,
+        errorMessage: null,
       },
-      include: { images: true }
-    })) as GenerationJobRecord;
+      include: {
+        images: true,
+      },
+    });
 
     return serializeJob(completedJob);
   } catch (error) {
-    const failedJob = (await (prisma as any).generationJob.update({
-      where: { id: job.id },
+    const failedJob = await prisma.generationJob.update({
+      where: {
+        id: job.id,
+      },
       data: {
         status: "FAILED",
-        errorMessage: error instanceof Error ? error.message : "生图任务失败。"
+        errorMessage: getErrorMessage(error),
       },
-      include: { images: true }
-    })) as GenerationJobRecord;
+      include: {
+        images: true,
+      },
+    });
 
     return serializeJob(failedJob);
   }
 }
 
-export async function listRecentGenerationJobs(limit = 12) {
-  const userId = await ensureDemoUser();
-  const jobs = (await (prisma as any).generationJob.findMany({
-    where: { userId },
-    orderBy: { createdAt: "desc" },
+export async function listRecentGenerationJobs(limit = 20) {
+  const jobs = await prisma.generationJob.findMany({
+    orderBy: {
+      createdAt: "desc",
+    },
     take: limit,
-    include: { images: true }
-  })) as GenerationJobRecord[];
+    include: {
+      images: true,
+    },
+  });
 
   return jobs.map(serializeJob);
 }
 
 export async function findGenerationJob(id: string) {
-  const job = (await (prisma as any).generationJob.findUnique({
-    where: { id },
-    include: { images: true }
-  })) as GenerationJobRecord | null;
+  const job = await prisma.generationJob.findUnique({
+    where: {
+      id,
+    },
+    include: {
+      images: true,
+    },
+  });
 
   return job ? serializeJob(job) : null;
 }

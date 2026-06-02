@@ -1,324 +1,323 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import clsx from "clsx";
 import { ImageUp, Loader2, RotateCcw, Send, Wand2 } from "lucide-react";
-import { clsx } from "clsx";
+
+type GenerationJobResult = {
+  id: string;
+  status: string;
+  provider: "openai" | "chatgpt_web";
+  model: string | null;
+  promptZh: string;
+  promptEn: string | null;
+  negativePrompt: string | null;
+  ratio: string;
+  quality: string;
+  imageCount: number;
+  creditCost: number;
+  errorMessage: string | null;
+  createdAt: string;
+  images: Array<{
+    id: string;
+    url: string;
+    width: number | null;
+    height: number | null;
+  }>;
+};
+
+type ApiResult<T> = {
+  ok?: boolean;
+  error?: string;
+} & T;
+
+type PolishResult = {
+  data?: {
+    promptZh?: string;
+    promptEn?: string;
+    negativePrompt?: string;
+    provider?: string;
+  };
+};
+
+type GenerationResult = {
+  job?: GenerationJobResult;
+};
+
+type GenerateComposerProps = {
+  initialPrompt?: string;
+  onJobChange?: (job: GenerationJobResult | null) => void;
+};
 
 const styles = ["写实", "商品", "角色", "界面", "插画", "建筑"] as const;
 const ratios = ["1:1", "3:4", "16:9", "9:16"] as const;
+const qualities = [
+  { value: "standard", label: "标准" },
+  { value: "high", label: "高清" },
+  { value: "low", label: "省积分" },
+] as const;
+const imageCounts = [1, 2, 4] as const;
 
-type PolishResult = {
-  title: string;
-  promptZh: string;
-  promptEn: string;
-  negativePrompt: string;
-  styleTags: string[];
-  recommendedRatio: string;
-  qualityHint: string;
-};
+async function readApiJson<T>(response: Response): Promise<ApiResult<T>> {
+  const contentType = response.headers.get("content-type") || "";
 
-type PolishResponse = {
-  ok: boolean;
-  result?: PolishResult;
-  error?: string;
-  warning?: string;
-  source?: "deepseek" | "local";
-};
+  if (contentType.includes("application/json")) {
+    return (await response.json()) as ApiResult<T>;
+  }
 
-export type GenerationJobResult = {
-  id: string;
-  status: string;
-  provider: string;
-  errorMessage?: string | null;
-  creditCost: number;
-  images: Array<{ id: string; url: string }>;
-};
-
-type GenerationResponse = {
-  ok: boolean;
-  job?: GenerationJobResult;
-  error?: string;
-};
-
-const quickIdeas = [
-  "蓝白色极简产品海报，玻璃质感咖啡机，柔和晨光，干净留白，适合电商首图",
-  "雨夜街头人像写真，透明雨伞反射霓虹，电影感构图，浅景深",
-  "国风角色设定，浅色丝绸服饰，水墨山景背景，克制高级的配色",
-  "移动 App 首屏样机，液态玻璃卡片，白蓝色调，清爽工具型界面"
-];
-
-function isKnownRatio(value: string): value is (typeof ratios)[number] {
-  return ratios.includes(value as (typeof ratios)[number]);
+  const text = await response.text();
+  return {
+    ok: false,
+    error: text ? `接口返回了非 JSON 内容：${text.slice(0, 80)}` : "接口返回了非 JSON 内容",
+  } as ApiResult<T>;
 }
 
-export function GenerateComposer({
-  compact = false,
-  initialPrompt = "",
-  onJobChange
-}: {
-  compact?: boolean;
-  initialPrompt?: string;
-  onJobChange?: (job: GenerationJobResult | null) => void;
-}) {
-  const [style, setStyle] = useState<(typeof styles)[number]>("商品");
+export function GenerateComposer({ initialPrompt = "", onJobChange }: GenerateComposerProps) {
+  const [prompt, setPrompt] = useState(initialPrompt);
+  const [selectedStyle, setSelectedStyle] = useState<(typeof styles)[number]>("写实");
   const [ratio, setRatio] = useState<(typeof ratios)[number]>("1:1");
-  const [description, setDescription] = useState(initialPrompt);
-  const [polishResult, setPolishResult] = useState<PolishResult | null>(null);
-  const [generationJob, setGenerationJob] = useState<GenerationJobResult | null>(null);
+  const [quality, setQuality] = useState<(typeof qualities)[number]["value"]>("standard");
+  const [imageCount, setImageCount] = useState<(typeof imageCounts)[number]>(1);
+  const [polishedPrompt, setPolishedPrompt] = useState("");
+  const [negativePrompt, setNegativePrompt] = useState("");
+  const [polishProvider, setPolishProvider] = useState("DeepSeek");
+  const [currentJob, setCurrentJob] = useState<GenerationJobResult | null>(null);
   const [isPolishing, setIsPolishing] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [ideaIndex, setIdeaIndex] = useState(0);
+  const [error, setError] = useState("");
 
-  async function polishDescription() {
-    const input = description.trim();
+  const canGenerate = useMemo(() => prompt.trim().length > 0 && !isGenerating, [prompt, isGenerating]);
 
-    setError("");
-    setNotice("");
+  function updateJob(job: GenerationJobResult | null) {
+    setCurrentJob(job);
+    onJobChange?.(job);
+  }
 
-    if (!input) {
-      setError("先写一句画面描述，再让 AI 帮你整理。");
+  async function polishPrompt() {
+    const rawPrompt = prompt.trim();
+
+    if (!rawPrompt) {
+      setError("先输入一句想生成的画面描述");
       return;
     }
 
     setIsPolishing(true);
+    setError("");
+    setNotice("");
 
     try {
       const response = await fetch("/api/prompts/polish", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ input, mode: style, ratio })
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt: rawPrompt,
+          style: selectedStyle,
+          ratio,
+        }),
       });
-      const data = (await response.json()) as PolishResponse;
+      const result = await readApiJson<PolishResult>(response);
 
-      if (!response.ok || !data.ok || !data.result) {
-        throw new Error(data.error || "描述整理失败，请稍后再试。");
+      if (!response.ok || result.ok === false) {
+        throw new Error(result.error || "润色失败");
       }
 
-      setPolishResult(data.result);
-      setDescription(data.result.promptZh);
-      if (isKnownRatio(data.result.recommendedRatio)) {
-        setRatio(data.result.recommendedRatio);
-      }
-      if (data.warning) {
-        setNotice(data.warning);
-      } else if (data.source === "local") {
-        setNotice("当前未配置 DeepSeek API Key，先使用本地预览结果。");
-      }
+      const data = result.data || {};
+      setPolishedPrompt(data.promptEn || data.promptZh || "");
+      setNegativePrompt(data.negativePrompt || "");
+      setPolishProvider(data.provider || "DeepSeek");
+      setNotice("提示词已润色，可以直接开始生成");
     } catch (caughtError) {
-      setError(caughtError instanceof Error ? caughtError.message : "描述整理失败，请稍后再试。");
+      setError(caughtError instanceof Error ? caughtError.message : "润色失败");
     } finally {
       setIsPolishing(false);
     }
   }
 
   async function startGeneration() {
-    const promptZh = (polishResult?.promptZh || description).trim();
+    const rawPrompt = prompt.trim();
 
-    setError("");
-    setNotice("");
-    setGenerationJob(null);
-    onJobChange?.(null);
-
-    if (!promptZh) {
-      setError("请先输入画面描述。");
+    if (!rawPrompt) {
+      setError("先输入一句想生成的画面描述");
       return;
     }
 
     setIsGenerating(true);
+    setError("");
+    setNotice("");
+    updateJob(null);
 
     try {
       const response = await fetch("/api/generation/jobs", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
-          promptZh,
-          promptEn: polishResult?.promptEn,
-          negativePrompt: polishResult?.negativePrompt,
+          promptZh: rawPrompt,
+          promptEn: polishedPrompt || undefined,
+          negativePrompt: negativePrompt || undefined,
           ratio,
-          quality: "standard",
-          imageCount: 1
-        })
+          quality,
+          imageCount,
+          provider: "openai",
+        }),
       });
-      const data = (await response.json()) as GenerationResponse;
+      const result = await readApiJson<GenerationResult>(response);
 
-      if (data.job) {
-        setGenerationJob(data.job);
-        onJobChange?.(data.job);
+      if (result.job) {
+        updateJob(result.job);
       }
 
-      if (!response.ok || !data.ok || !data.job) {
-        throw new Error(data.error || data.job?.errorMessage || "生图任务创建失败。");
+      if (!response.ok || result.ok === false) {
+        throw new Error(result.error || result.job?.errorMessage || "生成失败");
       }
 
-      setNotice("生图任务已完成。");
+      setNotice("生成完成，结果已保存到历史记录");
     } catch (caughtError) {
-      setError(caughtError instanceof Error ? caughtError.message : "生图任务创建失败。");
+      setError(caughtError instanceof Error ? caughtError.message : "生成失败");
     } finally {
       setIsGenerating(false);
     }
   }
 
-  function useNextIdea() {
-    const nextIndex = (ideaIndex + 1) % quickIdeas.length;
-    setIdeaIndex(nextIndex);
-    setDescription(quickIdeas[nextIndex]);
-    setPolishResult(null);
-    setGenerationJob(null);
-    setError("");
+  function resetComposer() {
+    setPrompt("");
+    setPolishedPrompt("");
+    setNegativePrompt("");
     setNotice("");
+    setError("");
+    updateJob(null);
   }
 
   return (
-    <section className="liquid-glass relative overflow-hidden rounded-[28px] p-5 animate-float-in">
-      <div className="liquid-mask" />
-      <div className="relative">
-        <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-slate-200 md:hidden" />
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-400">Create</p>
-            <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950">画面描述</h2>
-          </div>
-          <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-black text-slate-500">
-            约 1 分钟
-          </div>
+    <section className="composer-panel">
+      <div className="composer-head">
+        <div>
+          <span className="eyebrow">Create</span>
+          <h1>一句话生成你的视觉草图</h1>
+          <p>输入想法后可先润色提示词，再调用后台配置的 OpenAI 生图通道。</p>
         </div>
+        <button className="icon-button" type="button" onClick={resetComposer} aria-label="重置">
+          <RotateCcw size={18} />
+        </button>
+      </div>
 
-        <div className="relative mt-5 overflow-hidden rounded-[22px] border border-white/60 bg-white/48 p-3 shadow-card backdrop-blur-xl">
-          <div className="liquid-mask" />
-          <textarea
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            className="relative min-h-32 w-full resize-none bg-transparent p-3 text-[15px] leading-7 text-slate-800 outline-none placeholder:text-slate-400"
-            placeholder="描述你想要的画面，例如：蓝白色产品海报，玻璃质感咖啡机，冷光棚拍，干净留白..."
-          />
-          <div className="relative flex flex-wrap items-center gap-2 border-t border-white/70 px-2 pt-3">
-            <button
-              type="button"
-              onClick={polishDescription}
-              disabled={isPolishing}
-              className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-card transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isPolishing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
-              {isPolishing ? "整理中" : "整理描述"}
-            </button>
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-card transition hover:-translate-y-0.5"
-            >
-              <ImageUp className="h-3.5 w-3.5" /> 加图
-            </button>
-            <button
-              type="button"
-              onClick={useNextIdea}
-              className="ml-auto inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-xs font-black text-slate-500 shadow-card transition hover:-translate-y-0.5"
-            >
-              <RotateCcw className="h-3.5 w-3.5" /> 换一句
-            </button>
-          </div>
-        </div>
+      <div className="upload-card" aria-label="参考图上传占位">
+        <ImageUp size={24} />
+        <span>拖入参考图</span>
+        <small>阶段 4B 暂不处理图生图，先保留入口</small>
+      </div>
 
-        {error ? (
-          <p className="mt-3 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">{error}</p>
-        ) : null}
-        {notice ? (
-          <p className="mt-3 rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm font-bold text-sky-700">{notice}</p>
-        ) : null}
+      <label className="field-block">
+        <span>画面描述</span>
+        <textarea
+          value={prompt}
+          onChange={(event) => setPrompt(event.target.value)}
+          placeholder="例如：蓝白色玻璃质感的移动端应用启动页，柔和自然光，简洁高级"
+          rows={5}
+        />
+      </label>
 
-        {polishResult ? (
-          <div className="mt-4 rounded-[22px] border border-slate-200 bg-white/80 p-4 shadow-card">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-black text-white">{polishResult.title}</span>
-              {polishResult.styleTags.map((tag) => (
-                <span key={tag} className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-black text-slate-600">
-                  {tag}
-                </span>
-              ))}
-            </div>
-            <p className="mt-3 text-sm leading-7 text-slate-600">{polishResult.promptEn}</p>
-            <p className="mt-3 text-xs font-bold leading-6 text-slate-400">避免：{polishResult.negativePrompt}</p>
-            <p className="mt-2 text-xs font-bold leading-6 text-slate-500">{polishResult.qualityHint}</p>
-          </div>
-        ) : null}
-
-        <div className="mt-4 flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-          {styles.map((item) => (
+      <div className="option-group">
+        <span>风格方向</span>
+        <div className="chip-row">
+          {styles.map((style) => (
             <button
-              key={item}
+              key={style}
+              className={clsx("chip", selectedStyle === style && "active")}
               type="button"
-              onClick={() => setStyle(item)}
-              className={clsx(
-                "shrink-0 rounded-full border px-4 py-2 text-sm font-black transition",
-                style === item ? "border-slate-950 bg-slate-950 text-white shadow-card" : "border-slate-200 bg-white text-slate-600"
-              )}
+              onClick={() => setSelectedStyle(style)}
             >
-              {item}
+              {style}
             </button>
           ))}
         </div>
+      </div>
 
-        {!compact && (
-          <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_1.3fr]">
-            <button
-              type="button"
-              className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 px-4 py-4 text-sm font-black text-slate-600"
-            >
-              <ImageUp className="h-4 w-4" /> 上传参考图
-            </button>
-            <div className="flex gap-2 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-2 no-scrollbar">
-              {ratios.map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  onClick={() => setRatio(item)}
-                  className={clsx(
-                    "shrink-0 rounded-xl px-3 py-2 text-xs font-black",
-                    ratio === item ? "bg-slate-950 text-white shadow-card" : "text-slate-500"
-                  )}
-                >
-                  {item}
-                </button>
-              ))}
-            </div>
+      <div className="option-grid">
+        <div className="option-group">
+          <span>画幅比例</span>
+          <div className="chip-row">
+            {ratios.map((item) => (
+              <button
+                key={item}
+                className={clsx("chip", ratio === item && "active")}
+                type="button"
+                onClick={() => setRatio(item)}
+              >
+                {item}
+              </button>
+            ))}
           </div>
-        )}
-
-        <div className="mt-5 grid gap-3 sm:grid-cols-[.9fr_1.1fr]">
-          <button type="button" className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-600">
-            保存草稿
-          </button>
-          <button
-            type="button"
-            onClick={startGeneration}
-            disabled={isGenerating}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white shadow-card transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            {isGenerating ? "生成中" : "开始生成"}
-          </button>
         </div>
 
-        {generationJob ? (
-          <div className="mt-5 rounded-[24px] border border-slate-200 bg-white/86 p-4 shadow-card">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">{generationJob.provider}</p>
-                <h3 className="mt-1 text-lg font-black text-slate-950">任务 {generationJob.status}</h3>
-              </div>
-              <span className="rounded-full bg-ocean-50 px-3 py-1 text-xs font-black text-ocean-800">{generationJob.creditCost} 积分</span>
-            </div>
-            {generationJob.images.length > 0 ? (
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                {generationJob.images.map((image) => (
-                  <img key={image.id} src={image.url} alt="生成结果" className="aspect-square w-full rounded-[20px] border border-slate-200 object-cover" />
-                ))}
-              </div>
-            ) : (
-              <p className="mt-3 text-sm font-bold text-slate-500">{generationJob.errorMessage || "任务已记录，等待结果。"}</p>
-            )}
+        <div className="option-group">
+          <span>质量</span>
+          <div className="chip-row">
+            {qualities.map((item) => (
+              <button
+                key={item.value}
+                className={clsx("chip", quality === item.value && "active")}
+                type="button"
+                onClick={() => setQuality(item.value)}
+              >
+                {item.label}
+              </button>
+            ))}
           </div>
-        ) : null}
+        </div>
+
+        <div className="option-group">
+          <span>张数</span>
+          <div className="chip-row">
+            {imageCounts.map((item) => (
+              <button
+                key={item}
+                className={clsx("chip", imageCount === item && "active")}
+                type="button"
+                onClick={() => setImageCount(item)}
+              >
+                {item} 张
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {polishedPrompt ? (
+        <div className="prompt-preview">
+          <div>
+            <span>{polishProvider}</span>
+            <strong>润色后的提示词</strong>
+          </div>
+          <p>{polishedPrompt}</p>
+          {negativePrompt ? <small>避免：{negativePrompt}</small> : null}
+        </div>
+      ) : null}
+
+      {currentJob?.images.length ? (
+        <div className="result-strip">
+          {currentJob.images.map((image) => (
+            <img key={image.id} src={image.url} alt={currentJob.promptZh} />
+          ))}
+        </div>
+      ) : null}
+
+      {notice ? <div className="notice success">{notice}</div> : null}
+      {error ? <div className="notice error">{error}</div> : null}
+
+      <div className="composer-actions">
+        <button className="ghost-button" type="button" onClick={polishPrompt} disabled={isPolishing}>
+          {isPolishing ? <Loader2 className="spin" size={17} /> : <Wand2 size={17} />}
+          AI 润色
+        </button>
+        <button className="primary-button" type="button" onClick={startGeneration} disabled={!canGenerate}>
+          {isGenerating ? <Loader2 className="spin" size={17} /> : <Send size={17} />}
+          {isGenerating ? "生成中" : "开始生成"}
+        </button>
       </div>
     </section>
   );
