@@ -4,6 +4,11 @@ import {
   type ImageGenerationRequest,
   type ImageQuality,
 } from "./image-generation";
+import {
+  estimateGenerationCreditCost,
+  refundReservedCreditsForJob,
+  reserveCreditsForJob,
+} from "./credits";
 import { saveGeneratedImage } from "./storage";
 import { getPublicAppSettings, type GenerationProviderName } from "./settings";
 
@@ -56,9 +61,9 @@ function serializeJob(job: GenerationJobRecord): GenerationJobView {
     id: job.id,
     status: job.status,
     provider: job.provider as GenerationProviderName,
-    model: job.model,
-    promptZh: job.promptZh,
-    promptEn: job.promptEn,
+    model: job.providerRequestId,
+    promptZh: job.polishedPromptZh || job.originalInput,
+    promptEn: job.polishedPromptEn,
     negativePrompt: job.negativePrompt,
     ratio: job.ratio,
     quality: job.quality,
@@ -95,38 +100,11 @@ function normalizeQuality(value?: ImageQuality | string) {
   return "standard";
 }
 
-function estimateCreditCost(quality: string, imageCount: number) {
-  const singleCost = quality === "high" ? 12 : quality === "low" ? 3 : 5;
-  return singleCost * imageCount;
-}
-
-async function ensureDemoUser() {
-  const email = "demo@image2.local";
-  const existingUser = await prisma.user.findUnique({
-    where: {
-      email,
-    },
-  });
-
-  if (existingUser) {
-    return existingUser;
-  }
-
-  return prisma.user.create({
-    data: {
-      email,
-      displayName: "演示用户",
-      role: "USER",
-      credits: 100,
-    },
-  });
-}
-
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "生成任务执行失败";
 }
 
-export async function createAndRunGenerationJob(input: CreateGenerationJobInput) {
+export async function createAndRunGenerationJob(userId: string, input: CreateGenerationJobInput) {
   const promptZh = normalizePrompt(input.promptZh);
 
   if (!promptZh) {
@@ -138,16 +116,16 @@ export async function createAndRunGenerationJob(input: CreateGenerationJobInput)
   const imageCount = normalizeImageCount(input.imageCount);
   const quality = normalizeQuality(input.quality);
   const ratio = input.ratio || "1:1";
-  const creditCost = estimateCreditCost(quality, imageCount);
-  const user = await ensureDemoUser();
+  const creditCost = estimateGenerationCreditCost(quality, imageCount);
 
   const job = await prisma.generationJob.create({
     data: {
-      userId: user.id,
+      userId,
       status: "GENERATING",
       provider: providerName,
-      promptZh,
-      promptEn: input.promptEn?.trim() || null,
+      originalInput: promptZh,
+      polishedPromptZh: promptZh,
+      polishedPromptEn: input.promptEn?.trim() || null,
       negativePrompt: input.negativePrompt?.trim() || null,
       ratio,
       quality,
@@ -159,6 +137,7 @@ export async function createAndRunGenerationJob(input: CreateGenerationJobInput)
     },
   });
 
+  let creditsReserved = false;
   const request: ImageGenerationRequest = {
     promptZh,
     promptEn: input.promptEn,
@@ -169,6 +148,9 @@ export async function createAndRunGenerationJob(input: CreateGenerationJobInput)
   };
 
   try {
+    await reserveCreditsForJob(userId, creditCost, job.id);
+    creditsReserved = true;
+
     const provider = await getImageGenerationProvider(providerName);
     const result = await provider.generate(request);
 
@@ -182,32 +164,64 @@ export async function createAndRunGenerationJob(input: CreateGenerationJobInput)
 
       await prisma.generatedImage.create({
         data: {
-          userId: user.id,
           jobId: job.id,
           url: storedImage.url,
-          storageKey: storedImage.storageKey,
-          mimeType: image.mimeType,
         },
       });
     }
 
-    const completedJob = await prisma.generationJob.update({
-      where: {
-        id: job.id,
-      },
-      data: {
-        status: "COMPLETED",
-        provider: result.provider,
-        model: result.model,
-        errorMessage: null,
-      },
-      include: {
-        images: true,
-      },
+    const completedJob = await prisma.$transaction(async (tx) => {
+      await tx.creditAccount.update({
+        where: {
+          userId,
+        },
+        data: {
+          frozen: {
+            decrement: creditCost,
+          },
+        },
+      });
+
+      const account = await tx.creditAccount.findUniqueOrThrow({
+        where: {
+          userId,
+        },
+      });
+
+      await tx.creditTransaction.create({
+        data: {
+          userId,
+          type: "SPEND",
+          amount: -creditCost,
+          balance: account.available,
+          jobId: job.id,
+          memo: "生图成功扣除积分",
+        },
+      });
+
+      return tx.generationJob.update({
+        where: {
+          id: job.id,
+        },
+        data: {
+          status: "COMPLETED",
+          provider: result.provider,
+          providerRequestId: result.model,
+          errorMessage: null,
+        },
+        include: {
+          images: true,
+        },
+      });
     });
+    creditsReserved = false;
 
     return serializeJob(completedJob);
   } catch (error) {
+    if (creditsReserved) {
+      await refundReservedCreditsForJob(userId, creditCost, job.id).catch(() => null);
+    }
+
     const failedJob = await prisma.generationJob.update({
       where: {
         id: job.id,
@@ -225,8 +239,11 @@ export async function createAndRunGenerationJob(input: CreateGenerationJobInput)
   }
 }
 
-export async function listRecentGenerationJobs(limit = 20) {
+export async function listRecentGenerationJobs(userId: string, limit = 20) {
   const jobs = await prisma.generationJob.findMany({
+    where: {
+      userId,
+    },
     orderBy: {
       createdAt: "desc",
     },
@@ -239,10 +256,11 @@ export async function listRecentGenerationJobs(limit = 20) {
   return jobs.map(serializeJob);
 }
 
-export async function findGenerationJob(id: string) {
-  const job = await prisma.generationJob.findUnique({
+export async function findGenerationJob(userId: string, id: string) {
+  const job = await prisma.generationJob.findFirst({
     where: {
       id,
+      userId,
     },
     include: {
       images: true,

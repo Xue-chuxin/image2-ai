@@ -224,7 +224,11 @@ export function GenerateComposer({ initialPrompt = "", onJobChange }: GenerateCo
         <span>画面描述</span>
         <textarea
           value={prompt}
-          onChange={(event) => setPrompt(event.target.value)}
+          onChange={(event) => {
+            setPrompt(event.target.value);
+            setPolishedPromptEn("");
+            setNegativePrompt("");
+          }}
           placeholder="例如：一位穿黑色风衣的年轻女性站在雨夜霓虹街头，电影级打光，浅景深，35mm 镜头"
           rows={5}
         />
