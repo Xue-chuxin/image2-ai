@@ -1,7 +1,5 @@
 import { randomBytes } from "crypto";
-import { Prisma } from "@prisma/client";
 import { decryptSecret, encryptSecret, hasSettingsEncryptionKey } from "@/lib/app-crypto";
-import { prisma } from "@/lib/db";
 
 export type GenerationProviderName = "openai" | "chatgpt_web";
 
@@ -60,6 +58,8 @@ function normalizeText(value: unknown, fallback: string, maxLength = 120) {
 
 async function readSettingRows() {
   try {
+    const { Prisma } = await import("@prisma/client");
+    const { prisma } = await import("@/lib/db");
     return await prisma.$queryRaw<SettingRow[]>(Prisma.sql`SELECT "key", "value", "isEncrypted" FROM "AppSetting"`);
   } catch {
     return [];
@@ -75,6 +75,9 @@ function getStoredSetting(map: Map<string, SettingRow>, key: keyof PublicAppSett
 }
 
 async function upsertSetting(key: string, value: string, isEncrypted = false) {
+  const { Prisma } = await import("@prisma/client");
+  const { prisma } = await import("@/lib/db");
+
   await prisma.$executeRaw(
     Prisma.sql`INSERT INTO "AppSetting" (id, "key", "value", "isEncrypted", "createdAt", "updatedAt")
       VALUES (${createId()}, ${key}, ${value}, ${isEncrypted}, now(), now())
