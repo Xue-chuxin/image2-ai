@@ -14,6 +14,7 @@ export type StoredImage = {
 export interface StorageService {
   saveGeneratedImage(jobId: string, index: number, buffer: Buffer, mimeType: string): Promise<StoredImage>;
   saveReferenceImage(userId: string, buffer: Buffer, mimeType: string): Promise<StoredImage>;
+  savePaymentProof(userId: string, orderId: string, buffer: Buffer, mimeType: string): Promise<StoredImage>;
 }
 
 function extensionFromMime(mimeType: string) {
@@ -65,6 +66,23 @@ export const localStorageService: StorageService = {
       mimeType,
     };
   },
+
+  async savePaymentProof(userId: string, orderId: string, buffer: Buffer, mimeType: string): Promise<StoredImage> {
+    const extension = extensionFromMime(mimeType);
+    const directory = path.join(process.cwd(), "public", "uploads", "payments");
+    const safeUserId = userId.replace(/[^a-zA-Z0-9_-]/g, "");
+    const safeOrderId = orderId.replace(/[^a-zA-Z0-9_-]/g, "");
+    const filename = `${safeUserId}-${safeOrderId}-${Date.now()}-${randomBytes(6).toString("hex")}.${extension}`;
+
+    await mkdir(directory, { recursive: true });
+    await writeFile(path.join(directory, filename), buffer);
+
+    return {
+      url: `/uploads/payments/${filename}`,
+      fileSize: buffer.byteLength,
+      mimeType,
+    };
+  },
 };
 
 export async function saveGeneratedImage(jobId: string, index: number, buffer: Buffer, mimeType: string): Promise<StoredImage> {
@@ -73,4 +91,8 @@ export async function saveGeneratedImage(jobId: string, index: number, buffer: B
 
 export async function saveReferenceImage(userId: string, buffer: Buffer, mimeType: string): Promise<StoredImage> {
   return localStorageService.saveReferenceImage(userId, buffer, mimeType);
+}
+
+export async function savePaymentProof(userId: string, orderId: string, buffer: Buffer, mimeType: string): Promise<StoredImage> {
+  return localStorageService.savePaymentProof(userId, orderId, buffer, mimeType);
 }

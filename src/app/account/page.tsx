@@ -3,7 +3,7 @@ import { WalletCards } from "lucide-react";
 
 import { AccountBillingPanel } from "@/components/account-billing-panel";
 import { getUserSession } from "@/lib/auth";
-import { getUserBillingOverview } from "@/lib/billing";
+import { getBillingPaymentSettings, getUserBillingOverview } from "@/lib/billing";
 
 export default async function AccountPage() {
   const session = await getUserSession();
@@ -25,7 +25,7 @@ export default async function AccountPage() {
     );
   }
 
-  const overview = await getUserBillingOverview(session.userId);
+  const [overview, paymentSettings] = await Promise.all([getUserBillingOverview(session.userId), getBillingPaymentSettings()]);
 
   return (
     <main className="space-y-5 pb-28">
@@ -42,7 +42,7 @@ export default async function AccountPage() {
         </div>
       </section>
 
-      <AccountBillingPanel balance={overview.balance} packages={overview.packages} initialOrders={overview.orders} />
+      <AccountBillingPanel balance={overview.balance} packages={overview.packages} initialOrders={overview.orders} paymentSettings={paymentSettings} />
     </main>
   );
 }

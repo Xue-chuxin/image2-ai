@@ -248,6 +248,14 @@ model RechargeOrder {
   currency            String              @default("CNY")
   status              RechargeOrderStatus @default(PENDING)
   provider            String              @default("manual")
+  paymentMethod       String              @default("manual_transfer")
+  paymentNote         String?
+  paymentProofUrl     String?
+  paymentProofName    String?
+  paymentProofMimeType String?
+  paymentProofSize    Int?
+  submittedAt         DateTime?
+  adminNote           String?
   paidAt              DateTime?
   expiresAt           DateTime?
   user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -258,6 +266,7 @@ model RechargeOrder {
   @@index([userId, createdAt])
   @@index([status, createdAt])
   @@index([packageId])
+  @@index([submittedAt])
 }
 
 model AppSetting {

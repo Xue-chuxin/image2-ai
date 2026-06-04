@@ -9,7 +9,7 @@ type RouteContext = {
   }>;
 };
 
-export async function POST(_request: Request, context: RouteContext) {
+export async function POST(request: Request, context: RouteContext) {
   const session = await getAdminSession();
   if (!session) {
     return NextResponse.json({ ok: false, error: "请先登录管理员账号。" }, { status: 401 });
@@ -17,7 +17,8 @@ export async function POST(_request: Request, context: RouteContext) {
 
   try {
     const { id } = await context.params;
-    const order = await markRechargeOrderPaidByAdmin(id);
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+    const order = await markRechargeOrderPaidByAdmin(id, typeof body.adminNote === "string" ? body.adminNote : "");
 
     return NextResponse.json({
       ok: true,

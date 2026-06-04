@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CheckCircle2, Edit3, Loader2, Plus, Search } from "lucide-react";
-import type { CreditPackageView, RechargeOrderView } from "@/lib/billing";
+import { CheckCircle2, Edit3, Loader2, Plus, ReceiptText, Save, Search } from "lucide-react";
+import type { BillingPaymentSettings, CreditPackageView, RechargeOrderView } from "@/lib/billing";
 
 type BillingPayload = {
   ok: boolean;
@@ -10,6 +10,7 @@ type BillingPayload = {
   package?: CreditPackageView;
   orders?: RechargeOrderView[];
   order?: RechargeOrderView;
+  settings?: BillingPaymentSettings;
   error?: string;
 };
 
@@ -24,7 +25,7 @@ const statusOptions = [
 function formatCurrency(priceCents: number, currency = "CNY") {
   const value = priceCents / 100;
   if (currency === "CNY") {
-    return `￥${value.toFixed(2).replace(/\.00$/, "")}`;
+    return `¥${value.toFixed(2).replace(/\.00$/, "")}`;
   }
   return `${currency} ${value.toFixed(2)}`;
 }
@@ -68,13 +69,17 @@ function emptyForm() {
 export function AdminBillingDashboard({
   initialPackages,
   initialOrders,
+  initialPaymentSettings,
 }: {
   initialPackages: CreditPackageView[];
   initialOrders: RechargeOrderView[];
+  initialPaymentSettings: BillingPaymentSettings;
 }) {
   const [packages, setPackages] = useState(initialPackages);
   const [orders, setOrders] = useState(initialOrders);
   const [form, setForm] = useState(emptyForm());
+  const [paymentForm, setPaymentForm] = useState(initialPaymentSettings);
+  const [adminNotes, setAdminNotes] = useState<Record<string, string>>({});
   const [status, setStatus] = useState("all");
   const [query, setQuery] = useState("");
   const [pending, setPending] = useState("");
@@ -85,6 +90,7 @@ export function AdminBillingDashboard({
       packages: packages.length,
       activePackages: packages.filter((pkg) => pkg.isActive).length,
       pendingOrders: orders.filter((order) => order.status === "PENDING").length,
+      submittedOrders: orders.filter((order) => order.submittedAt && order.status === "PENDING").length,
       paidAmount: orders.filter((order) => order.status === "PAID").reduce((sum, order) => sum + order.amountCents, 0),
     }),
     [orders, packages],
@@ -133,6 +139,28 @@ export function AdminBillingDashboard({
       setMessage("套餐已保存。");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "保存套餐失败");
+    } finally {
+      setPending("");
+    }
+  }
+
+  async function savePaymentSettings() {
+    setPending("save-payment");
+    setMessage("");
+    try {
+      const payload = await requestJson("/api/admin/billing/settings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(paymentForm),
+      });
+      if (payload.settings) {
+        setPaymentForm(payload.settings);
+      }
+      setMessage("收款配置已保存。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "保存收款配置失败");
     } finally {
       setPending("");
     }
@@ -190,6 +218,12 @@ export function AdminBillingDashboard({
     try {
       const payload = await requestJson(`/api/admin/billing/orders/${orderId}/mark-paid`, {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          adminNote: adminNotes[orderId] || "",
+        }),
       });
       if (payload.order) {
         setOrders((current) => current.map((order) => (order.id === orderId ? payload.order! : order)));
@@ -204,12 +238,13 @@ export function AdminBillingDashboard({
 
   return (
     <section className="space-y-5">
-      <div className="grid gap-3 md:grid-cols-4">
+      <div className="grid gap-3 md:grid-cols-5">
         {[
           ["套餐", stats.packages],
           ["上架", stats.activePackages],
           ["待确认", stats.pendingOrders],
-          ["已到账金额", formatCurrency(stats.paidAmount)],
+          ["已交凭证", stats.submittedOrders],
+          ["到账金额", formatCurrency(stats.paidAmount)],
         ].map(([label, value]) => (
           <div key={label as string} className="rounded-[22px] border border-slate-200 bg-white/88 p-4 shadow-card backdrop-blur">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">{label as string}</p>
@@ -218,7 +253,52 @@ export function AdminBillingDashboard({
         ))}
       </div>
 
-      <section className="grid gap-5 lg:grid-cols-[.85fr_1.15fr]">
+      {message ? <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-600">{message}</p> : null}
+
+      <section className="grid gap-5 lg:grid-cols-[.9fr_1.1fr]">
+        <div className="rounded-[28px] border border-slate-200 bg-white/90 p-5 shadow-card backdrop-blur">
+          <div className="mb-4">
+            <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-400">Payment</p>
+            <h2 className="mt-1 text-2xl font-black text-slate-950">收款配置</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-500">用户创建订单后，会看到这里配置的收款说明和二维码。</p>
+          </div>
+          <div className="space-y-3">
+            <label className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700">
+              开启充值通道
+              <input type="checkbox" checked={paymentForm.paymentEnabled} onChange={(event) => setPaymentForm((current) => ({ ...current, paymentEnabled: event.target.checked }))} />
+            </label>
+            {[
+              ["paymentTitle", "收款标题", "人工充值"],
+              ["paymentReceiverName", "收款方", "例如：某某工作室"],
+              ["paymentReceiverAccount", "收款账号", "例如：微信号 / 支付宝账号 / 银行卡尾号"],
+              ["paymentQrUrl", "收款二维码 URL", "例如：/uploads/payments/qrcode.png"],
+            ].map(([key, label, placeholder]) => (
+              <label key={key} className="block">
+                <span className="text-sm font-bold text-slate-700">{label}</span>
+                <input
+                  value={paymentForm[key as keyof BillingPaymentSettings] as string}
+                  onChange={(event) => setPaymentForm((current) => ({ ...current, [key]: event.target.value }))}
+                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-ocean-300"
+                  placeholder={placeholder}
+                />
+              </label>
+            ))}
+            <label className="block">
+              <span className="text-sm font-bold text-slate-700">支付说明</span>
+              <textarea
+                value={paymentForm.paymentInstructions}
+                onChange={(event) => setPaymentForm((current) => ({ ...current, paymentInstructions: event.target.value }))}
+                rows={5}
+                className="mt-2 w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold leading-6 text-slate-700 outline-none focus:border-ocean-300"
+              />
+            </label>
+            <button type="button" onClick={savePaymentSettings} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white">
+              {pending === "save-payment" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              保存收款配置
+            </button>
+          </div>
+        </div>
+
         <div className="rounded-[28px] border border-slate-200 bg-white/90 p-5 shadow-card backdrop-blur">
           <div className="mb-4 flex items-center justify-between">
             <div>
@@ -229,7 +309,7 @@ export function AdminBillingDashboard({
               清空
             </button>
           </div>
-          <div className="space-y-3">
+          <div className="grid gap-3 md:grid-cols-2">
             {[
               ["name", "套餐名称", "入门包"],
               ["description", "描述", "适合轻量体验"],
@@ -248,23 +328,17 @@ export function AdminBillingDashboard({
                 />
               </label>
             ))}
-            <label className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700">
+            <label className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 md:col-span-2">
               上架套餐
               <input type="checkbox" checked={form.isActive} onChange={(event) => setForm((current) => ({ ...current, isActive: event.target.checked }))} />
             </label>
-            <button type="button" onClick={() => savePackage()} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white">
+            <button type="button" onClick={() => savePackage()} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white md:col-span-2">
               {pending === "save-package" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
               保存套餐
             </button>
           </div>
-        </div>
 
-        <div className="rounded-[28px] border border-slate-200 bg-white/90 p-5 shadow-card backdrop-blur">
-          <div className="mb-4">
-            <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-400">Packages</p>
-            <h2 className="mt-1 text-2xl font-black text-slate-950">套餐列表</h2>
-          </div>
-          <div className="grid gap-3">
+          <div className="mt-5 grid gap-3">
             {packages.map((pkg) => (
               <article key={pkg.id} className="rounded-[22px] border border-slate-200 bg-slate-50/80 p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -329,7 +403,7 @@ export function AdminBillingDashboard({
                   }
                 }}
                 className="w-full bg-transparent text-sm font-bold text-slate-700 outline-none placeholder:text-slate-400"
-                placeholder="订单号、邮箱、套餐"
+                placeholder="订单号、邮箱、套餐、备注"
               />
             </label>
             <button type="button" onClick={() => loadOrders(status, query)} className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white">
@@ -337,8 +411,6 @@ export function AdminBillingDashboard({
             </button>
           </div>
         </div>
-
-        {message ? <p className="mb-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-600">{message}</p> : null}
 
         <div className="grid gap-3">
           {orders.map((order) => (
@@ -349,22 +421,45 @@ export function AdminBillingDashboard({
                     <span className={`rounded-full border px-3 py-1 text-xs font-black ${statusClass(order.status)}`}>{statusLabel(order.status)}</span>
                     <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-black text-slate-500">{order.orderNo}</span>
                     <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-black text-slate-500">{order.userEmail || order.userId}</span>
+                    {order.submittedAt ? <span className="rounded-full border border-ocean-100 bg-ocean-50 px-3 py-1 text-xs font-black text-ocean-700">已交凭证</span> : null}
                   </div>
                   <h3 className="mt-3 text-lg font-black text-slate-950">{order.packageNameSnapshot}</h3>
                   <p className="mt-1 text-sm font-bold text-slate-500">
                     {order.totalCredits} 积分 · {formatCurrency(order.amountCents, order.currency)} · {new Date(order.createdAt).toLocaleString("zh-CN")}
                   </p>
+                  <div className="mt-3 grid gap-2 text-sm font-bold text-slate-500">
+                    <p>支付方式：{order.paymentMethod || "manual_transfer"}</p>
+                    {order.paymentNote ? <p>用户备注：{order.paymentNote}</p> : null}
+                    {order.paymentProofUrl ? (
+                      <a href={order.paymentProofUrl} target="_blank" rel="noreferrer" className="inline-flex w-fit items-center gap-2 rounded-full border border-ocean-100 bg-white px-3 py-2 text-xs font-black text-ocean-700">
+                        <ReceiptText className="h-4 w-4" />
+                        查看付款凭证
+                      </a>
+                    ) : (
+                      <p className="text-amber-600">用户尚未提交付款截图</p>
+                    )}
+                    {order.adminNote ? <p>后台备注：{order.adminNote}</p> : null}
+                  </div>
                 </div>
                 {order.status === "PENDING" ? (
-                  <button
-                    type="button"
-                    disabled={pending === `paid:${order.id}`}
-                    onClick={() => markPaid(order.id)}
-                    className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white disabled:opacity-60"
-                  >
-                    {pending === `paid:${order.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                    人工确认到账
-                  </button>
+                  <div className="grid min-w-64 gap-2">
+                    <textarea
+                      value={adminNotes[order.id] || ""}
+                      onChange={(event) => setAdminNotes((current) => ({ ...current, [order.id]: event.target.value }))}
+                      rows={3}
+                      className="resize-none rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm font-bold text-slate-700 outline-none"
+                      placeholder="后台备注，可选"
+                    />
+                    <button
+                      type="button"
+                      disabled={pending === `paid:${order.id}`}
+                      onClick={() => markPaid(order.id)}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white disabled:opacity-60"
+                    >
+                      {pending === `paid:${order.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                      确认到账
+                    </button>
+                  </div>
                 ) : null}
               </div>
             </article>

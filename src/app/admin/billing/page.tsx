@@ -2,11 +2,11 @@ import Link from "next/link";
 
 import { AdminBillingDashboard } from "@/components/admin/admin-billing-dashboard";
 import { requireAdmin } from "@/lib/auth";
-import { listAdminCreditPackages, listAdminRechargeOrders } from "@/lib/billing";
+import { getBillingPaymentSettings, listAdminCreditPackages, listAdminRechargeOrders } from "@/lib/billing";
 
 export default async function AdminBillingPage() {
   const session = await requireAdmin();
-  const [packages, orders] = await Promise.all([listAdminCreditPackages(), listAdminRechargeOrders({ limit: 80 })]);
+  const [packages, orders, paymentSettings] = await Promise.all([listAdminCreditPackages(), listAdminRechargeOrders({ limit: 80 }), getBillingPaymentSettings()]);
 
   return (
     <main className="space-y-5 pb-28">
@@ -32,7 +32,7 @@ export default async function AdminBillingPage() {
         </div>
       </section>
 
-      <AdminBillingDashboard initialPackages={packages} initialOrders={orders} />
+      <AdminBillingDashboard initialPackages={packages} initialOrders={orders} initialPaymentSettings={paymentSettings} />
     </main>
   );
 }
