@@ -37,10 +37,78 @@ type ExtractedImage = {
   mimeType: string;
 };
 
+type ImageCandidate = {
+  src: string;
+  width: number;
+  height: number;
+};
+
 let sharedContext: BrowserContext | null = null;
 let sharedPage: Page | null = null;
+
 const CHATGPT_URL = "https://chatgpt.com/";
 const execFileAsync = promisify(execFile);
+
+const zh = {
+  disabled: "\u540e\u53f0\u672a\u542f\u7528 ChatGPT Web \u672c\u673a\u6d4f\u89c8\u5668\u901a\u9053\u3002",
+  noPrompt: "\u8bf7\u8f93\u5165\u751f\u56fe\u63d0\u793a\u8bcd\u3002",
+  browserStartFailed: "\u542f\u52a8\u672c\u673a\u6d4f\u89c8\u5668\u5931\u8d25\u3002",
+  noChrome: "\u672a\u68c0\u6d4b\u5230\u672c\u673a Google Chrome \u53ef\u6267\u884c\u6587\u4ef6\u3002",
+  launchFailed: "\u6ca1\u6709\u542f\u52a8\u53ef\u7528\u7684 Google Chrome \u6216 Edge\u3002",
+  pageNotNavigated: "Chrome \u5df2\u6253\u5f00\uff0c\u4f46\u6ca1\u6709\u8df3\u8f6c\u5230 ChatGPT\u3002",
+  loginRequired: "ChatGPT \u5c1a\u672a\u767b\u5f55\uff0c\u8bf7\u5230\u540e\u53f0\u6253\u5f00\u767b\u5f55\u6d4f\u89c8\u5668\u5e76\u5b8c\u6210\u767b\u5f55\u3002",
+  noComposer: "\u6ca1\u6709\u627e\u5230 ChatGPT \u8f93\u5165\u6846\uff0c\u8bf7\u786e\u8ba4\u9875\u9762\u5df2\u767b\u5f55\u5e76\u505c\u7559\u5728 ChatGPT \u9996\u9875\u3002",
+  typeFailed: "\u627e\u5230\u4e86 ChatGPT \u8f93\u5165\u533a\uff0c\u4f46\u65e0\u6cd5\u5199\u5165\u63d0\u793a\u8bcd\u3002",
+  sendFailed: "\u63d0\u793a\u8bcd\u5df2\u5199\u5165\uff0c\u4f46\u6ca1\u6709\u627e\u5230\u53ef\u7528\u7684\u53d1\u9001\u6309\u94ae\u3002",
+  timeout: "\u7b49\u5f85 ChatGPT \u751f\u6210\u56fe\u7247\u8d85\u65f6\u3002",
+  noImage: "ChatGPT \u9875\u9762\u6ca1\u6709\u68c0\u6d4b\u5230\u53ef\u4fdd\u5b58\u7684\u751f\u6210\u56fe\u7247\u3002",
+  readImageFailed: "\u8bfb\u53d6\u56fe\u7247\u5931\u8d25",
+  loggedIn: "ChatGPT \u5df2\u767b\u5f55\uff0c\u53ef\u4ee5\u5f00\u59cb\u4f7f\u7528\u3002",
+  loginBrowserOpened: "\u6d4f\u89c8\u5668\u5df2\u6253\u5f00\uff0c\u8bf7\u5148\u5728\u9875\u9762\u4e2d\u767b\u5f55 ChatGPT\u3002",
+  ready: "ChatGPT \u5df2\u767b\u5f55\uff0c\u53ef\u4ee5\u751f\u6210\u56fe\u7247\u3002",
+  notEnabledStatus: "\u540e\u53f0\u672a\u542f\u7528 ChatGPT Web \u672c\u673a\u6d4f\u89c8\u5668\u901a\u9053\u3002",
+};
+
+function normalizeMimeType(value: string): GeneratedImagePayload["mimeType"] {
+  if (value.includes("jpeg") || value.includes("jpg")) {
+    return "image/jpeg";
+  }
+
+  if (value.includes("webp")) {
+    return "image/webp";
+  }
+
+  return "image/png";
+}
+
+function normalizeCount(imageCount?: number) {
+  return Math.min(Math.max(Math.floor(Number(imageCount || 1)), 1), 4);
+}
+
+function buildPrompt(request: ImageGenerationRequest) {
+  const prompt = (request.promptZh || request.promptEn || "").trim();
+  if (!prompt) {
+    throw new Error(zh.noPrompt);
+  }
+
+  const parts = [
+    "Please generate an image directly from the following brief. Do not reply with text only.",
+    `Main brief: ${prompt}`,
+    request.promptEn?.trim() ? `English reference prompt: ${request.promptEn.trim()}` : "",
+    request.negativePrompt?.trim() ? `Avoid: ${request.negativePrompt.trim()}` : "",
+    `Aspect ratio: ${request.ratio || "1:1"}`,
+    `Quality: ${request.quality || "standard"}`,
+    `Count: ${normalizeCount(request.imageCount)} image(s)`,
+  ];
+
+  return parts.filter(Boolean).join("\n");
+}
+
+function assertEnabled(config: ChatGPTWebRuntimeConfig) {
+  if (!config.enabled) {
+    throw new ChatGPTWebError("CHATGPT_WEB_DISABLED", zh.disabled);
+  }
+}
 
 async function fileExists(filePath: string) {
   try {
@@ -100,49 +168,17 @@ Get-CimInstance Win32_Process |
   ).catch(() => null);
 }
 
-function assertEnabled(config: ChatGPTWebRuntimeConfig) {
-  if (!config.enabled) {
-    throw new ChatGPTWebError("CHATGPT_WEB_DISABLED", "后台未启用 ChatGPT Web 本机浏览器通道。");
-  }
-}
-
-function normalizeMimeType(value: string): GeneratedImagePayload["mimeType"] {
-  if (value.includes("jpeg") || value.includes("jpg")) {
-    return "image/jpeg";
-  }
-
-  if (value.includes("webp")) {
-    return "image/webp";
-  }
-
-  return "image/png";
-}
-
-function buildPrompt(request: ImageGenerationRequest) {
-  const prompt = (request.promptZh || request.promptEn || "").trim();
-  if (!prompt) {
-    throw new Error("请输入生图提示词。");
-  }
-
-  const parts = [
-    "请根据下面的描述直接生成图片，不要只回复文字。",
-    `画面描述：${prompt}`,
-    request.promptEn?.trim() ? `英文参考提示词：${request.promptEn.trim()}` : "",
-    request.negativePrompt?.trim() ? `需要避免：${request.negativePrompt.trim()}` : "",
-    `画面比例：${request.ratio || "1:1"}`,
-    `质量要求：${request.quality || "standard"}`,
-    `张数：${Math.min(Math.max(Math.floor(Number(request.imageCount || 1)), 1), 4)} 张`,
-  ];
-
-  return parts.filter(Boolean).join("\n");
-}
-
 async function launchPersistentContext(config: ChatGPTWebRuntimeConfig, forceHeaded = false) {
   await mkdir(config.userDataDir, { recursive: true });
   await closeExistingProfileBrowsers(config.userDataDir);
+
   const { chromium } = await import("playwright");
   const headless = forceHeaded ? false : config.headless;
-  const args = ["--disable-blink-features=AutomationControlled"];
+  const args = [
+    "--disable-blink-features=AutomationControlled",
+    "--disable-session-crashed-bubble",
+    "--disable-restore-session-state",
+  ];
   const chromeExecutablePath = await findChromeExecutablePath();
   const launchErrors: string[] = [];
 
@@ -155,10 +191,10 @@ async function launchPersistentContext(config: ChatGPTWebRuntimeConfig, forceHea
         viewport: { width: 1440, height: 1000 },
       });
     } catch (error) {
-      launchErrors.push(`Chrome 路径 ${chromeExecutablePath} 启动失败：${error instanceof Error ? error.message : String(error)}`);
+      launchErrors.push(`Chrome executable ${chromeExecutablePath} failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   } else {
-    launchErrors.push("未检测到本机 Google Chrome 可执行文件。");
+    launchErrors.push(zh.noChrome);
   }
 
   try {
@@ -169,22 +205,24 @@ async function launchPersistentContext(config: ChatGPTWebRuntimeConfig, forceHea
       viewport: { width: 1440, height: 1000 },
     });
   } catch (error) {
-    launchErrors.push(`Playwright chrome channel 启动失败：${error instanceof Error ? error.message : String(error)}`);
-    try {
-      return await chromium.launchPersistentContext(config.userDataDir, {
-        channel: "msedge",
-        headless,
-        args,
-        viewport: { width: 1440, height: 1000 },
-      });
-    } catch (edgeError) {
-      launchErrors.push(`Playwright msedge channel 启动失败：${edgeError instanceof Error ? edgeError.message : String(edgeError)}`);
-      throw new ChatGPTWebError(
-        "CHATGPT_WEB_BROWSER_FAILED",
-        `没有启动可用的 Google Chrome 或 Edge。Profile 路径：${config.userDataDir}。详细原因：${launchErrors.join(" | ")}`,
-      );
-    }
+    launchErrors.push(`Playwright chrome channel failed: ${error instanceof Error ? error.message : String(error)}`);
   }
+
+  try {
+    return await chromium.launchPersistentContext(config.userDataDir, {
+      channel: "msedge",
+      headless,
+      args,
+      viewport: { width: 1440, height: 1000 },
+    });
+  } catch (error) {
+    launchErrors.push(`Playwright msedge channel failed: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
+  throw new ChatGPTWebError(
+    "CHATGPT_WEB_BROWSER_FAILED",
+    `${zh.launchFailed} Profile: ${config.userDataDir}. Details: ${launchErrors.join(" | ")}`,
+  );
 }
 
 async function getSharedContext(config: ChatGPTWebRuntimeConfig, forceHeaded = false) {
@@ -204,10 +242,7 @@ async function getSharedContext(config: ChatGPTWebRuntimeConfig, forceHeaded = f
       throw error;
     }
 
-    throw new ChatGPTWebError(
-      "CHATGPT_WEB_BROWSER_FAILED",
-      error instanceof Error ? error.message : "启动本机浏览器失败。",
-    );
+    throw new ChatGPTWebError("CHATGPT_WEB_BROWSER_FAILED", error instanceof Error ? error.message : zh.browserStartFailed);
   }
 }
 
@@ -241,22 +276,23 @@ async function gotoChatGPT(page: Page, timeoutMs: number) {
       timeout,
     });
   } catch {
-    // Some locally installed Chrome builds can open a controlled page but fail the first Playwright goto.
-    // In that case, drive the navigation from inside the page so the visible tab does not stay on about:blank.
+    // Fall through to in-page navigation.
   }
 
   if (isChatGPTNavigationTarget(page.url())) {
     return;
   }
 
-  await page.evaluate((url) => {
-    window.location.href = url;
-  }, CHATGPT_URL).catch(() => null);
+  await page
+    .evaluate((url) => {
+      window.location.href = url;
+    }, CHATGPT_URL)
+    .catch(() => null);
 
   await page.waitForURL((url) => isChatGPTNavigationTarget(url.href), { timeout }).catch(() => null);
 
   if (!isChatGPTNavigationTarget(page.url())) {
-    throw new ChatGPTWebError("CHATGPT_WEB_BROWSER_FAILED", `Chrome 已打开，但没有跳转到 ChatGPT，当前页面是 ${page.url()}。`);
+    throw new ChatGPTWebError("CHATGPT_WEB_BROWSER_FAILED", `${zh.pageNotNavigated} Current URL: ${page.url()}`);
   }
 }
 
@@ -266,173 +302,331 @@ async function isLoggedIn(page: Page) {
     return false;
   }
 
-  const loginButtons = await page
-    .locator('a[href*="/auth/login"], button:has-text("Log in"), button:has-text("登录"), button:has-text("Sign up")')
-    .count()
-    .catch(() => 0);
-
+  const loginButtons = await page.locator('a[href*="/auth/login"], button:has-text("Log in"), button:has-text("Sign up")').count().catch(() => 0);
   if (loginButtons > 0) {
     return false;
   }
 
   const composerCount = await page
-    .locator('textarea, div[contenteditable="true"], [data-testid="composer-root"]')
+    .locator('textarea[name="prompt-textarea"], [data-testid="composer-root"], div[contenteditable="true"]')
     .count()
     .catch(() => 0);
 
   return composerCount > 0;
 }
 
-async function getLargeImageSrcs(page: Page) {
+async function getImageCandidates(page: Page) {
   return page.evaluate(() => {
-    const images = Array.from(document.querySelectorAll("main img")) as HTMLImageElement[];
+    const images = Array.from(document.querySelectorAll("img")) as HTMLImageElement[];
     return images
-      .filter((image) => image.naturalWidth >= 256 && image.naturalHeight >= 256 && image.src)
-      .map((image) => image.src);
-  });
+      .map((image) => ({
+        src: image.currentSrc || image.src,
+        width: image.naturalWidth || image.width,
+        height: image.naturalHeight || image.height,
+      }))
+      .filter((image) => image.src && image.width >= 256 && image.height >= 256);
+  }) as Promise<ImageCandidate[]>;
 }
 
-async function findVisibleLocator(page: Page, selector: string): Promise<Locator | null> {
-  const locator = page.locator(selector);
+function candidateKey(candidate: ImageCandidate) {
+  return `${candidate.src}|${candidate.width}x${candidate.height}`;
+}
+
+async function locatorHasBox(locator: Locator) {
+  const box = await locator.boundingBox().catch(() => null);
+  return Boolean(box && box.width > 8 && box.height > 8);
+}
+
+async function clickLocator(locator: Locator) {
+  await locator.scrollIntoViewIfNeeded({ timeout: 2000 }).catch(() => null);
+  try {
+    await locator.click({ timeout: 3000 });
+    return true;
+  } catch {
+    const box = await locator.boundingBox().catch(() => null);
+    if (!box) {
+      return false;
+    }
+
+    const page = locator.page();
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    return true;
+  }
+}
+
+async function clickLastUsable(locator: Locator) {
   const count = await locator.count().catch(() => 0);
 
   for (let index = count - 1; index >= 0; index -= 1) {
     const candidate = locator.nth(index);
-    const isUsable = await candidate
-      .evaluate((node) => {
-        const element = node as HTMLElement;
-        const rect = element.getBoundingClientRect();
-        const style = window.getComputedStyle(element);
-
-        return (
-          rect.width > 4 &&
-          rect.height > 4 &&
-          style.display !== "none" &&
-          style.visibility !== "hidden" &&
-          style.pointerEvents !== "none" &&
-          element.getAttribute("aria-hidden") !== "true" &&
-          !(element as HTMLInputElement | HTMLTextAreaElement).disabled
-        );
-      })
-      .catch(() => false);
-
-    if (isUsable) {
-      return candidate;
+    if (await locatorHasBox(candidate)) {
+      if (await clickLocator(candidate)) {
+        return true;
+      }
     }
   }
 
-  return null;
+  return false;
 }
 
-async function findComposer(page: Page) {
-  const textTargets = [
-    page.getByText("有问题，尽管问").last(),
-    page.getByText("Message ChatGPT").last(),
-    page.getByLabel("与 ChatGPT 聊天").last(),
-    page.getByLabel("Message ChatGPT").last(),
+async function focusComposer(page: Page) {
+  await page.keyboard.press("Escape").catch(() => null);
+
+  const candidates = [
+    page.locator('[data-testid="composer-root"] div[contenteditable="true"]'),
+    page.locator('[data-testid="composer-root"]'),
+    page.locator('form:has(textarea[name="prompt-textarea"])'),
+    page.locator('div[contenteditable="true"][role="textbox"]'),
+    page.locator('div[contenteditable="plaintext-only"]'),
+    page.locator('div[contenteditable="true"]'),
+    page.locator('textarea[name="prompt-textarea"]'),
+    page.locator('textarea[aria-label*="ChatGPT"]'),
+    page.locator('main form'),
+    page.getByText(/\u6709\u95ee\u9898/),
+    page.getByText(/Message ChatGPT/i),
   ];
 
-  for (const locator of textTargets) {
-    if (await locator.isVisible().catch(() => false)) {
-      return locator;
+  for (const locator of candidates) {
+    if (await clickLastUsable(locator)) {
+      return true;
     }
   }
 
-  const selectors = [
-    '[data-testid="composer-root"] div[contenteditable="true"]',
-    '[data-testid="composer-root"]',
-    'form:has(textarea[name="prompt-textarea"])',
-    'form:has([contenteditable="true"])',
-    'div[contenteditable="true"][role="textbox"]',
-    'div[contenteditable="plaintext-only"]',
-    'div[contenteditable="true"]',
-    'textarea[placeholder*="有问题"]:not(.wcDTda_fallbackTextarea)',
-    'textarea[name="prompt-textarea"]:not(.wcDTda_fallbackTextarea)',
-    'textarea[aria-label*="ChatGPT"]:not(.wcDTda_fallbackTextarea)',
-    'textarea[placeholder*="Message"]',
-    'textarea[placeholder*="消息"]',
-    'main form',
-    'textarea:not(.wcDTda_fallbackTextarea)',
-  ];
+  const clickedByDom = await page
+    .evaluate(() => {
+      const selectors = [
+        '[data-testid="composer-root"]',
+        'form:has(textarea[name="prompt-textarea"])',
+        'textarea[name="prompt-textarea"]',
+        'main form',
+      ];
 
-  for (const selector of selectors) {
-    const locator = await findVisibleLocator(page, selector);
-    if (locator) {
-      return locator;
-    }
-  }
+      for (const selector of selectors) {
+        const element = document.querySelector(selector) as HTMLElement | null;
+        const target = element?.closest("form") || element;
+        if (!target) {
+          continue;
+        }
 
-  const textbox = await findVisibleLocator(page, '[role="textbox"]');
-  if (textbox) {
-    return textbox;
-  }
+        const rect = target.getBoundingClientRect();
+        if (rect.width <= 8 || rect.height <= 8) {
+          continue;
+        }
 
-  throw new ChatGPTWebError("CHATGPT_WEB_BROWSER_FAILED", "没有找到 ChatGPT 输入框，可能是页面结构已变化。");
+        const clickTarget = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2) as HTMLElement | null;
+        (clickTarget || target).click();
+        (clickTarget || target).focus();
+        return true;
+      }
+
+      return false;
+    })
+    .catch(() => false);
+
+  return clickedByDom;
 }
 
-async function submitPrompt(page: Page, prompt: string) {
-  const composer = await findComposer(page);
-  await composer.click({ timeout: 10000 });
+async function forceSetComposerText(page: Page, prompt: string) {
+  return page
+    .evaluate((text) => {
+      function isVisible(element: Element) {
+        const htmlElement = element as HTMLElement;
+        const rect = htmlElement.getBoundingClientRect();
+        const style = window.getComputedStyle(htmlElement);
+        return rect.width > 4 && rect.height > 4 && style.display !== "none" && style.visibility !== "hidden";
+      }
+
+      const editors = Array.from(document.querySelectorAll('[contenteditable="true"], [contenteditable="plaintext-only"]')) as HTMLElement[];
+      const editor = editors.reverse().find(isVisible);
+      if (editor) {
+        editor.focus();
+        document.execCommand("selectAll", false);
+        document.execCommand("insertText", false, text);
+        editor.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: text }));
+        return true;
+      }
+
+      const textareas = Array.from(document.querySelectorAll("textarea")) as HTMLTextAreaElement[];
+      const textarea = textareas.reverse().find(isVisible) || textareas.find((item) => item.name === "prompt-textarea");
+      if (textarea) {
+        const descriptor = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value");
+        descriptor?.set?.call(textarea, text);
+        textarea.dispatchEvent(new Event("input", { bubbles: true }));
+        textarea.dispatchEvent(new Event("change", { bubbles: true }));
+        textarea.focus();
+        return true;
+      }
+
+      return false;
+    }, prompt)
+    .catch(() => false);
+}
+
+async function composerHasPrompt(page: Page, prompt: string) {
+  const needle = prompt.trim().slice(0, 12);
+  if (!needle) {
+    return false;
+  }
+
+  return page
+    .evaluate((value) => {
+      const active = document.activeElement as HTMLInputElement | HTMLTextAreaElement | HTMLElement | null;
+      const activeValue = "value" in (active || {}) ? String((active as HTMLInputElement | HTMLTextAreaElement).value || "") : active?.textContent || "";
+      const textareas = Array.from(document.querySelectorAll("textarea")) as HTMLTextAreaElement[];
+      const editors = Array.from(document.querySelectorAll('[contenteditable="true"], [contenteditable="plaintext-only"]')) as HTMLElement[];
+      const allText = [activeValue, ...textareas.map((item) => item.value), ...editors.map((item) => item.textContent || "")].join("\n");
+      return allText.includes(value);
+    }, needle)
+    .catch(() => false);
+}
+
+async function typePrompt(page: Page, prompt: string) {
+  if (!(await focusComposer(page))) {
+    throw new ChatGPTWebError("CHATGPT_WEB_BROWSER_FAILED", zh.noComposer);
+  }
 
   await page.keyboard.press(process.platform === "darwin" ? "Meta+A" : "Control+A").catch(() => null);
   await page.keyboard.press("Backspace").catch(() => null);
   await page.keyboard.insertText(prompt);
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(500);
 
-  const sendButtonSelectors = [
-    'button[data-testid="send-button"]',
-    'button[aria-label*="Send"]',
-    'button[aria-label*="发送"]',
-  ];
+  if (await composerHasPrompt(page, prompt)) {
+    return;
+  }
 
-  for (const selector of sendButtonSelectors) {
-    const button = page.locator(selector).last();
-    if (await button.isVisible().catch(() => false)) {
-      await button.click();
+  if (await forceSetComposerText(page, prompt)) {
+    await page.waitForTimeout(500);
+    if (await composerHasPrompt(page, prompt)) {
       return;
     }
   }
 
-  await page.keyboard.press("Enter");
+  throw new ChatGPTWebError("CHATGPT_WEB_BROWSER_FAILED", zh.typeFailed);
 }
 
-async function waitForGeneratedImages(page: Page, previousSrcs: string[], imageCount: number, timeoutMs: number) {
-  try {
-    await page.waitForFunction(
-      ({ previous, expectedCount }) => {
-        const previousSet = new Set(previous);
-        const images = Array.from(document.querySelectorAll("main img")) as HTMLImageElement[];
-        const generated = images.filter(
-          (image) => image.naturalWidth >= 256 && image.naturalHeight >= 256 && image.src && !previousSet.has(image.src),
-        );
-        return generated.length >= expectedCount;
-      },
-      { previous: previousSrcs, expectedCount: imageCount },
-      { timeout: timeoutMs },
-    );
-  } catch {
-    throw new ChatGPTWebError("CHATGPT_WEB_TIMEOUT", "等待 ChatGPT 生成图片超时。");
+async function clickGenerateImageTool(page: Page) {
+  const toolButtons = [
+    page.getByRole("button", { name: /\u751f\u6210\u56fe\u7247/ }),
+    page.getByText(/\u751f\u6210\u56fe\u7247/),
+    page.getByRole("button", { name: /Create image|Generate image/i }),
+  ];
+
+  for (const locator of toolButtons) {
+    if (await clickLastUsable(locator)) {
+      await page.waitForTimeout(300);
+      return;
+    }
   }
 }
 
-async function extractGeneratedImages(page: Page, previousSrcs: string[], imageCount: number) {
+async function clickSendButton(page: Page) {
+  const selectors = [
+    'button[data-testid="send-button"]',
+    'button[aria-label*="Send"]',
+    'button[aria-label*="\u53d1\u9001"]',
+    'button:has(svg)',
+  ];
+
+  for (const selector of selectors) {
+    const clicked = await page
+      .locator(selector)
+      .evaluateAll((buttons) => {
+        const visibleButtons = buttons
+          .map((button) => button as HTMLButtonElement)
+          .filter((button) => {
+            const rect = button.getBoundingClientRect();
+            const label = `${button.getAttribute("aria-label") || ""} ${button.textContent || ""}`.toLowerCase();
+            const disabled = button.disabled || button.getAttribute("aria-disabled") === "true";
+            const looksLikeSend = label.includes("send") || label.includes("\u53d1\u9001") || button.getAttribute("data-testid") === "send-button";
+            return !disabled && rect.width > 8 && rect.height > 8 && looksLikeSend;
+          });
+
+        const target = visibleButtons[visibleButtons.length - 1];
+        if (!target) {
+          return false;
+        }
+
+        target.click();
+        return true;
+      })
+      .catch(() => false);
+
+    if (clicked) {
+      return true;
+    }
+  }
+
+  await page.keyboard.press("Enter").catch(() => null);
+  await page.waitForTimeout(800);
+  return true;
+}
+
+async function submitPrompt(page: Page, prompt: string) {
+  await clickGenerateImageTool(page).catch(() => null);
+  await typePrompt(page, prompt);
+  if (!(await clickSendButton(page))) {
+    throw new ChatGPTWebError("CHATGPT_WEB_BROWSER_FAILED", zh.sendFailed);
+  }
+}
+
+async function waitForGeneratedImages(page: Page, previous: ImageCandidate[], imageCount: number, timeoutMs: number) {
+  const previousKeys = previous.map(candidateKey);
+
+  try {
+    await page.waitForFunction(
+      ({ keys, expectedCount }) => {
+        const previousSet = new Set(keys);
+        const images = Array.from(document.querySelectorAll("img")) as HTMLImageElement[];
+        const generated = images.filter((image) => {
+          const src = image.currentSrc || image.src;
+          const width = image.naturalWidth || image.width;
+          const height = image.naturalHeight || image.height;
+          const key = `${src}|${width}x${height}`;
+          return src && width >= 256 && height >= 256 && !previousSet.has(key);
+        });
+        return generated.length >= expectedCount;
+      },
+      { keys: previousKeys, expectedCount: imageCount },
+      { timeout: timeoutMs },
+    );
+  } catch {
+    throw new ChatGPTWebError("CHATGPT_WEB_TIMEOUT", zh.timeout);
+  }
+}
+
+async function extractGeneratedImages(page: Page, previous: ImageCandidate[], imageCount: number) {
+  const previousKeys = previous.map(candidateKey);
   const extracted = await page.evaluate(
-    async ({ previous, count }) => {
-      const previousSet = new Set(previous);
-      const images = Array.from(document.querySelectorAll("main img")) as HTMLImageElement[];
-      const candidates = images.filter(
-        (image) => image.naturalWidth >= 256 && image.naturalHeight >= 256 && image.src && !previousSet.has(image.src),
-      );
-      const uniqueSrcs = Array.from(new Set(candidates.map((image) => image.src))).slice(-count);
+    async ({ keys, count, readImageFailed }) => {
+      const previousSet = new Set(keys);
+      const images = Array.from(document.querySelectorAll("img")) as HTMLImageElement[];
+      const candidates = images.filter((image) => {
+        const src = image.currentSrc || image.src;
+        const width = image.naturalWidth || image.width;
+        const height = image.naturalHeight || image.height;
+        const key = `${src}|${width}x${height}`;
+        return src && width >= 256 && height >= 256 && !previousSet.has(key);
+      });
+
+      const uniqueSrcs = Array.from(new Set(candidates.map((image) => image.currentSrc || image.src))).slice(-count);
       const output: Array<{ base64: string; mimeType: string }> = [];
 
       for (const src of uniqueSrcs) {
+        if (src.startsWith("data:")) {
+          const [header, base64] = src.split(",", 2);
+          output.push({
+            base64: base64 || "",
+            mimeType: header.match(/^data:(.*?);base64/)?.[1] || "image/png",
+          });
+          continue;
+        }
+
         const response = await fetch(src);
         const blob = await response.blob();
         const base64 = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => resolve(String(reader.result).split(",")[1] || "");
-          reader.onerror = () => reject(new Error("读取图片失败"));
+          reader.onerror = () => reject(new Error(readImageFailed));
           reader.readAsDataURL(blob);
         });
 
@@ -446,7 +640,7 @@ async function extractGeneratedImages(page: Page, previousSrcs: string[], imageC
 
       return output;
     },
-    { previous: previousSrcs, count: imageCount },
+    { keys: previousKeys, count: imageCount, readImageFailed: zh.readImageFailed },
   );
 
   return extracted as ExtractedImage[];
@@ -467,7 +661,7 @@ export async function openChatGPTWebLoginBrowser(): Promise<ChatGPTWebStatus> {
     userDataDir: config.userDataDir,
     headless: false,
     timeoutSeconds: Math.floor(config.timeoutMs / 1000),
-    message: ready ? "ChatGPT 已登录，可以开始使用。" : "浏览器已打开，请先在页面中登录 ChatGPT。",
+    message: ready ? zh.loggedIn : zh.loginBrowserOpened,
   };
 }
 
@@ -480,7 +674,7 @@ export async function checkChatGPTWebStatus(): Promise<ChatGPTWebStatus> {
       userDataDir: config.userDataDir,
       headless: config.headless,
       timeoutSeconds: Math.floor(config.timeoutMs / 1000),
-      message: "后台未启用 ChatGPT Web 本机浏览器通道。",
+      message: zh.notEnabledStatus,
     };
   }
 
@@ -494,7 +688,7 @@ export async function checkChatGPTWebStatus(): Promise<ChatGPTWebStatus> {
     userDataDir: config.userDataDir,
     headless: config.headless,
     timeoutSeconds: Math.floor(config.timeoutMs / 1000),
-    message: ready ? "ChatGPT 已登录，可以生成图片。" : "ChatGPT 尚未登录，请先打开登录浏览器。",
+    message: ready ? zh.ready : zh.loginRequired,
   };
 }
 
@@ -506,17 +700,17 @@ export async function generateWithChatGPTWeb(request: ImageGenerationRequest): P
   await gotoChatGPT(page, config.timeoutMs);
 
   if (!(await isLoggedIn(page))) {
-    throw new ChatGPTWebError("CHATGPT_WEB_LOGIN_REQUIRED", "ChatGPT 尚未登录，请到后台打开登录浏览器并完成登录。");
+    throw new ChatGPTWebError("CHATGPT_WEB_LOGIN_REQUIRED", zh.loginRequired);
   }
 
-  const imageCount = Math.min(Math.max(Math.floor(Number(request.imageCount || 1)), 1), 4);
-  const previousSrcs = await getLargeImageSrcs(page);
+  const imageCount = normalizeCount(request.imageCount);
+  const previousImages = await getImageCandidates(page);
   await submitPrompt(page, buildPrompt(request));
-  await waitForGeneratedImages(page, previousSrcs, imageCount, config.timeoutMs);
+  await waitForGeneratedImages(page, previousImages, imageCount, config.timeoutMs);
 
-  const extracted = await extractGeneratedImages(page, previousSrcs, imageCount);
+  const extracted = await extractGeneratedImages(page, previousImages, imageCount);
   if (!extracted.length) {
-    throw new ChatGPTWebError("CHATGPT_WEB_NO_IMAGE_FOUND", "ChatGPT 页面没有检测到可保存的生成图片。");
+    throw new ChatGPTWebError("CHATGPT_WEB_NO_IMAGE_FOUND", zh.noImage);
   }
 
   return extracted.map((image) => ({
