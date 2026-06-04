@@ -18,8 +18,15 @@ import { getPublicAppSettings, type GenerationProviderName } from "./settings";
 type GeneratedImageRecord = {
   id: string;
   url: string;
+  thumbnailUrl: string | null;
   width: number | null;
   height: number | null;
+  fileSize: number | null;
+  mimeType: string | null;
+  isPublic: boolean;
+  isDeleted: boolean;
+  takenDownAt: string | null;
+  takenDownReason: string | null;
 };
 
 export type GenerationJobView = {
@@ -120,12 +127,31 @@ function serializeJob(job: GenerationJobRecord): GenerationJobView {
     createdAt: serializeDate(job.createdAt),
     updatedAt: serializeDate(job.updatedAt),
     isStale: isStaleJob(job),
-    images: job.images.map((image) => ({
-      id: image.id,
-      url: image.url,
-      width: image.width,
-      height: image.height,
-    })),
+    images: job.images.filter((image) => !(image as typeof image & { isDeleted?: boolean }).isDeleted).map((image) => {
+      const imageRecord = image as typeof image & {
+        thumbnailUrl?: string | null;
+        fileSize?: number | null;
+        mimeType?: string | null;
+        isPublic?: boolean;
+        isDeleted?: boolean;
+        takenDownAt?: Date | null;
+        takenDownReason?: string | null;
+      };
+
+      return {
+        id: imageRecord.id,
+        url: imageRecord.url,
+        thumbnailUrl: imageRecord.thumbnailUrl || null,
+        width: imageRecord.width,
+        height: imageRecord.height,
+        fileSize: imageRecord.fileSize || null,
+        mimeType: imageRecord.mimeType || null,
+        isPublic: Boolean(imageRecord.isPublic),
+        isDeleted: Boolean(imageRecord.isDeleted),
+        takenDownAt: imageRecord.takenDownAt ? serializeDate(imageRecord.takenDownAt) : null,
+        takenDownReason: imageRecord.takenDownReason || null,
+      };
+    }),
   };
 }
 
@@ -278,6 +304,11 @@ export async function executeGenerationJob(jobId: string, userId: string) {
         data: {
           jobId,
           url: storedImage.url,
+          thumbnailUrl: storedImage.thumbnailUrl,
+          width: storedImage.width,
+          height: storedImage.height,
+          fileSize: storedImage.fileSize,
+          mimeType: storedImage.mimeType,
         },
       });
     }

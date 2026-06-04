@@ -1,101 +1,225 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useState } from "react";
-import { Copy, Download, Loader2, RotateCcw, Wand2 } from "lucide-react";
+import { Download, EyeOff, Globe2, RefreshCcw, Send, Trash2 } from "lucide-react";
+import { CopyPromptButton } from "@/components/copy-prompt-button";
 
-type RetryResponse = {
-  ok: boolean;
-  error?: string;
+type HistoryImageActionView = {
+  id: string;
+  url: string;
+  thumbnailUrl?: string | null;
+  isPublic?: boolean;
+  isDeleted?: boolean;
+  takenDownAt?: string | null;
+  takenDownReason?: string | null;
 };
 
-export function HistoryJobActions({
-  jobId,
-  status,
-  promptZh,
-  imageUrl,
-}: {
-  jobId: string;
-  status: string;
-  promptZh: string;
-  imageUrl?: string;
-}) {
-  const [isRetrying, setIsRetrying] = useState(false);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+type HistoryJobActionsProps = {
+  job?: {
+    id?: string;
+    status?: string;
+    promptZh?: string;
+    promptEn?: string | null;
+    negativePrompt?: string | null;
+    ratio?: string;
+    quality?: string;
+    imageCount?: number;
+    images?: HistoryImageActionView[];
+  };
+  jobId?: string;
+  id?: string;
+  status?: string;
+  promptZh?: string;
+  prompt?: string;
+  promptEn?: string | null;
+  negativePrompt?: string | null;
+  ratio?: string;
+  quality?: string;
+  imageCount?: number;
+  images?: HistoryImageActionView[];
+  [key: string]: unknown;
+};
 
-  async function copyPrompt() {
-    await navigator.clipboard.writeText(promptZh);
-    setMessage("提示词已复制。");
-    setError("");
+type ActionPayload = {
+  ok: boolean;
+  error?: string;
+  image?: HistoryImageActionView;
+  job?: unknown;
+};
+
+function buttonClass(tone: "dark" | "light" | "danger" = "light") {
+  if (tone === "dark") {
+    return "inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white";
+  }
+
+  if (tone === "danger") {
+    return "inline-flex items-center justify-center gap-2 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-black text-rose-600";
+  }
+
+  return "inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-600";
+}
+
+export function HistoryJobActions(props: HistoryJobActionsProps) {
+  const job = props.job || {};
+  const jobId = props.jobId || props.id || job.id || "";
+  const status = props.status || job.status || "";
+  const promptZh = props.promptZh || props.prompt || job.promptZh || "";
+  const promptEn = props.promptEn ?? job.promptEn ?? null;
+  const negativePrompt = props.negativePrompt ?? job.negativePrompt ?? null;
+  const ratio = props.ratio || job.ratio || "1:1";
+  const quality = props.quality || job.quality || "standard";
+  const imageCount = props.imageCount || job.imageCount || 1;
+  const [images, setImages] = useState<HistoryImageActionView[]>(props.images || job.images || []);
+  const [message, setMessage] = useState("");
+  const [pending, setPending] = useState("");
+
+  const generateHref = useMemo(() => {
+    const params = new URLSearchParams();
+    if (promptZh) {
+      params.set("prompt", promptZh);
+    }
+    if (promptEn) {
+      params.set("promptEn", promptEn);
+    }
+    if (negativePrompt) {
+      params.set("negativePrompt", negativePrompt);
+    }
+    params.set("ratio", ratio);
+    params.set("quality", quality);
+    params.set("imageCount", String(imageCount));
+    return `/generate?${params.toString()}`;
+  }, [imageCount, negativePrompt, promptEn, promptZh, quality, ratio]);
+
+  async function requestJson(url: string, init: RequestInit) {
+    const response = await fetch(url, init);
+    const payload = (await response.json().catch(() => ({}))) as ActionPayload;
+    if (!response.ok || !payload.ok) {
+      throw new Error(payload.error || "操作失败");
+    }
+    return payload;
   }
 
   async function retryJob() {
-    setIsRetrying(true);
-    setMessage("");
-    setError("");
+    if (!jobId) {
+      return;
+    }
 
+    setPending("retry");
+    setMessage("");
     try {
-      const response = await fetch(`/api/generation/jobs/${jobId}/retry`, {
+      await requestJson(`/api/generation/jobs/${jobId}/retry`, {
         method: "POST",
       });
-      const data = (await response.json()) as RetryResponse;
-
-      if (!response.ok || !data.ok) {
-        throw new Error(data.error || "重试任务失败");
-      }
-
-      setMessage("任务已重新提交，页面即将刷新。");
-      window.setTimeout(() => {
-        window.location.reload();
-      }, 800);
-    } catch (caughtError) {
-      setError(caughtError instanceof Error ? caughtError.message : "重试任务失败");
+      setMessage("已重新提交任务，稍后在记录里查看结果。");
+      window.setTimeout(() => window.location.reload(), 800);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "重试失败");
     } finally {
-      setIsRetrying(false);
+      setPending("");
     }
   }
 
+  async function updateImage(imageId: string, action: "publish" | "unpublish" | "delete") {
+    setPending(`${action}:${imageId}`);
+    setMessage("");
+
+    try {
+      const url = action === "delete" ? `/api/images/${imageId}` : `/api/images/${imageId}/${action}`;
+      const payload = await requestJson(url, {
+        method: action === "delete" ? "DELETE" : "POST",
+      });
+
+      if (payload.image) {
+        setImages((current) =>
+          current.map((image) => {
+            if (image.id !== imageId) {
+              return image;
+            }
+            return {
+              ...image,
+              ...payload.image,
+            };
+          }),
+        );
+      }
+
+      if (action === "publish") {
+        setMessage("作品已发布到首页广场。");
+      } else if (action === "unpublish") {
+        setMessage("已取消发布。");
+      } else {
+        setMessage("作品记录已删除。");
+      }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "操作失败");
+    } finally {
+      setPending("");
+    }
+  }
+
+  const retryable = status === "FAILED" || status === "CANCELED";
+  const visibleImages = images.filter((image) => !image.isDeleted);
+
   return (
-    <div className="mt-4 flex flex-wrap items-center gap-2">
-      {imageUrl ? (
-        <a
-          href={imageUrl}
-          download
-          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-600 shadow-card"
-        >
-          <Download className="h-4 w-4" />
-          下载图片
-        </a>
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        {promptZh ? <CopyPromptButton text={promptZh} label="复制提示词" className={buttonClass("light")} /> : null}
+        <Link href={generateHref} className={buttonClass("light")}>
+          <Send className="h-4 w-4" />
+          再次生成
+        </Link>
+        {retryable ? (
+          <button type="button" onClick={retryJob} disabled={pending === "retry"} className={buttonClass("dark")}>
+            <RefreshCcw className="h-4 w-4" />
+            {pending === "retry" ? "重试中" : "重试失败任务"}
+          </button>
+        ) : null}
+      </div>
+
+      {visibleImages.length > 0 ? (
+        <div className="grid gap-2">
+          {visibleImages.map((image) => {
+            const imagePending = pending.endsWith(`:${image.id}`);
+            const disabledByTakeDown = Boolean(image.takenDownAt);
+
+            return (
+              <div key={image.id} className="rounded-[20px] border border-slate-200 bg-white/80 p-3 shadow-card">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Image</p>
+                    <p className="mt-1 truncate text-sm font-bold text-slate-600">{image.id}</p>
+                    {disabledByTakeDown ? <p className="mt-1 text-xs font-bold text-rose-500">已被后台下架：{image.takenDownReason || "管理员下架"}</p> : null}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <a href={image.url} download className={buttonClass("light")}>
+                      <Download className="h-4 w-4" />
+                      下载
+                    </a>
+                    {image.isPublic ? (
+                      <button type="button" disabled={imagePending} onClick={() => updateImage(image.id, "unpublish")} className={buttonClass("light")}>
+                        <EyeOff className="h-4 w-4" />
+                        取消发布
+                      </button>
+                    ) : (
+                      <button type="button" disabled={imagePending || disabledByTakeDown} onClick={() => updateImage(image.id, "publish")} className={buttonClass("dark")}>
+                        <Globe2 className="h-4 w-4" />
+                        发布广场
+                      </button>
+                    )}
+                    <button type="button" disabled={imagePending} onClick={() => updateImage(image.id, "delete")} className={buttonClass("danger")}>
+                      <Trash2 className="h-4 w-4" />
+                      删除
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       ) : null}
-      <button
-        type="button"
-        onClick={copyPrompt}
-        className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-600 shadow-card"
-      >
-        <Copy className="h-4 w-4" />
-        复制提示词
-      </button>
-      <Link
-        href={`/generate?prompt=${encodeURIComponent(promptZh)}`}
-        className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-600 shadow-card"
-      >
-        <Wand2 className="h-4 w-4" />
-        再次生成
-      </Link>
-      {status === "FAILED" || status === "CANCELED" ? (
-        <button
-          type="button"
-          onClick={retryJob}
-          disabled={isRetrying}
-          className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-card disabled:opacity-60"
-        >
-          {isRetrying ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
-          重试任务
-        </button>
-      ) : null}
-      {message ? <span className="text-xs font-bold text-emerald-600">{message}</span> : null}
-      {error ? <span className="text-xs font-bold text-red-600">{error}</span> : null}
+
+      {message ? <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-600">{message}</p> : null}
     </div>
   );
 }

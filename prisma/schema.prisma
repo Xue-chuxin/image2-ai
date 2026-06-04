@@ -128,14 +128,26 @@ model GenerationJob {
 }
 
 model GeneratedImage {
-  id        String        @id @default(cuid())
-  jobId     String
-  url       String
-  width     Int?
-  height    Int?
-  seed      String?
-  job       GenerationJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  createdAt DateTime      @default(now())
+  id              String        @id @default(cuid())
+  jobId           String
+  url             String
+  thumbnailUrl    String?
+  width           Int?
+  height          Int?
+  fileSize        Int?
+  mimeType        String?
+  seed            String?
+  isPublic        Boolean       @default(false)
+  isDeleted       Boolean       @default(false)
+  publishedAt     DateTime?
+  takenDownAt     DateTime?
+  takenDownReason String?
+  job             GenerationJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  createdAt       DateTime      @default(now())
+
+  @@index([isPublic, createdAt])
+  @@index([isDeleted])
+  @@index([publishedAt])
 }
 
 model CreditAccount {
