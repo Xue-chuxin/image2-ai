@@ -83,7 +83,7 @@ async function launchPersistentContext(config: ChatGPTWebRuntimeConfig, forceHea
 
   try {
     return await chromium.launchPersistentContext(config.userDataDir, {
-      channel: "msedge",
+      channel: "chrome",
       headless,
       args,
       viewport: { width: 1440, height: 1000 },
@@ -91,7 +91,7 @@ async function launchPersistentContext(config: ChatGPTWebRuntimeConfig, forceHea
   } catch {
     try {
       return await chromium.launchPersistentContext(config.userDataDir, {
-        channel: "chrome",
+        channel: "msedge",
         headless,
         args,
         viewport: { width: 1440, height: 1000 },
