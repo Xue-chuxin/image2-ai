@@ -520,42 +520,91 @@ async function clickGenerateImageTool(page: Page) {
 }
 
 async function clickSendButton(page: Page) {
-  const selectors = [
-    'button[data-testid="send-button"]',
-    'button[aria-label*="Send"]',
-    'button[aria-label*="\u53d1\u9001"]',
-    'button:has(svg)',
-  ];
+  const clicked = await page
+    .evaluate(() => {
+      function isVisibleButton(button: HTMLButtonElement) {
+        const rect = button.getBoundingClientRect();
+        const style = window.getComputedStyle(button);
+        const disabled = button.disabled || button.getAttribute("aria-disabled") === "true";
+        return !disabled && rect.width > 8 && rect.height > 8 && style.display !== "none" && style.visibility !== "hidden";
+      }
 
-  for (const selector of selectors) {
-    const clicked = await page
-      .locator(selector)
-      .evaluateAll((buttons) => {
-        const visibleButtons = buttons
-          .map((button) => button as HTMLButtonElement)
-          .filter((button) => {
-            const rect = button.getBoundingClientRect();
-            const label = `${button.getAttribute("aria-label") || ""} ${button.textContent || ""}`.toLowerCase();
-            const disabled = button.disabled || button.getAttribute("aria-disabled") === "true";
-            const looksLikeSend = label.includes("send") || label.includes("\u53d1\u9001") || button.getAttribute("data-testid") === "send-button";
-            return !disabled && rect.width > 8 && rect.height > 8 && looksLikeSend;
-          });
+      function buttonLabel(button: HTMLButtonElement) {
+        return [
+          button.getAttribute("aria-label"),
+          button.getAttribute("title"),
+          button.getAttribute("data-testid"),
+          button.textContent,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+      }
 
-        const target = visibleButtons[visibleButtons.length - 1];
-        if (!target) {
-          return false;
-        }
+      const buttons = Array.from(document.querySelectorAll("button")) as HTMLButtonElement[];
+      const labeledSendButton = buttons
+        .filter(isVisibleButton)
+        .reverse()
+        .find((button) => {
+          const label = buttonLabel(button);
+          return (
+            label.includes("send") ||
+            label.includes("submit") ||
+            label.includes("composer-submit") ||
+            label.includes("\u53d1\u9001") ||
+            label.includes("\u63d0\u4ea4")
+          );
+        });
 
-        target.click();
+      if (labeledSendButton) {
+        labeledSendButton.click();
         return true;
-      })
-      .catch(() => false);
+      }
 
-    if (clicked) {
+      const composer =
+        document.querySelector('[data-testid="composer-root"]')?.closest("form") ||
+        document.querySelector('textarea[name="prompt-textarea"]')?.closest("form") ||
+        document.querySelector('[contenteditable="true"]')?.closest("form") ||
+        document.querySelector("main form");
+
+      if (!composer) {
+        return false;
+      }
+
+      const composerRect = (composer as HTMLElement).getBoundingClientRect();
+      const composerButtons = buttons
+        .filter(isVisibleButton)
+        .filter((button) => {
+          const rect = button.getBoundingClientRect();
+          return (
+            rect.left >= composerRect.left - 8 &&
+            rect.right <= composerRect.right + 8 &&
+            rect.top >= composerRect.top - 8 &&
+            rect.bottom <= composerRect.bottom + 8
+          );
+        })
+        .sort((leftButton, rightButton) => {
+          const leftRect = leftButton.getBoundingClientRect();
+          const rightRect = rightButton.getBoundingClientRect();
+          return leftRect.right - rightRect.right || leftRect.bottom - rightRect.bottom;
+        });
+
+      const bottomRightButton = composerButtons[composerButtons.length - 1];
+      if (!bottomRightButton) {
+        return false;
+      }
+
+      bottomRightButton.click();
       return true;
-    }
+    })
+    .catch(() => false);
+
+  if (clicked) {
+    await page.waitForTimeout(800);
+    return true;
   }
 
+  await focusComposer(page).catch(() => null);
   await page.keyboard.press("Enter").catch(() => null);
   await page.waitForTimeout(800);
   return true;
