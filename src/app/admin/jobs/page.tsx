@@ -1,29 +1,30 @@
-import { AdminSettingsForm } from "@/components/admin/admin-settings-form";
-import { requireAdmin } from "@/lib/auth";
-import { getAdminAppSettings } from "@/lib/settings";
 import Link from "next/link";
 
-export default async function AdminSettingsPage() {
+import { AdminJobsDashboard } from "@/components/admin/admin-jobs-dashboard";
+import { requireAdmin } from "@/lib/auth";
+import { listAdminGenerationJobs } from "@/lib/generation-jobs";
+
+export default async function AdminJobsPage() {
   const session = await requireAdmin();
-  const settings = await getAdminAppSettings();
+  const jobs = await listAdminGenerationJobs(50);
 
   return (
     <main className="space-y-5 pb-28">
       <section className="rounded-[28px] border border-slate-200 bg-white/88 p-5 shadow-card backdrop-blur">
-        <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-400">Admin</p>
+        <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-400">Admin Jobs</p>
         <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-3xl font-black text-slate-950">后台配置</h1>
+            <h1 className="text-3xl font-black text-slate-950">生成任务运维</h1>
             <p className="mt-2 text-sm leading-6 text-slate-500">
-              管理站点标题、模型参数和 API Key。敏感配置只显示是否已配置，不回显明文。
+              查看所有用户的生图任务、Provider、积分、失败原因，并重新执行失败任务。
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Link
-              href="/admin/jobs"
+              href="/admin/settings"
               className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-600 shadow-card transition hover:border-ocean-200 hover:text-ocean-700"
             >
-              任务运维
+              后台配置
             </Link>
             <div className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-500 shadow-card">
               {session.email}
@@ -31,7 +32,8 @@ export default async function AdminSettingsPage() {
           </div>
         </div>
       </section>
-      <AdminSettingsForm initialSettings={settings} />
+
+      <AdminJobsDashboard initialJobs={jobs} />
     </main>
   );
 }

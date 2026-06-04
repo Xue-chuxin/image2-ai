@@ -39,9 +39,30 @@ export type GenerationJobView = {
   images: GeneratedImageRecord[];
 };
 
+export type AdminGenerationJobView = GenerationJobView & {
+  user: {
+    id: string;
+    email: string | null;
+    displayName: string | null;
+  };
+};
+
 type GenerationJobRecord = Prisma.GenerationJobGetPayload<{
   include: {
     images: true;
+  };
+}>;
+
+type AdminGenerationJobRecord = Prisma.GenerationJobGetPayload<{
+  include: {
+    images: true;
+    user: {
+      select: {
+        id: true;
+        email: true;
+        displayName: true;
+      };
+    };
   };
 }>;
 
@@ -87,6 +108,13 @@ function serializeJob(job: GenerationJobRecord): GenerationJobView {
       width: image.width,
       height: image.height,
     })),
+  };
+}
+
+function serializeAdminJob(job: AdminGenerationJobRecord): AdminGenerationJobView {
+  return {
+    ...serializeJob(job),
+    user: job.user,
   };
 }
 
@@ -226,6 +254,31 @@ function scheduleGenerationJob(jobId: string, userId: string) {
   }, 0);
 }
 
+async function findAdminGenerationJob(jobId: string) {
+  const job = await prisma.generationJob.findUnique({
+    where: {
+      id: jobId,
+    },
+    include: {
+      images: true,
+      user: {
+        select: {
+          id: true,
+          email: true,
+          displayName: true,
+        },
+      },
+    },
+  });
+
+  return job ? serializeAdminJob(job) : null;
+}
+
+async function rescheduleGenerationJobForAdmin(jobId: string, userId: string) {
+  scheduleGenerationJob(jobId, userId);
+  return findAdminGenerationJob(jobId);
+}
+
 export async function createAndQueueGenerationJob(userId: string, input: CreateGenerationJobInput) {
   const promptZh = normalizePrompt(input.promptZh);
 
@@ -298,6 +351,73 @@ export async function listRecentGenerationJobs(userId: string, limit = 20) {
   });
 
   return jobs.map(serializeJob);
+}
+
+export async function listAdminGenerationJobs(limit = 50): Promise<AdminGenerationJobView[]> {
+  const jobs = await prisma.generationJob.findMany({
+    orderBy: {
+      createdAt: "desc",
+    },
+    take: Math.min(Math.max(Math.floor(limit), 1), 100),
+    include: {
+      images: true,
+      user: {
+        select: {
+          id: true,
+          email: true,
+          displayName: true,
+        },
+      },
+    },
+  });
+
+  return jobs.map(serializeAdminJob);
+}
+
+export async function retryFailedGenerationJobByAdmin(jobId: string) {
+  const job = await prisma.generationJob.findUnique({
+    where: {
+      id: jobId,
+    },
+    include: {
+      images: true,
+    },
+  });
+
+  if (!job) {
+    throw new Error("\u4efb\u52a1\u4e0d\u5b58\u5728");
+  }
+
+  if (job.status !== "FAILED" && job.status !== "CANCELED") {
+    if (job.status === "QUEUED" || job.status === "GENERATING") {
+      return rescheduleGenerationJobForAdmin(job.id, job.userId);
+    }
+
+    throw new Error("\u53ea\u80fd\u91cd\u8bd5\u5931\u8d25\u6216\u5df2\u53d6\u6d88\u7684\u4efb\u52a1");
+  }
+
+  await reserveCreditsForJob(job.userId, job.creditCost, job.id);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.generatedImage.deleteMany({
+      where: {
+        jobId: job.id,
+      },
+    });
+
+    await tx.generationJob.update({
+      where: {
+        id: job.id,
+      },
+      data: {
+        status: "QUEUED",
+        errorMessage: null,
+        providerRequestId: null,
+      },
+    });
+  });
+
+  return rescheduleGenerationJobForAdmin(job.id, job.userId);
 }
 
 export async function findGenerationJob(userId: string, id: string) {
