@@ -110,6 +110,21 @@ function assertEnabled(config: ChatGPTWebRuntimeConfig) {
   }
 }
 
+function appendPageDiagnostic(error: unknown, page: Page, stage: string) {
+  const url = page.url();
+  const detail = `Stage: ${stage}. URL: ${url}.`;
+
+  if (error instanceof ChatGPTWebError) {
+    const cleanMessage = error.message.replace(/^\[[^\]]+\]\s*/, "");
+    return new ChatGPTWebError(error.code, `${cleanMessage} ${detail}`);
+  }
+
+  return new ChatGPTWebError(
+    "CHATGPT_WEB_BROWSER_FAILED",
+    `${error instanceof Error ? error.message : zh.browserStartFailed} ${detail}`,
+  );
+}
+
 async function fileExists(filePath: string) {
   try {
     await access(filePath);
@@ -746,24 +761,37 @@ export async function generateWithChatGPTWeb(request: ImageGenerationRequest): P
   assertEnabled(config);
 
   const page = await getSharedPage(config);
-  await gotoChatGPT(page, config.timeoutMs);
+  let stage = "open_chatgpt";
 
-  if (!(await isLoggedIn(page))) {
-    throw new ChatGPTWebError("CHATGPT_WEB_LOGIN_REQUIRED", zh.loginRequired);
+  try {
+    await gotoChatGPT(page, config.timeoutMs);
+
+    stage = "check_login";
+    if (!(await isLoggedIn(page))) {
+      throw new ChatGPTWebError("CHATGPT_WEB_LOGIN_REQUIRED", zh.loginRequired);
+    }
+
+    stage = "snapshot_existing_images";
+    const imageCount = normalizeCount(request.imageCount);
+    const previousImages = await getImageCandidates(page);
+
+    stage = "submit_prompt";
+    await submitPrompt(page, buildPrompt(request));
+
+    stage = "wait_for_images";
+    await waitForGeneratedImages(page, previousImages, imageCount, config.timeoutMs);
+
+    stage = "extract_images";
+    const extracted = await extractGeneratedImages(page, previousImages, imageCount);
+    if (!extracted.length) {
+      throw new ChatGPTWebError("CHATGPT_WEB_NO_IMAGE_FOUND", zh.noImage);
+    }
+
+    return extracted.map((image) => ({
+      buffer: Buffer.from(image.base64, "base64"),
+      mimeType: normalizeMimeType(image.mimeType),
+    }));
+  } catch (error) {
+    throw appendPageDiagnostic(error, page, stage);
   }
-
-  const imageCount = normalizeCount(request.imageCount);
-  const previousImages = await getImageCandidates(page);
-  await submitPrompt(page, buildPrompt(request));
-  await waitForGeneratedImages(page, previousImages, imageCount, config.timeoutMs);
-
-  const extracted = await extractGeneratedImages(page, previousImages, imageCount);
-  if (!extracted.length) {
-    throw new ChatGPTWebError("CHATGPT_WEB_NO_IMAGE_FOUND", zh.noImage);
-  }
-
-  return extracted.map((image) => ({
-    buffer: Buffer.from(image.base64, "base64"),
-    mimeType: normalizeMimeType(image.mimeType),
-  }));
 }

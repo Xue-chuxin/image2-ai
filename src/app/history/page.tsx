@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { HistoryJobActions } from "@/components/history-job-actions";
 import { getUserSession } from "@/lib/auth";
 import { listRecentGenerationJobs, type GenerationJobView } from "@/lib/generation-jobs";
 
@@ -17,6 +18,14 @@ function getStatusLabel(status: string) {
 
   if (status === "GENERATING") {
     return "生成中";
+  }
+
+  if (status === "QUEUED") {
+    return "排队中";
+  }
+
+  if (status === "CANCELED") {
+    return "已取消";
   }
 
   return status;
@@ -93,6 +102,13 @@ function HistoryItem({ job }: { job: GenerationJobView }) {
             <dd>{formatTime(job.createdAt)}</dd>
           </div>
         </dl>
+
+        <HistoryJobActions
+          jobId={job.id}
+          status={job.status}
+          promptZh={job.promptZh}
+          imageUrl={firstImage?.url}
+        />
       </div>
     </article>
   );
@@ -107,7 +123,7 @@ export default async function HistoryPage() {
         <section className="section-heading">
           <span className="eyebrow">History</span>
           <h1>生成历史</h1>
-          <p>登录普通用户账号后，只会看到你自己的生成任务和图片结果。</p>
+          <p>登录普通用户账号后，只会看到你自己的生图任务和图片结果。</p>
         </section>
         <section className="empty-state">
           <span>请先登录</span>
@@ -133,7 +149,7 @@ export default async function HistoryPage() {
       <section className="section-heading">
         <span className="eyebrow">History</span>
         <h1>生成历史</h1>
-        <p>这里展示当前账号最近创建的生图任务，包括成功图片和失败原因。</p>
+        <p>这里展示当前账号最近创建的生图任务，包括成功图片、失败原因、Provider 和积分记录。</p>
       </section>
 
       {jobs.length ? (
