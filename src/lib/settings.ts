@@ -65,6 +65,10 @@ const defaultDeepSeekPolishPrompt = [
   "promptZh 是最终要回填到输入框的中文润色结果；promptEn 是可选的英文生图提示词；negativePrompt 写需要避免的内容。",
 ].join("\n");
 
+function getLocalProfileBaseDir() {
+  return path.join(process.env.LOCALAPPDATA || process.env.HOME || process.cwd(), "image2-app");
+}
+
 const defaultSettings: PublicAppSettings = {
   browserTitle: "Image2 Studio",
   siteTitle: "造图台",
@@ -74,7 +78,7 @@ const defaultSettings: PublicAppSettings = {
   deepseekModel: "deepseek-chat",
   openaiImageModel: "gpt-image-1",
   chatgptWebEnabled: false,
-  chatgptWebUserDataDir: ".local/chatgpt-web-profile",
+  chatgptWebUserDataDir: "chatgpt-web-profile",
   chatgptWebHeadless: false,
   chatgptWebTimeoutSeconds: 180,
 };
@@ -145,7 +149,7 @@ function getStoredNumber(map: Map<string, SettingRow>, key: keyof PublicAppSetti
 }
 
 function resolveLocalPath(value: string) {
-  return path.isAbsolute(value) ? value : path.resolve(process.cwd(), value);
+  return path.isAbsolute(value) ? value : path.resolve(getLocalProfileBaseDir(), value);
 }
 
 async function readSettingRows() {

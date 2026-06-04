@@ -111,6 +111,7 @@ async function launchPersistentContext(config: ChatGPTWebRuntimeConfig, forceHea
   const headless = forceHeaded ? false : config.headless;
   const args = ["--disable-blink-features=AutomationControlled"];
   const chromeExecutablePath = await findChromeExecutablePath();
+  const launchErrors: string[] = [];
 
   if (chromeExecutablePath) {
     try {
@@ -120,9 +121,11 @@ async function launchPersistentContext(config: ChatGPTWebRuntimeConfig, forceHea
         args,
         viewport: { width: 1440, height: 1000 },
       });
-    } catch {
-      // Fall back to Playwright channel discovery below.
+    } catch (error) {
+      launchErrors.push(`Chrome 路径 ${chromeExecutablePath} 启动失败：${error instanceof Error ? error.message : String(error)}`);
     }
+  } else {
+    launchErrors.push("未检测到本机 Google Chrome 可执行文件。");
   }
 
   try {
@@ -132,7 +135,8 @@ async function launchPersistentContext(config: ChatGPTWebRuntimeConfig, forceHea
       args,
       viewport: { width: 1440, height: 1000 },
     });
-  } catch {
+  } catch (error) {
+    launchErrors.push(`Playwright chrome channel 启动失败：${error instanceof Error ? error.message : String(error)}`);
     try {
       return await chromium.launchPersistentContext(config.userDataDir, {
         channel: "msedge",
@@ -140,10 +144,11 @@ async function launchPersistentContext(config: ChatGPTWebRuntimeConfig, forceHea
         args,
         viewport: { width: 1440, height: 1000 },
       });
-    } catch {
+    } catch (edgeError) {
+      launchErrors.push(`Playwright msedge channel 启动失败：${edgeError instanceof Error ? edgeError.message : String(edgeError)}`);
       throw new ChatGPTWebError(
         "CHATGPT_WEB_BROWSER_FAILED",
-        "没有找到可用的 Google Chrome 或 Edge。请安装 Chrome，或设置 CHROME_EXECUTABLE_PATH 指向 chrome.exe。",
+        `没有启动可用的 Google Chrome 或 Edge。Profile 路径：${config.userDataDir}。详细原因：${launchErrors.join(" | ")}`,
       );
     }
   }
@@ -162,6 +167,10 @@ async function getSharedContext(config: ChatGPTWebRuntimeConfig, forceHeaded = f
     });
     return sharedContext;
   } catch (error) {
+    if (error instanceof ChatGPTWebError) {
+      throw error;
+    }
+
     throw new ChatGPTWebError(
       "CHATGPT_WEB_BROWSER_FAILED",
       error instanceof Error ? error.message : "启动本机浏览器失败。",
