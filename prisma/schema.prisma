@@ -44,6 +44,7 @@ model User {
   updatedAt          DateTime            @updatedAt
   creditAccount      CreditAccount?
   generationJobs     GenerationJob[]
+  uploadedImages     UploadedImage[]
   promptFavorites    PromptFavorite[]
   creditTransactions CreditTransaction[]
 }
@@ -120,11 +121,46 @@ model GenerationJob {
   providerRequestId String?
   user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   images            GeneratedImage[]
+  referenceImages   GenerationJobReferenceImage[]
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
 
   @@index([userId, createdAt])
   @@index([status])
+}
+
+model UploadedImage {
+  id            String                        @id @default(cuid())
+  userId        String
+  url           String
+  thumbnailUrl  String?
+  mimeType      String
+  fileSize      Int
+  width         Int?
+  height        Int?
+  purpose       String                        @default("reference")
+  isDeleted     Boolean                       @default(false)
+  user          User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobReferences GenerationJobReferenceImage[]
+  createdAt     DateTime                      @default(now())
+
+  @@index([userId, createdAt])
+  @@index([purpose])
+  @@index([isDeleted])
+}
+
+model GenerationJobReferenceImage {
+  id        String        @id @default(cuid())
+  jobId     String
+  imageId   String
+  sortOrder Int           @default(0)
+  job       GenerationJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  image     UploadedImage @relation(fields: [imageId], references: [id], onDelete: Cascade)
+  createdAt DateTime      @default(now())
+
+  @@unique([jobId, imageId])
+  @@index([jobId, sortOrder])
+  @@index([imageId])
 }
 
 model GeneratedImage {

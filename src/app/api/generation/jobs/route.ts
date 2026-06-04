@@ -25,6 +25,17 @@ function normalizeNumber(value: unknown) {
   return Number.isFinite(numberValue) ? numberValue : undefined;
 }
 
+function normalizeStringArray(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => normalizeString(item))
+    .filter(Boolean)
+    .slice(0, 4);
+}
+
 export async function GET() {
   const session = await getUserSession();
   if (!session) {
@@ -80,6 +91,7 @@ export async function POST(request: Request) {
       quality: normalizeString(body.quality) || "standard",
       imageCount: normalizeNumber(body.imageCount),
       provider: normalizeProvider(body.provider),
+      referenceImageIds: normalizeStringArray(body.referenceImageIds),
     };
 
     const job = await createAndQueueGenerationJob(session.userId, input);

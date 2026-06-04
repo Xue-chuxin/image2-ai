@@ -107,7 +107,13 @@ function HistoryItem({ job }: { job: GenerationJobView }) {
           jobId={job.id}
           status={job.status}
           promptZh={job.promptZh}
-          imageUrl={firstImage?.url}
+          promptEn={job.promptEn}
+          negativePrompt={job.negativePrompt}
+          ratio={job.ratio}
+          quality={job.quality}
+          imageCount={job.imageCount}
+          images={job.images}
+          referenceImages={job.referenceImages}
         />
       </div>
     </article>

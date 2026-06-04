@@ -15,6 +15,14 @@ type HistoryImageActionView = {
   takenDownReason?: string | null;
 };
 
+type HistoryReferenceImageView = {
+  id: string;
+  url: string;
+  thumbnailUrl?: string | null;
+  mimeType?: string | null;
+  fileSize?: number | null;
+};
+
 type HistoryJobActionsProps = {
   job?: {
     id?: string;
@@ -26,6 +34,7 @@ type HistoryJobActionsProps = {
     quality?: string;
     imageCount?: number;
     images?: HistoryImageActionView[];
+    referenceImages?: HistoryReferenceImageView[];
   };
   jobId?: string;
   id?: string;
@@ -38,6 +47,7 @@ type HistoryJobActionsProps = {
   quality?: string;
   imageCount?: number;
   images?: HistoryImageActionView[];
+  referenceImages?: HistoryReferenceImageView[];
   [key: string]: unknown;
 };
 
@@ -60,6 +70,18 @@ function buttonClass(tone: "dark" | "light" | "danger" = "light") {
   return "inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-600";
 }
 
+function formatSize(bytes?: number | null) {
+  if (!bytes) {
+    return "未知大小";
+  }
+
+  if (bytes >= 1024 * 1024) {
+    return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  }
+
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+
 export function HistoryJobActions(props: HistoryJobActionsProps) {
   const job = props.job || {};
   const jobId = props.jobId || props.id || job.id || "";
@@ -70,6 +92,7 @@ export function HistoryJobActions(props: HistoryJobActionsProps) {
   const ratio = props.ratio || job.ratio || "1:1";
   const quality = props.quality || job.quality || "standard";
   const imageCount = props.imageCount || job.imageCount || 1;
+  const referenceImages = props.referenceImages || job.referenceImages || [];
   const [images, setImages] = useState<HistoryImageActionView[]>(props.images || job.images || []);
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState("");
@@ -88,8 +111,12 @@ export function HistoryJobActions(props: HistoryJobActionsProps) {
     params.set("ratio", ratio);
     params.set("quality", quality);
     params.set("imageCount", String(imageCount));
+    for (const image of referenceImages) {
+      params.append("referenceImageIds", image.id);
+      params.append("referenceImageUrls", image.thumbnailUrl || image.url);
+    }
     return `/generate?${params.toString()}`;
-  }, [imageCount, negativePrompt, promptEn, promptZh, quality, ratio]);
+  }, [imageCount, negativePrompt, promptEn, promptZh, quality, ratio, referenceImages]);
 
   async function requestJson(url: string, init: RequestInit) {
     const response = await fetch(url, init);
@@ -163,6 +190,26 @@ export function HistoryJobActions(props: HistoryJobActionsProps) {
 
   return (
     <div className="space-y-3">
+      {referenceImages.length > 0 ? (
+        <div className="rounded-[20px] border border-slate-200 bg-white/80 p-3 shadow-card">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Reference Images</p>
+            <span className="text-xs font-black text-slate-400">{referenceImages.length} 张</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {referenceImages.map((image) => (
+              <a key={image.id} href={image.url} target="_blank" rel="noreferrer" className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+                <img src={image.thumbnailUrl || image.url} alt="参考图" className="h-24 w-full object-cover" />
+                <div className="p-2">
+                  <p className="truncate text-xs font-black text-slate-700">{image.mimeType || "参考图"}</p>
+                  <p className="mt-1 text-xs font-bold text-slate-400">{formatSize(image.fileSize)}</p>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       <div className="flex flex-wrap gap-2">
         {promptZh ? <CopyPromptButton text={promptZh} label="复制提示词" className={buttonClass("light")} /> : null}
         <Link href={generateHref} className={buttonClass("light")}>

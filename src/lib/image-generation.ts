@@ -10,6 +10,15 @@ export type ImageGenerationRequest = {
   ratio?: string;
   quality?: ImageQuality | string;
   imageCount?: number;
+  referenceImages?: Array<{
+    id: string;
+    url: string;
+    thumbnailUrl?: string | null;
+    mimeType?: string | null;
+    fileSize?: number | null;
+    width?: number | null;
+    height?: number | null;
+  }>;
 };
 
 export type GeneratedImagePayload = {
@@ -133,6 +142,10 @@ class OpenAIImageProvider implements ImageGenerationProvider {
   name: GenerationProviderName = "openai";
 
   async generate(request: ImageGenerationRequest): Promise<ImageGenerationResult> {
+    if (request.referenceImages?.length) {
+      throw new Error("当前 OpenAI 图像通道暂不支持参考图，请切换 ChatGPT Web，或先移除参考图后再生成。");
+    }
+
     const runtimeConfig = await getOpenAIRuntimeConfig();
 
     if (!runtimeConfig.apiKey) {

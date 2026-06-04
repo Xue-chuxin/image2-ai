@@ -1,8 +1,18 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { type ChangeEvent, type DragEvent, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
-import { ImageUp, Loader2, RotateCcw, Send, Wand2 } from "lucide-react";
+import { ImageUp, Loader2, RotateCcw, Send, UploadCloud, Wand2, X } from "lucide-react";
+
+type ReferenceImageResult = {
+  id: string;
+  url: string;
+  thumbnailUrl: string | null;
+  mimeType: string;
+  fileSize: number;
+  width: number | null;
+  height: number | null;
+};
 
 type GenerationJobResult = {
   id: string;
@@ -18,9 +28,11 @@ type GenerationJobResult = {
   creditCost: number;
   errorMessage: string | null;
   createdAt: string;
+  referenceImages: ReferenceImageResult[];
   images: Array<{
     id: string;
     url: string;
+    thumbnailUrl?: string | null;
     width: number | null;
     height: number | null;
   }>;
@@ -52,13 +64,18 @@ type GenerationResult = {
   job?: GenerationJobResult;
 };
 
+type UploadResult = {
+  image?: ReferenceImageResult;
+};
+
 type GenerateComposerProps = {
   initialPrompt?: string;
+  initialReferenceImages?: ReferenceImageResult[];
   onJobChange?: (job: GenerationJobResult | null) => void;
   compact?: boolean;
 };
 
-const styles = ["写实", "商品", "角色", "界面", "插画", "建筑"] as const;
+const styles = ["写真", "商品", "角色", "界面", "插画", "建筑"] as const;
 const ratios = ["1:1", "3:4", "16:9", "9:16"] as const;
 const qualities = [
   { value: "standard", label: "标准" },
@@ -66,6 +83,9 @@ const qualities = [
   { value: "low", label: "省积分" },
 ] as const;
 const imageCounts = [1, 2, 4] as const;
+const MAX_REFERENCE_IMAGES = 4;
+const MAX_REFERENCE_IMAGE_BYTES = 8 * 1024 * 1024;
+const allowedTypes = new Set(["image/png", "image/jpeg", "image/webp"]);
 
 async function readApiJson<T>(response: Response): Promise<ApiResult<T>> {
   const contentType = response.headers.get("content-type") || "";
@@ -91,22 +111,34 @@ function isTerminalStatus(status?: string) {
   return status === "COMPLETED" || status === "FAILED" || status === "CANCELED";
 }
 
-export function GenerateComposer({ initialPrompt = "", onJobChange, compact = false }: GenerateComposerProps) {
+function formatSize(bytes: number) {
+  if (bytes >= 1024 * 1024) {
+    return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  }
+
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+
+export function GenerateComposer({ initialPrompt = "", initialReferenceImages = [], onJobChange, compact = false }: GenerateComposerProps) {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [prompt, setPrompt] = useState(initialPrompt);
-  const [selectedStyle, setSelectedStyle] = useState<(typeof styles)[number]>("写实");
+  const [selectedStyle, setSelectedStyle] = useState<(typeof styles)[number]>("写真");
   const [ratio, setRatio] = useState<(typeof ratios)[number]>("1:1");
   const [quality, setQuality] = useState<(typeof qualities)[number]["value"]>("standard");
   const [imageCount, setImageCount] = useState<(typeof imageCounts)[number]>(1);
   const [polishedPromptEn, setPolishedPromptEn] = useState("");
   const [negativePrompt, setNegativePrompt] = useState("");
   const [polishProvider, setPolishProvider] = useState("DeepSeek");
+  const [referenceImages, setReferenceImages] = useState<ReferenceImageResult[]>(initialReferenceImages.slice(0, MAX_REFERENCE_IMAGES));
+  const [isDragging, setIsDragging] = useState(false);
+  const [isUploadingReference, setIsUploadingReference] = useState(false);
   const [currentJob, setCurrentJob] = useState<GenerationJobResult | null>(null);
   const [isPolishing, setIsPolishing] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
 
-  const canGenerate = useMemo(() => prompt.trim().length > 0 && !isGenerating, [prompt, isGenerating]);
+  const canGenerate = useMemo(() => prompt.trim().length > 0 && !isGenerating && !isUploadingReference, [prompt, isGenerating, isUploadingReference]);
 
   function updateJob(job: GenerationJobResult | null) {
     setCurrentJob(job);
@@ -140,11 +172,82 @@ export function GenerateComposer({ initialPrompt = "", onJobChange, compact = fa
     throw new Error("生成任务仍在进行，请稍后到历史记录查看结果。");
   }
 
+  function validateReferenceFile(file: File) {
+    if (!allowedTypes.has(file.type)) {
+      throw new Error("只支持 PNG、JPG、WEBP 图片。");
+    }
+
+    if (file.size > MAX_REFERENCE_IMAGE_BYTES) {
+      throw new Error("参考图不能超过 8MB。");
+    }
+  }
+
+  async function uploadReferenceFile(file: File) {
+    if (referenceImages.length >= MAX_REFERENCE_IMAGES) {
+      throw new Error(`一次最多上传 ${MAX_REFERENCE_IMAGES} 张参考图。`);
+    }
+
+    validateReferenceFile(file);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch("/api/uploads/reference-images", {
+      method: "POST",
+      body: formData,
+    });
+    const result = await readApiJson<UploadResult>(response);
+
+    if (!response.ok || result.ok === false || !result.image) {
+      throw new Error(result.error || "上传参考图失败");
+    }
+
+    setReferenceImages((current) => [...current, result.image!].slice(0, MAX_REFERENCE_IMAGES));
+  }
+
+  async function uploadReferenceFiles(files: FileList | File[]) {
+    const pendingFiles = Array.from(files).slice(0, MAX_REFERENCE_IMAGES - referenceImages.length);
+    if (!pendingFiles.length) {
+      return;
+    }
+
+    setIsUploadingReference(true);
+    setError("");
+    setNotice("");
+
+    try {
+      for (const file of pendingFiles) {
+        await uploadReferenceFile(file);
+      }
+      setNotice("参考图已上传并保存。当前阶段会把参考图关联到任务，自动上传到 ChatGPT Web 放到下一阶段。");
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "上传参考图失败");
+    } finally {
+      setIsUploadingReference(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  }
+
+  function onReferenceInputChange(event: ChangeEvent<HTMLInputElement>) {
+    if (event.target.files) {
+      void uploadReferenceFiles(event.target.files);
+    }
+  }
+
+  function onReferenceDrop(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    setIsDragging(false);
+    if (event.dataTransfer.files.length) {
+      void uploadReferenceFiles(event.dataTransfer.files);
+    }
+  }
+
   async function polishPrompt() {
     const rawPrompt = prompt.trim();
 
     if (!rawPrompt) {
-      setError("先输入一句想生成的画面描述。");
+      setError("先输入一段画面描述。");
       return;
     }
 
@@ -188,7 +291,7 @@ export function GenerateComposer({ initialPrompt = "", onJobChange, compact = fa
     const rawPrompt = prompt.trim();
 
     if (!rawPrompt) {
-      setError("先输入一句想生成的画面描述。");
+      setError("请先输入画面描述。");
       return;
     }
 
@@ -210,6 +313,7 @@ export function GenerateComposer({ initialPrompt = "", onJobChange, compact = fa
           ratio,
           quality,
           imageCount,
+          referenceImageIds: referenceImages.map((image) => image.id),
         }),
       });
       const result = await readApiJson<GenerationResult>(response);
@@ -224,7 +328,7 @@ export function GenerateComposer({ initialPrompt = "", onJobChange, compact = fa
 
       let finalJob = result.job;
       if (!isTerminalStatus(finalJob.status)) {
-        setNotice("生成任务已提交，正在等待 ChatGPT 返回结果。");
+        setNotice(referenceImages.length ? "生成任务已提交，参考图已关联到任务；当前通道先按文本生图。" : "生成任务已提交，正在等待结果。");
         finalJob = await pollGenerationJob(finalJob);
       }
 
@@ -244,9 +348,14 @@ export function GenerateComposer({ initialPrompt = "", onJobChange, compact = fa
     setPrompt("");
     setPolishedPromptEn("");
     setNegativePrompt("");
+    setReferenceImages([]);
     setNotice("");
     setError("");
     updateJob(null);
+  }
+
+  function removeReferenceImage(id: string) {
+    setReferenceImages((current) => current.filter((image) => image.id !== id));
   }
 
   return (
@@ -255,18 +364,51 @@ export function GenerateComposer({ initialPrompt = "", onJobChange, compact = fa
         <div>
           <span className="eyebrow">Create</span>
           <h1>一句话生成你的视觉草图</h1>
-          <p>输入想法后可先让 DeepSeek 润色，润色结果会直接回填到输入框。</p>
+          <p>输入想法后可先用 DeepSeek 润色，也可以上传参考图并保存到本次任务。</p>
         </div>
         <button className="icon-button" type="button" onClick={resetComposer} aria-label="重置">
           <RotateCcw size={18} />
         </button>
       </div>
 
-      <div className="upload-card" aria-label="参考图上传占位">
-        <ImageUp size={24} />
-        <span>拖入参考图</span>
-        <small>当前阶段暂不处理图生图，先保留入口。</small>
+      <div
+        className={clsx("upload-card", isDragging && "ring-2 ring-ocean-300")}
+        onDragOver={(event) => {
+          event.preventDefault();
+          setIsDragging(true);
+        }}
+        onDragLeave={() => setIsDragging(false)}
+        onDrop={onReferenceDrop}
+      >
+        <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" multiple className="hidden" onChange={onReferenceInputChange} />
+        <button type="button" onClick={() => fileInputRef.current?.click()} className="flex w-full flex-col items-center gap-2 text-center">
+          {isUploadingReference ? <Loader2 className="animate-spin" size={24} /> : <ImageUp size={24} />}
+          <span>{isUploadingReference ? "参考图上传中" : "拖入参考图或点击上传"}</span>
+          <small>PNG / JPG / WEBP，单张不超过 8MB，最多 4 张</small>
+        </button>
       </div>
+
+      {referenceImages.length > 0 ? (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {referenceImages.map((image) => (
+            <div key={image.id} className="group relative overflow-hidden rounded-[18px] border border-slate-200 bg-white/85 shadow-card">
+              <img src={image.thumbnailUrl || image.url} alt="参考图" className="h-28 w-full object-cover" />
+              <button
+                type="button"
+                onClick={() => removeReferenceImage(image.id)}
+                className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-slate-950/70 text-white backdrop-blur"
+                aria-label="移除参考图"
+              >
+                <X size={14} />
+              </button>
+              <div className="p-2">
+                <p className="truncate text-xs font-black text-slate-700">{image.mimeType.replace("image/", "").toUpperCase()}</p>
+                <p className="mt-1 text-xs font-bold text-slate-400">{formatSize(image.fileSize)}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
 
       <label className="field-block">
         <span>画面描述</span>
@@ -286,12 +428,7 @@ export function GenerateComposer({ initialPrompt = "", onJobChange, compact = fa
         <span>风格方向</span>
         <div className="chip-row">
           {styles.map((style) => (
-            <button
-              key={style}
-              className={clsx("chip", selectedStyle === style && "active")}
-              type="button"
-              onClick={() => setSelectedStyle(style)}
-            >
+            <button key={style} className={clsx("chip", selectedStyle === style && "active")} type="button" onClick={() => setSelectedStyle(style)}>
               {style}
             </button>
           ))}
@@ -314,12 +451,7 @@ export function GenerateComposer({ initialPrompt = "", onJobChange, compact = fa
           <span>质量</span>
           <div className="chip-row">
             {qualities.map((item) => (
-              <button
-                key={item.value}
-                className={clsx("chip", quality === item.value && "active")}
-                type="button"
-                onClick={() => setQuality(item.value)}
-              >
+              <button key={item.value} className={clsx("chip", quality === item.value && "active")} type="button" onClick={() => setQuality(item.value)}>
                 {item.label}
               </button>
             ))}
@@ -361,15 +493,17 @@ export function GenerateComposer({ initialPrompt = "", onJobChange, compact = fa
       {error ? <div className="notice error">{error}</div> : null}
 
       <div className="composer-actions">
-        <button className="ghost-button" type="button" onClick={polishPrompt} disabled={isPolishing}>
-          {isPolishing ? <Loader2 className="spin" size={17} /> : <Wand2 size={17} />}
+        <button type="button" onClick={polishPrompt} disabled={isPolishing || isGenerating} className="secondary-action">
+          {isPolishing ? <Loader2 className="animate-spin" size={18} /> : <Wand2 size={18} />}
           AI 润色
         </button>
-        <button className="primary-button" type="button" onClick={startGeneration} disabled={!canGenerate}>
-          {isGenerating ? <Loader2 className="spin" size={17} /> : <Send size={17} />}
-          {isGenerating ? "生成中" : "开始生成"}
+        <button type="button" onClick={startGeneration} disabled={!canGenerate} className="primary-action">
+          {isGenerating ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
+          开始生成
         </button>
       </div>
+
+      {referenceImages.length > 0 ? <p className="text-xs font-bold leading-6 text-slate-400">参考图会保存到任务记录中。当前版本暂不自动上传参考图到 ChatGPT Web。</p> : null}
     </section>
   );
 }

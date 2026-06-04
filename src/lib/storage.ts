@@ -1,3 +1,4 @@
+import { randomBytes } from "crypto";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 
@@ -12,6 +13,7 @@ export type StoredImage = {
 
 export interface StorageService {
   saveGeneratedImage(jobId: string, index: number, buffer: Buffer, mimeType: string): Promise<StoredImage>;
+  saveReferenceImage(userId: string, buffer: Buffer, mimeType: string): Promise<StoredImage>;
 }
 
 function extensionFromMime(mimeType: string) {
@@ -43,8 +45,32 @@ export const localStorageService: StorageService = {
       mimeType,
     };
   },
+
+  async saveReferenceImage(userId: string, buffer: Buffer, mimeType: string): Promise<StoredImage> {
+    const extension = extensionFromMime(mimeType);
+    const directory = path.join(process.cwd(), "public", "uploads", "reference");
+    const thumbnailDirectory = path.join(directory, "thumbs");
+    const safeUserId = userId.replace(/[^a-zA-Z0-9_-]/g, "");
+    const filename = `${safeUserId}-${Date.now()}-${randomBytes(6).toString("hex")}.${extension}`;
+
+    await mkdir(directory, { recursive: true });
+    await mkdir(thumbnailDirectory, { recursive: true });
+    await writeFile(path.join(directory, filename), buffer);
+    await writeFile(path.join(thumbnailDirectory, filename), buffer);
+
+    return {
+      url: `/uploads/reference/${filename}`,
+      thumbnailUrl: `/uploads/reference/thumbs/${filename}`,
+      fileSize: buffer.byteLength,
+      mimeType,
+    };
+  },
 };
 
 export async function saveGeneratedImage(jobId: string, index: number, buffer: Buffer, mimeType: string): Promise<StoredImage> {
   return localStorageService.saveGeneratedImage(jobId, index, buffer, mimeType);
+}
+
+export async function saveReferenceImage(userId: string, buffer: Buffer, mimeType: string): Promise<StoredImage> {
+  return localStorageService.saveReferenceImage(userId, buffer, mimeType);
 }

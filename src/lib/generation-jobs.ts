@@ -14,6 +14,30 @@ import {
 } from "./credits";
 import { saveGeneratedImage } from "./storage";
 import { getPublicAppSettings, type GenerationProviderName } from "./settings";
+import { resolveReferenceImagesForJob } from "./uploads";
+
+const generationJobInclude = {
+  images: true,
+  referenceImages: {
+    orderBy: {
+      sortOrder: "asc",
+    },
+    include: {
+      image: true,
+    },
+  },
+} as const;
+
+const adminGenerationJobInclude = {
+  ...generationJobInclude,
+  user: {
+    select: {
+      id: true,
+      email: true,
+      displayName: true,
+    },
+  },
+} as const;
 
 type GeneratedImageRecord = {
   id: string;
@@ -27,6 +51,16 @@ type GeneratedImageRecord = {
   isDeleted: boolean;
   takenDownAt: string | null;
   takenDownReason: string | null;
+};
+
+type ReferenceImageRecord = {
+  id: string;
+  url: string;
+  thumbnailUrl: string | null;
+  mimeType: string;
+  fileSize: number;
+  width: number | null;
+  height: number | null;
 };
 
 export type GenerationJobView = {
@@ -46,6 +80,7 @@ export type GenerationJobView = {
   updatedAt: string;
   isStale: boolean;
   images: GeneratedImageRecord[];
+  referenceImages: ReferenceImageRecord[];
 };
 
 export type AdminGenerationJobView = GenerationJobView & {
@@ -57,22 +92,11 @@ export type AdminGenerationJobView = GenerationJobView & {
 };
 
 type GenerationJobRecord = Prisma.GenerationJobGetPayload<{
-  include: {
-    images: true;
-  };
+  include: typeof generationJobInclude;
 }>;
 
 type AdminGenerationJobRecord = Prisma.GenerationJobGetPayload<{
-  include: {
-    images: true;
-    user: {
-      select: {
-        id: true;
-        email: true;
-        displayName: true;
-      };
-    };
-  };
+  include: typeof adminGenerationJobInclude;
 }>;
 
 export type CreateGenerationJobInput = {
@@ -83,6 +107,7 @@ export type CreateGenerationJobInput = {
   quality?: ImageQuality | string;
   imageCount?: number;
   provider?: GenerationProviderName;
+  referenceImageIds?: string[];
 };
 
 const runningJobIds = new Set<string>();
@@ -152,6 +177,15 @@ function serializeJob(job: GenerationJobRecord): GenerationJobView {
         takenDownReason: imageRecord.takenDownReason || null,
       };
     }),
+    referenceImages: job.referenceImages.map((item) => ({
+      id: item.image.id,
+      url: item.image.url,
+      thumbnailUrl: item.image.thumbnailUrl,
+      mimeType: item.image.mimeType,
+      fileSize: item.image.fileSize,
+      width: item.image.width,
+      height: item.image.height,
+    })),
   };
 }
 
@@ -194,6 +228,15 @@ function toGenerationRequest(job: GenerationJobRecord): ImageGenerationRequest {
     ratio: job.ratio,
     quality: job.quality,
     imageCount: job.imageCount,
+    referenceImages: job.referenceImages.map((item) => ({
+      id: item.image.id,
+      url: item.image.url,
+      thumbnailUrl: item.image.thumbnailUrl || item.image.url,
+      mimeType: item.image.mimeType,
+      fileSize: item.image.fileSize,
+      width: item.image.width,
+      height: item.image.height,
+    })),
   };
 }
 
@@ -203,9 +246,7 @@ async function getJobForExecution(jobId: string, userId: string) {
       id: jobId,
       userId,
     },
-    include: {
-      images: true,
-    },
+    include: generationJobInclude,
   });
 }
 
@@ -214,16 +255,7 @@ async function findAdminGenerationJob(jobId: string) {
     where: {
       id: jobId,
     },
-    include: {
-      images: true,
-      user: {
-        select: {
-          id: true,
-          email: true,
-          displayName: true,
-        },
-      },
-    },
+    include: adminGenerationJobInclude,
   });
 
   return job ? serializeAdminJob(job) : null;
@@ -240,9 +272,7 @@ async function failGenerationJob(jobId: string, userId: string, creditCost: numb
       status: "FAILED",
       errorMessage: getErrorMessage(error),
     },
-    include: {
-      images: true,
-    },
+    include: generationJobInclude,
   });
 
   return serializeJob(failedJob);
@@ -260,9 +290,7 @@ async function recoverStaleGenerationJobs(userId?: string) {
       },
     },
     take: 30,
-    include: {
-      images: true,
-    },
+    include: generationJobInclude,
   });
 
   for (const job of staleJobs) {
@@ -288,9 +316,7 @@ export async function executeGenerationJob(jobId: string, userId: string) {
       status: "GENERATING",
       errorMessage: null,
     },
-    include: {
-      images: true,
-    },
+    include: generationJobInclude,
   });
 
   try {
@@ -317,9 +343,7 @@ export async function executeGenerationJob(jobId: string, userId: string) {
       where: {
         id: jobId,
       },
-      include: {
-        images: true,
-      },
+      include: generationJobInclude,
     });
 
     if (!latestJob || latestJob.status !== "GENERATING") {
@@ -338,9 +362,7 @@ export async function executeGenerationJob(jobId: string, userId: string) {
         providerRequestId: result.model,
         errorMessage: null,
       },
-      include: {
-        images: true,
-      },
+      include: generationJobInclude,
     });
 
     return serializeJob(completedJob);
@@ -403,6 +425,7 @@ export async function createAndQueueGenerationJob(userId: string, input: CreateG
   const quality = normalizeQuality(input.quality);
   const ratio = input.ratio || "1:1";
   const creditCost = estimateGenerationCreditCost(quality, imageCount);
+  const referenceImages = await resolveReferenceImagesForJob(userId, input.referenceImageIds);
 
   const job = await prisma.generationJob.create({
     data: {
@@ -417,10 +440,16 @@ export async function createAndQueueGenerationJob(userId: string, input: CreateG
       quality,
       imageCount,
       creditCost,
+      referenceImages: referenceImages.length
+        ? {
+            create: referenceImages.map((image, index) => ({
+              imageId: image.id,
+              sortOrder: index,
+            })),
+          }
+        : undefined,
     },
-    include: {
-      images: true,
-    },
+    include: generationJobInclude,
   });
 
   try {
@@ -455,9 +484,7 @@ export async function retryGenerationJobForUser(userId: string, jobId: string) {
       id: jobId,
       userId,
     },
-    include: {
-      images: true,
-    },
+    include: generationJobInclude,
   });
 
   if (!job) {
@@ -492,9 +519,7 @@ export async function listRecentGenerationJobs(userId: string, limit = 20) {
       createdAt: "desc",
     },
     take: limit,
-    include: {
-      images: true,
-    },
+    include: generationJobInclude,
   });
 
   return jobs.map(serializeJob);
@@ -508,9 +533,7 @@ export async function findGenerationJob(userId: string, id: string) {
       id,
       userId,
     },
-    include: {
-      images: true,
-    },
+    include: generationJobInclude,
   });
 
   return job ? serializeJob(job) : null;
@@ -568,16 +591,7 @@ export async function listAdminGenerationJobsFiltered({
       createdAt: "desc",
     },
     take: Math.min(Math.max(Math.floor(limit), 1), 100),
-    include: {
-      images: true,
-      user: {
-        select: {
-          id: true,
-          email: true,
-          displayName: true,
-        },
-      },
-    },
+    include: adminGenerationJobInclude,
   });
 
   return jobs.map(serializeAdminJob);
@@ -595,9 +609,7 @@ export async function retryFailedGenerationJobByAdmin(jobId: string) {
     where: {
       id: jobId,
     },
-    include: {
-      images: true,
-    },
+    include: generationJobInclude,
   });
 
   if (!job) {
@@ -623,9 +635,7 @@ export async function markGenerationJobFailedByAdmin(jobId: string) {
     where: {
       id: jobId,
     },
-    include: {
-      images: true,
-    },
+    include: generationJobInclude,
   });
 
   if (!job) {
@@ -647,3 +657,4 @@ export async function markGenerationJobFailedByAdmin(jobId: string) {
   await failGenerationJob(job.id, job.userId, job.creditCost, new Error("\u7ba1\u7406\u5458\u624b\u52a8\u6807\u8bb0\u5931\u8d25\uff0c\u5df2\u9000\u56de\u51bb\u7ed3\u79ef\u5206\u3002"));
   return findAdminGenerationJob(job.id);
 }
+

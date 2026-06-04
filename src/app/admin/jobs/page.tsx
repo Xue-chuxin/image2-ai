@@ -27,6 +27,12 @@ export default async function AdminJobsPage() {
               作品管理
             </Link>
             <Link
+              href="/admin/uploads"
+              className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-600 shadow-card transition hover:border-ocean-200 hover:text-ocean-700"
+            >
+              上传资源
+            </Link>
+            <Link
               href="/admin/settings"
               className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-600 shadow-card transition hover:border-ocean-200 hover:text-ocean-700"
             >
