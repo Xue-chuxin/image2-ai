@@ -1,3 +1,4 @@
+import { generateWithChatGPTWeb } from "@/lib/chatgpt-web";
 import { getOpenAIRuntimeConfig, getPublicAppSettings, type GenerationProviderName } from "./settings";
 
 export type ImageQuality = "standard" | "high" | "low";
@@ -42,7 +43,7 @@ function buildPrompt(request: ImageGenerationRequest) {
   const negativePrompt = request.negativePrompt?.trim();
 
   if (!prompt) {
-    throw new Error("请输入生成提示词");
+    throw new Error("请输入生成提示词。");
   }
 
   if (!negativePrompt) {
@@ -135,7 +136,7 @@ class OpenAIImageProvider implements ImageGenerationProvider {
     const runtimeConfig = await getOpenAIRuntimeConfig();
 
     if (!runtimeConfig.apiKey) {
-      throw new Error("后台尚未配置 OpenAI API Key，请先到后台配置页保存密钥");
+      throw new Error("后台尚未配置 OpenAI API Key，请先到后台配置页保存密钥。");
     }
 
     const prompt = buildPrompt(request);
@@ -162,7 +163,7 @@ class OpenAIImageProvider implements ImageGenerationProvider {
     const data = payload.data || [];
 
     if (!data.length) {
-      throw new Error("OpenAI 未返回生成图片");
+      throw new Error("OpenAI 未返回生成图片。");
     }
 
     const images = await Promise.all(
@@ -175,7 +176,7 @@ class OpenAIImageProvider implements ImageGenerationProvider {
           return imageFromUrl(item.url);
         }
 
-        throw new Error("OpenAI 返回的图片数据为空");
+        throw new Error("OpenAI 返回的图片数据为空。");
       }),
     );
 
@@ -190,8 +191,14 @@ class OpenAIImageProvider implements ImageGenerationProvider {
 class ChatGPTWebProvider implements ImageGenerationProvider {
   name: GenerationProviderName = "chatgpt_web";
 
-  async generate(): Promise<ImageGenerationResult> {
-    throw new Error("ChatGPT 网页版生图通道尚未启用，请在后台切换为 OpenAI Provider");
+  async generate(request: ImageGenerationRequest): Promise<ImageGenerationResult> {
+    const images = await generateWithChatGPTWeb(request);
+
+    return {
+      provider: this.name,
+      model: "chatgpt-web",
+      images,
+    };
   }
 }
 

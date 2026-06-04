@@ -1,9 +1,11 @@
 node_modules/
 .next/
 .npm-cache/
+.local/
 .env
 .env.local
 .env.*.local
+public/generated/
 dev-server.out.log
 dev-server.err.log
 *.log

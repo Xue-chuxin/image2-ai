@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, Loader2, LogOut, Save, ShieldAlert, XCircle } from "lucide-react";
+import { CheckCircle2, ExternalLink, Loader2, LogOut, RefreshCw, Save, ShieldAlert, XCircle } from "lucide-react";
 
 import type { AdminAppSettings, AdminDiagnosticStatus, GenerationProviderName } from "@/lib/settings";
 
@@ -11,11 +11,38 @@ type SettingsResponse = {
   error?: string;
 };
 
+type ChatGPTWebStatusResponse = {
+  ok: boolean;
+  status?: {
+    enabled: boolean;
+    ready: boolean;
+    userDataDir: string;
+    headless: boolean;
+    timeoutSeconds: number;
+    message: string;
+  };
+  error?: string;
+};
+
 async function readSettingsResponse(response: Response): Promise<SettingsResponse> {
   const contentType = response.headers.get("content-type") || "";
 
   if (contentType.includes("application/json")) {
     return (await response.json()) as SettingsResponse;
+  }
+
+  const text = await response.text();
+  return {
+    ok: false,
+    error: text.includes("<!DOCTYPE") ? "接口返回了 HTML 错误页，请查看服务端日志。" : text || "接口返回格式异常。",
+  };
+}
+
+async function readChatGPTWebResponse(response: Response): Promise<ChatGPTWebStatusResponse> {
+  const contentType = response.headers.get("content-type") || "";
+
+  if (contentType.includes("application/json")) {
+    return (await response.json()) as ChatGPTWebStatusResponse;
   }
 
   const text = await response.text();
@@ -52,8 +79,12 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
   const [openaiApiKey, setOpenaiApiKey] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [chatgptMessage, setChatgptMessage] = useState("");
+  const [chatgptError, setChatgptError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isOpeningChatGPT, setIsOpeningChatGPT] = useState(false);
+  const [isCheckingChatGPT, setIsCheckingChatGPT] = useState(false);
 
   function update<K extends keyof AdminAppSettings>(key: K, value: AdminAppSettings[K]) {
     setSettings((current) => ({ ...current, [key]: value }));
@@ -80,6 +111,10 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
           deepseekModel: settings.deepseekModel,
           deepseekPolishPrompt: settings.deepseekPolishPrompt,
           openaiImageModel: settings.openaiImageModel,
+          chatgptWebEnabled: settings.chatgptWebEnabled,
+          chatgptWebUserDataDir: settings.chatgptWebUserDataDir,
+          chatgptWebHeadless: settings.chatgptWebHeadless,
+          chatgptWebTimeoutSeconds: settings.chatgptWebTimeoutSeconds,
           deepseekApiKey,
           openaiApiKey,
         }),
@@ -98,6 +133,44 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
       setError(caughtError instanceof Error ? caughtError.message : "保存失败。");
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function openChatGPTLoginBrowser() {
+    setChatgptError("");
+    setChatgptMessage("");
+    setIsOpeningChatGPT(true);
+
+    try {
+      const response = await fetch("/api/admin/chatgpt-web/open-login", { method: "POST" });
+      const data = await readChatGPTWebResponse(response);
+      if (!response.ok || !data.ok || !data.status) {
+        throw new Error(data.error || "打开登录浏览器失败。");
+      }
+      setChatgptMessage(data.status.message);
+    } catch (caughtError) {
+      setChatgptError(caughtError instanceof Error ? caughtError.message : "打开登录浏览器失败。");
+    } finally {
+      setIsOpeningChatGPT(false);
+    }
+  }
+
+  async function checkChatGPTStatus() {
+    setChatgptError("");
+    setChatgptMessage("");
+    setIsCheckingChatGPT(true);
+
+    try {
+      const response = await fetch("/api/admin/chatgpt-web/check", { method: "POST" });
+      const data = await readChatGPTWebResponse(response);
+      if (!response.ok || !data.ok || !data.status) {
+        throw new Error(data.error || "检测登录状态失败。");
+      }
+      setChatgptMessage(data.status.message);
+    } catch (caughtError) {
+      setChatgptError(caughtError instanceof Error ? caughtError.message : "检测登录状态失败。");
+    } finally {
+      setIsCheckingChatGPT(false);
     }
   }
 
@@ -152,8 +225,8 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
                 onChange={(event) => update("defaultGenerationProvider", event.target.value as GenerationProviderName)}
                 className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
               >
+                <option value="chatgpt_web">ChatGPT Web 本机浏览器</option>
                 <option value="openai">OpenAI 官方 API</option>
-                <option value="chatgpt_web">ChatGPT Web 预留接口</option>
               </select>
             </label>
             <label className="block">
@@ -175,6 +248,83 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
               />
             </label>
           </div>
+        </div>
+
+        <div className="rounded-[28px] border border-slate-200 bg-white/88 p-5 shadow-card backdrop-blur">
+          <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-400">ChatGPT Web</p>
+          <h2 className="mt-2 text-2xl font-black text-slate-950">网页版 ChatGPT</h2>
+          <p className="mt-2 text-sm font-bold leading-6 text-slate-500">
+            使用本机浏览器 Profile 保存登录态，不保存 ChatGPT 账号、密码或 Cookie。
+          </p>
+          <div className="mt-5 grid gap-4">
+            <label className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+              <span>
+                <span className="block text-sm font-black text-slate-800">启用 ChatGPT Web</span>
+                <span className="mt-1 block text-xs font-bold text-slate-400">启用后才能作为默认 Provider 使用。</span>
+              </span>
+              <input
+                checked={settings.chatgptWebEnabled}
+                onChange={(event) => update("chatgptWebEnabled", event.target.checked)}
+                type="checkbox"
+                className="h-5 w-5 rounded border-slate-300 text-slate-950"
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm font-bold text-slate-700">浏览器 Profile 路径</span>
+              <input
+                value={settings.chatgptWebUserDataDir}
+                onChange={(event) => update("chatgptWebUserDataDir", event.target.value)}
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
+              />
+            </label>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                <span>
+                  <span className="block text-sm font-black text-slate-800">无头模式</span>
+                  <span className="mt-1 block text-xs font-bold text-slate-400">登录阶段会强制显示浏览器。</span>
+                </span>
+                <input
+                  checked={settings.chatgptWebHeadless}
+                  onChange={(event) => update("chatgptWebHeadless", event.target.checked)}
+                  type="checkbox"
+                  className="h-5 w-5 rounded border-slate-300 text-slate-950"
+                />
+              </label>
+              <label className="block">
+                <span className="text-sm font-bold text-slate-700">超时时间（秒）</span>
+                <input
+                  value={settings.chatgptWebTimeoutSeconds}
+                  onChange={(event) => update("chatgptWebTimeoutSeconds", Number(event.target.value))}
+                  type="number"
+                  min={30}
+                  max={900}
+                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
+                />
+              </label>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={openChatGPTLoginBrowser}
+                disabled={isOpeningChatGPT}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 shadow-card disabled:opacity-60"
+              >
+                {isOpeningChatGPT ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
+                打开登录浏览器
+              </button>
+              <button
+                type="button"
+                onClick={checkChatGPTStatus}
+                disabled={isCheckingChatGPT}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white shadow-card disabled:opacity-60"
+              >
+                {isCheckingChatGPT ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                检测登录状态
+              </button>
+            </div>
+          </div>
+          {chatgptMessage ? <p className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{chatgptMessage}</p> : null}
+          {chatgptError ? <p className="mt-4 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">{chatgptError}</p> : null}
         </div>
       </section>
 

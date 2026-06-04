@@ -1,3 +1,4 @@
+import path from "path";
 import { randomBytes } from "crypto";
 
 import { decryptSecret, encryptSecret, hasSettingsEncryptionKey } from "@/lib/app-crypto";
@@ -12,6 +13,10 @@ export type PublicAppSettings = {
   deepseekBaseUrl: string;
   deepseekModel: string;
   openaiImageModel: string;
+  chatgptWebEnabled: boolean;
+  chatgptWebUserDataDir: string;
+  chatgptWebHeadless: boolean;
+  chatgptWebTimeoutSeconds: number;
 };
 
 export type AdminDiagnosticStatus = "ok" | "warning" | "error";
@@ -35,6 +40,13 @@ export type SaveAdminSettingsInput = Partial<PublicAppSettings> & {
   deepseekPolishPrompt?: string;
   deepseekApiKey?: string;
   openaiApiKey?: string;
+};
+
+export type ChatGPTWebRuntimeConfig = {
+  enabled: boolean;
+  userDataDir: string;
+  headless: boolean;
+  timeoutMs: number;
 };
 
 type SettingRow = {
@@ -61,6 +73,10 @@ const defaultSettings: PublicAppSettings = {
   deepseekBaseUrl: "https://api.deepseek.com",
   deepseekModel: "deepseek-chat",
   openaiImageModel: "gpt-image-1",
+  chatgptWebEnabled: false,
+  chatgptWebUserDataDir: ".local/chatgpt-web-profile",
+  chatgptWebHeadless: false,
+  chatgptWebTimeoutSeconds: 180,
 };
 
 function createId() {
@@ -79,6 +95,59 @@ function normalizeText(value: unknown, fallback: string, maxLength = 120) {
   return clean ? clean.slice(0, maxLength) : fallback;
 }
 
+function normalizeBoolean(value: unknown, fallback: boolean) {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (["true", "1", "yes", "on"].includes(normalized)) {
+      return true;
+    }
+    if (["false", "0", "no", "off"].includes(normalized)) {
+      return false;
+    }
+  }
+
+  return fallback;
+}
+
+function normalizeTimeoutSeconds(value: unknown, fallback: number) {
+  const numeric = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(numeric)) {
+    return fallback;
+  }
+
+  return Math.min(Math.max(Math.floor(numeric), 30), 900);
+}
+
+function getStoredSetting(map: Map<string, SettingRow>, key: keyof PublicAppSettings | "deepseekPolishPrompt") {
+  return map.get(key)?.value;
+}
+
+function getStoredBoolean(map: Map<string, SettingRow>, key: keyof PublicAppSettings, envValue: string | undefined, fallback: boolean) {
+  const storedValue = map.get(key)?.value;
+  if (typeof storedValue === "string") {
+    return normalizeBoolean(storedValue, fallback);
+  }
+
+  return normalizeBoolean(envValue, fallback);
+}
+
+function getStoredNumber(map: Map<string, SettingRow>, key: keyof PublicAppSettings, envValue: string | undefined, fallback: number) {
+  const storedValue = map.get(key)?.value;
+  if (typeof storedValue === "string") {
+    return normalizeTimeoutSeconds(storedValue, fallback);
+  }
+
+  return normalizeTimeoutSeconds(envValue, fallback);
+}
+
+function resolveLocalPath(value: string) {
+  return path.isAbsolute(value) ? value : path.resolve(process.cwd(), value);
+}
+
 async function readSettingRows() {
   if (!process.env.DATABASE_URL) {
     return [];
@@ -95,10 +164,6 @@ async function readSettingRows() {
 
 function toMap(rows: SettingRow[]) {
   return new Map(rows.map((row) => [row.key, row]));
-}
-
-function getStoredSetting(map: Map<string, SettingRow>, key: keyof PublicAppSettings | "deepseekPolishPrompt") {
-  return map.get(key)?.value;
 }
 
 async function upsertSetting(key: string, value: string, isEncrypted = false) {
@@ -154,6 +219,7 @@ async function buildDiagnostics(
 ): Promise<AdminDiagnosticItem[]> {
   const encryptionReady = hasSettingsEncryptionKey();
   const providerIsOpenAI = settings.defaultGenerationProvider === "openai";
+  const providerIsChatGPTWeb = settings.defaultGenerationProvider === "chatgpt_web";
 
   return [
     await checkDatabase(),
@@ -173,22 +239,32 @@ async function buildDiagnostics(
       key: "openai",
       label: "OpenAI 生图",
       status: openaiApiKeyConfigured ? "ok" : providerIsOpenAI ? "error" : "warning",
-      message: openaiApiKeyConfigured ? `已配置 ${settings.openaiImageModel}。` : "未配置 OpenAI API Key，真实生图不可用。",
+      message: openaiApiKeyConfigured ? `已配置 ${settings.openaiImageModel}。` : "未配置 OpenAI API Key，OpenAI 官方通道不可用。",
+    },
+    {
+      key: "chatgpt_web",
+      label: "ChatGPT Web",
+      status: settings.chatgptWebEnabled ? "warning" : providerIsChatGPTWeb ? "error" : "warning",
+      message: settings.chatgptWebEnabled
+        ? "已启用本机浏览器通道，请在下方检测 ChatGPT 登录状态。"
+        : "未启用本机浏览器通道，默认 Provider 不能选择 ChatGPT Web。",
     },
     {
       key: "provider",
       label: "默认 Provider",
-      status: settings.defaultGenerationProvider === "chatgpt_web" ? "warning" : "ok",
-      message:
-        settings.defaultGenerationProvider === "chatgpt_web"
-          ? "ChatGPT Web 目前只是预留接口，默认会返回未启用。"
-          : "默认使用 OpenAI 官方 API。",
+      status: providerIsChatGPTWeb && !settings.chatgptWebEnabled ? "error" : "ok",
+      message: providerIsChatGPTWeb ? "默认使用 ChatGPT Web 本机浏览器通道。" : "默认使用 OpenAI 官方 API。",
     },
   ];
 }
 
 export async function getPublicAppSettings(): Promise<PublicAppSettings> {
   const map = toMap(await readSettingRows());
+  const chatgptWebUserDataDir = normalizeText(
+    getStoredSetting(map, "chatgptWebUserDataDir") || process.env.CHATGPT_WEB_USER_DATA_DIR,
+    defaultSettings.chatgptWebUserDataDir,
+    300,
+  );
 
   return {
     browserTitle: getStoredSetting(map, "browserTitle") || defaultSettings.browserTitle,
@@ -200,6 +276,15 @@ export async function getPublicAppSettings(): Promise<PublicAppSettings> {
     deepseekBaseUrl: getStoredSetting(map, "deepseekBaseUrl") || process.env.DEEPSEEK_BASE_URL || defaultSettings.deepseekBaseUrl,
     deepseekModel: getStoredSetting(map, "deepseekModel") || process.env.DEEPSEEK_MODEL || defaultSettings.deepseekModel,
     openaiImageModel: getStoredSetting(map, "openaiImageModel") || process.env.OPENAI_IMAGE_MODEL || defaultSettings.openaiImageModel,
+    chatgptWebEnabled: getStoredBoolean(map, "chatgptWebEnabled", process.env.CHATGPT_WEB_ENABLED, defaultSettings.chatgptWebEnabled),
+    chatgptWebUserDataDir,
+    chatgptWebHeadless: getStoredBoolean(map, "chatgptWebHeadless", process.env.CHATGPT_WEB_HEADLESS, defaultSettings.chatgptWebHeadless),
+    chatgptWebTimeoutSeconds: getStoredNumber(
+      map,
+      "chatgptWebTimeoutSeconds",
+      process.env.CHATGPT_WEB_TIMEOUT_SECONDS,
+      defaultSettings.chatgptWebTimeoutSeconds,
+    ),
   };
 }
 
@@ -228,6 +313,10 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
   const openaiImageModel = normalizeText(input.openaiImageModel, defaultSettings.openaiImageModel);
   const deepseekPolishPrompt = normalizeText(input.deepseekPolishPrompt, defaultDeepSeekPolishPrompt, 6000);
   const defaultGenerationProvider = normalizeProvider(input.defaultGenerationProvider);
+  const chatgptWebEnabled = normalizeBoolean(input.chatgptWebEnabled, defaultSettings.chatgptWebEnabled);
+  const chatgptWebUserDataDir = normalizeText(input.chatgptWebUserDataDir, defaultSettings.chatgptWebUserDataDir, 300);
+  const chatgptWebHeadless = normalizeBoolean(input.chatgptWebHeadless, defaultSettings.chatgptWebHeadless);
+  const chatgptWebTimeoutSeconds = normalizeTimeoutSeconds(input.chatgptWebTimeoutSeconds, defaultSettings.chatgptWebTimeoutSeconds);
 
   await upsertSetting("browserTitle", browserTitle);
   await upsertSetting("siteTitle", siteTitle);
@@ -237,6 +326,10 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
   await upsertSetting("openaiImageModel", openaiImageModel);
   await upsertSetting("deepseekPolishPrompt", deepseekPolishPrompt);
   await upsertSetting("defaultGenerationProvider", defaultGenerationProvider);
+  await upsertSetting("chatgptWebEnabled", String(chatgptWebEnabled));
+  await upsertSetting("chatgptWebUserDataDir", chatgptWebUserDataDir);
+  await upsertSetting("chatgptWebHeadless", String(chatgptWebHeadless));
+  await upsertSetting("chatgptWebTimeoutSeconds", String(chatgptWebTimeoutSeconds));
 
   if (input.deepseekApiKey?.trim()) {
     await upsertSetting("deepseekApiKey", encryptSecret(input.deepseekApiKey.trim()), true);
@@ -276,5 +369,16 @@ export async function getOpenAIRuntimeConfig() {
   return {
     apiKey: await getSecretValue("openaiApiKey", process.env.OPENAI_API_KEY),
     model: settings.openaiImageModel,
+  };
+}
+
+export async function getChatGPTWebRuntimeConfig(): Promise<ChatGPTWebRuntimeConfig> {
+  const settings = await getPublicAppSettings();
+
+  return {
+    enabled: settings.chatgptWebEnabled,
+    userDataDir: resolveLocalPath(settings.chatgptWebUserDataDir),
+    headless: settings.chatgptWebHeadless,
+    timeoutMs: settings.chatgptWebTimeoutSeconds * 1000,
   };
 }
