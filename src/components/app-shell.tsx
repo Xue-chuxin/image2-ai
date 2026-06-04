@@ -11,7 +11,7 @@ const navItems = [
   { href: "/prompts", label: "灵感", icon: Library },
   { href: "/generate", label: "创作", icon: ImagePlus, primary: true },
   { href: "/history", label: "记录", icon: Clock3 },
-  { href: "/signin", label: "账户", icon: UserRound }
+  { href: "/account", label: "账户", icon: UserRound },
 ];
 
 export function AppShell({ children, settings }: { children: React.ReactNode; settings: PublicAppSettings }) {
@@ -42,7 +42,7 @@ export function AppShell({ children, settings }: { children: React.ReactNode; se
                   className={clsx(
                     "inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-black transition duration-200",
                     active ? "bg-slate-950 text-white shadow-card" : "text-slate-500 hover:bg-slate-50 hover:text-slate-950",
-                    item.primary && !active && "bg-ocean-50 text-ocean-800 hover:bg-ocean-100 hover:text-ocean-900"
+                    item.primary && !active && "bg-ocean-50 text-ocean-800 hover:bg-ocean-100 hover:text-ocean-900",
                   )}
                 >
                   <Icon className="h-4 w-4" />
@@ -103,7 +103,7 @@ export function AppShell({ children, settings }: { children: React.ReactNode; se
                     "flex min-h-12 flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-bold transition",
                     item.primary && "-mt-7 h-16 rounded-[22px] bg-slate-950 text-white shadow-card",
                     !item.primary && active && "bg-ocean-50 text-ocean-800",
-                    !item.primary && !active && "text-slate-400 hover:text-slate-600"
+                    !item.primary && !active && "text-slate-400 hover:text-slate-600",
                   )}
                 >
                   <Icon className="h-4 w-4" />

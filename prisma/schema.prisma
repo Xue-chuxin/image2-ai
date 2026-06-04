@@ -31,6 +31,13 @@ enum CreditTransactionType {
   ADJUSTMENT
 }
 
+enum RechargeOrderStatus {
+  PENDING
+  PAID
+  CANCELED
+  EXPIRED
+}
+
 model User {
   id                 String              @id @default(cuid())
   email              String?             @unique
@@ -47,6 +54,7 @@ model User {
   uploadedImages     UploadedImage[]
   promptFavorites    PromptFavorite[]
   creditTransactions CreditTransaction[]
+  rechargeOrders     RechargeOrder[]
 }
 
 model PromptCategory {
@@ -209,6 +217,47 @@ model CreditTransaction {
   createdAt DateTime              @default(now())
 
   @@index([userId, createdAt])
+}
+
+model CreditPackage {
+  id            String          @id @default(cuid())
+  name          String
+  description   String?
+  credits       Int
+  bonusCredits  Int             @default(0)
+  priceCents    Int
+  currency      String          @default("CNY")
+  sortOrder     Int             @default(0)
+  isActive      Boolean         @default(true)
+  orders        RechargeOrder[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
+model RechargeOrder {
+  id                  String              @id @default(cuid())
+  orderNo             String              @unique
+  userId              String
+  packageId           String?
+  packageNameSnapshot String
+  credits             Int
+  bonusCredits        Int                 @default(0)
+  amountCents         Int
+  currency            String              @default("CNY")
+  status              RechargeOrderStatus @default(PENDING)
+  provider            String              @default("manual")
+  paidAt              DateTime?
+  expiresAt           DateTime?
+  user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  package             CreditPackage?      @relation(fields: [packageId], references: [id], onDelete: SetNull)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@index([packageId])
 }
 
 model AppSetting {

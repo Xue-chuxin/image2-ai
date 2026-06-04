@@ -18,6 +18,9 @@ export default async function AdminUploadsPage() {
             <p className="mt-2 text-sm leading-6 text-slate-500">查看用户上传的参考图资源，排查文件大小、类型和用户来源。</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <Link href="/admin/billing" className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-600 shadow-card">
+              套餐充值
+            </Link>
             <Link href="/admin/images" className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-600 shadow-card">
               作品管理
             </Link>

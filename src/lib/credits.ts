@@ -149,3 +149,41 @@ export async function refundReservedCreditsForJob(userId: string, amount: number
     });
   });
 }
+
+export async function grantPurchasedCredits(userId: string, amount: number, orderId: string, memo = "积分充值到账") {
+  if (amount <= 0) {
+    return;
+  }
+
+  await ensureCreditAccount(userId);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.creditAccount.update({
+      where: {
+        userId,
+      },
+      data: {
+        available: {
+          increment: amount,
+        },
+      },
+    });
+
+    const account = await tx.creditAccount.findUniqueOrThrow({
+      where: {
+        userId,
+      },
+    });
+
+    await tx.creditTransaction.create({
+      data: {
+        userId,
+        type: "PURCHASE",
+        amount,
+        balance: account.available,
+        orderId,
+        memo,
+      },
+    });
+  });
+}
