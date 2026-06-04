@@ -173,7 +173,6 @@ export function GenerateComposer({ initialPrompt = "", onJobChange, compact = fa
           ratio,
           quality,
           imageCount,
-          provider: "openai",
         }),
       });
       const result = await readApiJson<GenerationResult>(response);
