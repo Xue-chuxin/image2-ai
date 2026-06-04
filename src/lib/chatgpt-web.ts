@@ -1,7 +1,7 @@
 import { execFile } from "child_process";
 import { access, mkdir } from "fs/promises";
 import { promisify } from "util";
-import type { BrowserContext, Page } from "playwright";
+import type { BrowserContext, Locator, Page } from "playwright";
 
 import type { GeneratedImagePayload, ImageGenerationRequest } from "@/lib/image-generation";
 import { getChatGPTWebRuntimeConfig, type ChatGPTWebRuntimeConfig } from "@/lib/settings";
@@ -292,24 +292,59 @@ async function getLargeImageSrcs(page: Page) {
   });
 }
 
+async function findVisibleLocator(page: Page, selector: string): Promise<Locator | null> {
+  const locator = page.locator(selector);
+  const count = await locator.count().catch(() => 0);
+
+  for (let index = count - 1; index >= 0; index -= 1) {
+    const candidate = locator.nth(index);
+    const isUsable = await candidate
+      .evaluate((node) => {
+        const element = node as HTMLElement;
+        const rect = element.getBoundingClientRect();
+        const style = window.getComputedStyle(element);
+
+        return (
+          rect.width > 4 &&
+          rect.height > 4 &&
+          style.display !== "none" &&
+          style.visibility !== "hidden" &&
+          style.pointerEvents !== "none" &&
+          element.getAttribute("aria-hidden") !== "true" &&
+          !(element as HTMLInputElement | HTMLTextAreaElement).disabled
+        );
+      })
+      .catch(() => false);
+
+    if (isUsable) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
 async function findComposer(page: Page) {
   const selectors = [
+    '[data-testid="composer-root"] div[contenteditable="true"]',
+    'div[contenteditable="true"][role="textbox"]',
+    'div[contenteditable="true"]',
+    'textarea[name="prompt-textarea"]:not(.wcDTda_fallbackTextarea)',
+    'textarea[aria-label*="ChatGPT"]:not(.wcDTda_fallbackTextarea)',
     'textarea[placeholder*="Message"]',
     'textarea[placeholder*="消息"]',
-    "textarea",
-    'div[contenteditable="true"]',
-    '[data-testid="composer-root"] div[contenteditable="true"]',
+    'textarea:not(.wcDTda_fallbackTextarea)',
   ];
 
   for (const selector of selectors) {
-    const locator = page.locator(selector).last();
-    if (await locator.isVisible().catch(() => false)) {
+    const locator = await findVisibleLocator(page, selector);
+    if (locator) {
       return locator;
     }
   }
 
-  const textbox = page.getByRole("textbox").last();
-  if (await textbox.isVisible().catch(() => false)) {
+  const textbox = await findVisibleLocator(page, '[role="textbox"]');
+  if (textbox) {
     return textbox;
   }
 
@@ -318,14 +353,12 @@ async function findComposer(page: Page) {
 
 async function submitPrompt(page: Page, prompt: string) {
   const composer = await findComposer(page);
-  await composer.click();
+  await composer.click({ timeout: 10000 });
 
-  const tagName = await composer.evaluate((node) => node.tagName.toLowerCase()).catch(() => "");
-  if (tagName === "textarea") {
-    await composer.fill(prompt);
-  } else {
-    await page.keyboard.insertText(prompt);
-  }
+  await page.keyboard.press(process.platform === "darwin" ? "Meta+A" : "Control+A").catch(() => null);
+  await page.keyboard.press("Backspace").catch(() => null);
+  await page.keyboard.insertText(prompt);
+  await page.waitForTimeout(300);
 
   const sendButtonSelectors = [
     'button[data-testid="send-button"]',
