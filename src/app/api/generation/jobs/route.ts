@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import {
-  createAndRunGenerationJob,
+  createAndQueueGenerationJob,
   listRecentGenerationJobs,
   type CreateGenerationJobInput,
 } from "@/lib/generation-jobs";
@@ -82,7 +82,7 @@ export async function POST(request: Request) {
       provider: normalizeProvider(body.provider),
     };
 
-    const job = await createAndRunGenerationJob(session.userId, input);
+    const job = await createAndQueueGenerationJob(session.userId, input);
     const failed = job.status === "FAILED";
 
     return NextResponse.json(
@@ -92,7 +92,7 @@ export async function POST(request: Request) {
         error: failed ? job.errorMessage || "生成任务失败" : undefined,
       },
       {
-        status: failed ? 500 : 200,
+        status: failed ? 500 : 202,
       },
     );
   } catch (error) {

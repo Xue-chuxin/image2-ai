@@ -81,6 +81,16 @@ async function readApiJson<T>(response: Response): Promise<ApiResult<T>> {
   } as ApiResult<T>;
 }
 
+function wait(ms: number) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+function isTerminalStatus(status?: string) {
+  return status === "COMPLETED" || status === "FAILED" || status === "CANCELED";
+}
+
 export function GenerateComposer({ initialPrompt = "", onJobChange, compact = false }: GenerateComposerProps) {
   const [prompt, setPrompt] = useState(initialPrompt);
   const [selectedStyle, setSelectedStyle] = useState<(typeof styles)[number]>("写实");
@@ -103,11 +113,38 @@ export function GenerateComposer({ initialPrompt = "", onJobChange, compact = fa
     onJobChange?.(job);
   }
 
+  async function pollGenerationJob(initialJob: GenerationJobResult) {
+    let latestJob = initialJob;
+
+    for (let attempt = 0; attempt < 180; attempt += 1) {
+      await wait(2000);
+      const pollResponse = await fetch(`/api/generation/jobs/${latestJob.id}`, {
+        method: "GET",
+      });
+      const pollResult = await readApiJson<GenerationResult>(pollResponse);
+
+      if (pollResult.job) {
+        latestJob = pollResult.job;
+        updateJob(latestJob);
+      }
+
+      if (!pollResponse.ok || pollResult.ok === false) {
+        throw new Error(pollResult.error || latestJob.errorMessage || "读取生成任务失败");
+      }
+
+      if (isTerminalStatus(latestJob.status)) {
+        return latestJob;
+      }
+    }
+
+    throw new Error("生成任务仍在进行，请稍后到历史记录查看结果。");
+  }
+
   async function polishPrompt() {
     const rawPrompt = prompt.trim();
 
     if (!rawPrompt) {
-      setError("先输入一句想生成的画面描述");
+      setError("先输入一句想生成的画面描述。");
       return;
     }
 
@@ -139,7 +176,7 @@ export function GenerateComposer({ initialPrompt = "", onJobChange, compact = fa
       setPolishedPromptEn(data.promptEn || "");
       setNegativePrompt(data.negativePrompt || "");
       setPolishProvider(result.source === "local" ? "本地兜底" : data.provider || "DeepSeek");
-      setNotice(result.warning || "DeepSeek 已润色并回填到输入框");
+      setNotice(result.warning || "DeepSeek 已润色并回填到输入框。");
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "润色失败");
     } finally {
@@ -151,7 +188,7 @@ export function GenerateComposer({ initialPrompt = "", onJobChange, compact = fa
     const rawPrompt = prompt.trim();
 
     if (!rawPrompt) {
-      setError("先输入一句想生成的画面描述");
+      setError("先输入一句想生成的画面描述。");
       return;
     }
 
@@ -181,11 +218,21 @@ export function GenerateComposer({ initialPrompt = "", onJobChange, compact = fa
         updateJob(result.job);
       }
 
-      if (!response.ok || result.ok === false) {
+      if (!response.ok || result.ok === false || !result.job) {
         throw new Error(result.error || result.job?.errorMessage || "生成失败");
       }
 
-      setNotice("生成完成，积分已扣除，结果已保存到历史记录");
+      let finalJob = result.job;
+      if (!isTerminalStatus(finalJob.status)) {
+        setNotice("生成任务已提交，正在等待 ChatGPT 返回结果。");
+        finalJob = await pollGenerationJob(finalJob);
+      }
+
+      if (finalJob.status === "FAILED") {
+        throw new Error(finalJob.errorMessage || "生成失败");
+      }
+
+      setNotice("生成完成，积分已扣除，结果已保存到历史记录。");
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "生成失败");
     } finally {
@@ -218,7 +265,7 @@ export function GenerateComposer({ initialPrompt = "", onJobChange, compact = fa
       <div className="upload-card" aria-label="参考图上传占位">
         <ImageUp size={24} />
         <span>拖入参考图</span>
-        <small>阶段 5 暂不处理图生图，先保留入口</small>
+        <small>当前阶段暂不处理图生图，先保留入口。</small>
       </div>
 
       <label className="field-block">

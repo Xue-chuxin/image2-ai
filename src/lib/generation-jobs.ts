@@ -10,6 +10,7 @@ import {
   estimateGenerationCreditCost,
   refundReservedCreditsForJob,
   reserveCreditsForJob,
+  spendReservedCreditsForJob,
 } from "./credits";
 import { saveGeneratedImage } from "./storage";
 import { getPublicAppSettings, type GenerationProviderName } from "./settings";
@@ -52,6 +53,13 @@ export type CreateGenerationJobInput = {
   quality?: ImageQuality | string;
   imageCount?: number;
   provider?: GenerationProviderName;
+};
+
+const runningJobIds = new Set<string>();
+
+const text = {
+  promptRequired: "\u8bf7\u8f93\u5165\u4e2d\u6587\u63d0\u793a\u8bcd",
+  generationFailed: "\u751f\u6210\u4efb\u52a1\u6267\u884c\u5931\u8d25",
 };
 
 function serializeDate(value: Date | string) {
@@ -103,14 +111,126 @@ function normalizeQuality(value?: ImageQuality | string) {
 }
 
 function getErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "生成任务执行失败";
+  return error instanceof Error ? error.message : text.generationFailed;
 }
 
-export async function createAndRunGenerationJob(userId: string, input: CreateGenerationJobInput) {
+function toGenerationRequest(job: GenerationJobRecord): ImageGenerationRequest {
+  return {
+    promptZh: job.polishedPromptZh || job.originalInput,
+    promptEn: job.polishedPromptEn || undefined,
+    negativePrompt: job.negativePrompt || undefined,
+    ratio: job.ratio,
+    quality: job.quality,
+    imageCount: job.imageCount,
+  };
+}
+
+async function getJobForExecution(jobId: string, userId: string) {
+  return prisma.generationJob.findFirst({
+    where: {
+      id: jobId,
+      userId,
+    },
+    include: {
+      images: true,
+    },
+  });
+}
+
+async function failGenerationJob(jobId: string, userId: string, creditCost: number, error: unknown) {
+  await refundReservedCreditsForJob(userId, creditCost, jobId).catch(() => null);
+
+  const failedJob = await prisma.generationJob.update({
+    where: {
+      id: jobId,
+    },
+    data: {
+      status: "FAILED",
+      errorMessage: getErrorMessage(error),
+    },
+    include: {
+      images: true,
+    },
+  });
+
+  return serializeJob(failedJob);
+}
+
+export async function executeGenerationJob(jobId: string, userId: string) {
+  const initialJob = await getJobForExecution(jobId, userId);
+  if (!initialJob || initialJob.status === "COMPLETED" || initialJob.status === "FAILED" || initialJob.status === "CANCELED") {
+    return initialJob ? serializeJob(initialJob) : null;
+  }
+
+  const activeJob = await prisma.generationJob.update({
+    where: {
+      id: jobId,
+    },
+    data: {
+      status: "GENERATING",
+      errorMessage: null,
+    },
+    include: {
+      images: true,
+    },
+  });
+
+  try {
+    const provider = await getImageGenerationProvider(activeJob.provider as GenerationProviderName);
+    const result = await provider.generate(toGenerationRequest(activeJob));
+
+    for (const [index, image] of result.images.entries()) {
+      const storedImage = await saveGeneratedImage(jobId, index, image.buffer, image.mimeType);
+
+      await prisma.generatedImage.create({
+        data: {
+          jobId,
+          url: storedImage.url,
+        },
+      });
+    }
+
+    await spendReservedCreditsForJob(userId, activeJob.creditCost, jobId);
+
+    const completedJob = await prisma.generationJob.update({
+      where: {
+        id: jobId,
+      },
+      data: {
+        status: "COMPLETED",
+        provider: result.provider,
+        providerRequestId: result.model,
+        errorMessage: null,
+      },
+      include: {
+        images: true,
+      },
+    });
+
+    return serializeJob(completedJob);
+  } catch (error) {
+    return failGenerationJob(jobId, userId, activeJob.creditCost, error);
+  }
+}
+
+function scheduleGenerationJob(jobId: string, userId: string) {
+  if (runningJobIds.has(jobId)) {
+    return;
+  }
+
+  runningJobIds.add(jobId);
+  setTimeout(() => {
+    void executeGenerationJob(jobId, userId).finally(() => {
+      runningJobIds.delete(jobId);
+    });
+  }, 0);
+}
+
+export async function createAndQueueGenerationJob(userId: string, input: CreateGenerationJobInput) {
   const promptZh = normalizePrompt(input.promptZh);
 
   if (!promptZh) {
-    throw new Error("请输入中文提示词");
+    throw new Error(text.promptRequired);
   }
 
   const publicSettings = await getPublicAppSettings();
@@ -123,7 +243,7 @@ export async function createAndRunGenerationJob(userId: string, input: CreateGen
   const job = await prisma.generationJob.create({
     data: {
       userId,
-      status: "GENERATING",
+      status: "QUEUED",
       provider: providerName,
       originalInput: promptZh,
       polishedPromptZh: promptZh,
@@ -139,87 +259,10 @@ export async function createAndRunGenerationJob(userId: string, input: CreateGen
     },
   });
 
-  let creditsReserved = false;
-  const request: ImageGenerationRequest = {
-    promptZh,
-    promptEn: input.promptEn,
-    negativePrompt: input.negativePrompt,
-    ratio,
-    quality,
-    imageCount,
-  };
-
   try {
     await reserveCreditsForJob(userId, creditCost, job.id);
-    creditsReserved = true;
-
-    const provider = await getImageGenerationProvider(providerName);
-    const result = await provider.generate(request);
-
-    for (const [index, image] of result.images.entries()) {
-      const storedImage = await saveGeneratedImage(job.id, index, image.buffer, image.mimeType);
-
-      await prisma.generatedImage.create({
-        data: {
-          jobId: job.id,
-          url: storedImage.url,
-        },
-      });
-    }
-
-    const completedJob = await prisma.$transaction(async (tx) => {
-      await tx.creditAccount.update({
-        where: {
-          userId,
-        },
-        data: {
-          frozen: {
-            decrement: creditCost,
-          },
-        },
-      });
-
-      const account = await tx.creditAccount.findUniqueOrThrow({
-        where: {
-          userId,
-        },
-      });
-
-      await tx.creditTransaction.create({
-        data: {
-          userId,
-          type: "SPEND",
-          amount: -creditCost,
-          balance: account.available,
-          jobId: job.id,
-          memo: "生图成功扣除积分",
-        },
-      });
-
-      return tx.generationJob.update({
-        where: {
-          id: job.id,
-        },
-        data: {
-          status: "COMPLETED",
-          provider: result.provider,
-          providerRequestId: result.model,
-          errorMessage: null,
-        },
-        include: {
-          images: true,
-        },
-      });
-    });
-    creditsReserved = false;
-
-    return serializeJob(completedJob);
   } catch (error) {
-    if (creditsReserved) {
-      await refundReservedCreditsForJob(userId, creditCost, job.id).catch(() => null);
-    }
-
-    const failedJob = await prisma.generationJob.update({
+    await prisma.generationJob.update({
       where: {
         id: job.id,
       },
@@ -227,13 +270,17 @@ export async function createAndRunGenerationJob(userId: string, input: CreateGen
         status: "FAILED",
         errorMessage: getErrorMessage(error),
       },
-      include: {
-        images: true,
-      },
     });
-
-    return serializeJob(failedJob);
+    throw error;
   }
+
+  scheduleGenerationJob(job.id, userId);
+  return serializeJob(job);
+}
+
+export async function createAndRunGenerationJob(userId: string, input: CreateGenerationJobInput) {
+  const queuedJob = await createAndQueueGenerationJob(userId, input);
+  return executeGenerationJob(queuedJob.id, userId);
 }
 
 export async function listRecentGenerationJobs(userId: string, limit = 20) {
