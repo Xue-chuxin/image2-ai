@@ -325,14 +325,33 @@ async function findVisibleLocator(page: Page, selector: string): Promise<Locator
 }
 
 async function findComposer(page: Page) {
+  const textTargets = [
+    page.getByText("有问题，尽管问").last(),
+    page.getByText("Message ChatGPT").last(),
+    page.getByLabel("与 ChatGPT 聊天").last(),
+    page.getByLabel("Message ChatGPT").last(),
+  ];
+
+  for (const locator of textTargets) {
+    if (await locator.isVisible().catch(() => false)) {
+      return locator;
+    }
+  }
+
   const selectors = [
     '[data-testid="composer-root"] div[contenteditable="true"]',
+    '[data-testid="composer-root"]',
+    'form:has(textarea[name="prompt-textarea"])',
+    'form:has([contenteditable="true"])',
     'div[contenteditable="true"][role="textbox"]',
+    'div[contenteditable="plaintext-only"]',
     'div[contenteditable="true"]',
+    'textarea[placeholder*="有问题"]:not(.wcDTda_fallbackTextarea)',
     'textarea[name="prompt-textarea"]:not(.wcDTda_fallbackTextarea)',
     'textarea[aria-label*="ChatGPT"]:not(.wcDTda_fallbackTextarea)',
     'textarea[placeholder*="Message"]',
     'textarea[placeholder*="消息"]',
+    'main form',
     'textarea:not(.wcDTda_fallbackTextarea)',
   ];
 
