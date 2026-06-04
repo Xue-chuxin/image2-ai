@@ -37,6 +37,7 @@ type ExtractedImage = {
 
 let sharedContext: BrowserContext | null = null;
 let sharedPage: Page | null = null;
+const CHATGPT_URL = "https://chatgpt.com/";
 
 async function fileExists(filePath: string) {
   try {
@@ -179,11 +180,42 @@ async function getSharedPage(config: ChatGPTWebRuntimeConfig, forceHeaded = fals
   return sharedPage;
 }
 
+async function createChatGPTPage(config: ChatGPTWebRuntimeConfig, forceHeaded = false) {
+  const context = await getSharedContext(config, forceHeaded);
+  sharedPage = await context.newPage();
+  return sharedPage;
+}
+
+function isChatGPTNavigationTarget(url: string) {
+  return url.includes("chatgpt.com") || url.includes("auth.openai.com");
+}
+
 async function gotoChatGPT(page: Page, timeoutMs: number) {
-  await page.goto("https://chatgpt.com/", {
-    waitUntil: "domcontentloaded",
-    timeout: Math.min(timeoutMs, 60000),
-  });
+  const timeout = Math.min(timeoutMs, 60000);
+
+  try {
+    await page.goto(CHATGPT_URL, {
+      waitUntil: "domcontentloaded",
+      timeout,
+    });
+  } catch {
+    // Some locally installed Chrome builds can open a controlled page but fail the first Playwright goto.
+    // In that case, drive the navigation from inside the page so the visible tab does not stay on about:blank.
+  }
+
+  if (isChatGPTNavigationTarget(page.url())) {
+    return;
+  }
+
+  await page.evaluate((url) => {
+    window.location.href = url;
+  }, CHATGPT_URL).catch(() => null);
+
+  await page.waitForURL((url) => isChatGPTNavigationTarget(url.href), { timeout }).catch(() => null);
+
+  if (!isChatGPTNavigationTarget(page.url())) {
+    throw new ChatGPTWebError("CHATGPT_WEB_BROWSER_FAILED", `Chrome 已打开，但没有跳转到 ChatGPT，当前页面是 ${page.url()}。`);
+  }
 }
 
 async function isLoggedIn(page: Page) {
@@ -330,7 +362,7 @@ export async function openChatGPTWebLoginBrowser(): Promise<ChatGPTWebStatus> {
   const config = await getChatGPTWebRuntimeConfig();
   assertEnabled(config);
 
-  const page = await getSharedPage(config, true);
+  const page = await createChatGPTPage(config, true);
   await gotoChatGPT(page, config.timeoutMs);
   await page.bringToFront().catch(() => null);
   const ready = await isLoggedIn(page);
