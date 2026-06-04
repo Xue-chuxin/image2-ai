@@ -1,4 +1,6 @@
+import { execFile } from "child_process";
 import { access, mkdir } from "fs/promises";
+import { promisify } from "util";
 import type { BrowserContext, Page } from "playwright";
 
 import type { GeneratedImagePayload, ImageGenerationRequest } from "@/lib/image-generation";
@@ -38,6 +40,7 @@ type ExtractedImage = {
 let sharedContext: BrowserContext | null = null;
 let sharedPage: Page | null = null;
 const CHATGPT_URL = "https://chatgpt.com/";
+const execFileAsync = promisify(execFile);
 
 async function fileExists(filePath: string) {
   try {
@@ -66,6 +69,35 @@ async function findChromeExecutablePath() {
   }
 
   return null;
+}
+
+async function closeExistingProfileBrowsers(userDataDir: string) {
+  if (process.platform !== "win32") {
+    return;
+  }
+
+  const script = `
+$profilePath = [System.IO.Path]::GetFullPath(${JSON.stringify(userDataDir)})
+$target = $profilePath.TrimEnd('\\').Replace('/', '\\').ToLowerInvariant()
+Get-CimInstance Win32_Process |
+  Where-Object {
+    ($_.Name -eq 'chrome.exe' -or $_.Name -eq 'msedge.exe') -and
+    $_.CommandLine -and
+    $_.CommandLine.Replace('/', '\\').ToLowerInvariant().Contains($target)
+  } |
+  ForEach-Object {
+    Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
+  }
+`;
+
+  await execFileAsync(
+    "powershell.exe",
+    ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script],
+    {
+      timeout: 10000,
+      windowsHide: true,
+    },
+  ).catch(() => null);
 }
 
 function assertEnabled(config: ChatGPTWebRuntimeConfig) {
@@ -107,6 +139,7 @@ function buildPrompt(request: ImageGenerationRequest) {
 
 async function launchPersistentContext(config: ChatGPTWebRuntimeConfig, forceHeaded = false) {
   await mkdir(config.userDataDir, { recursive: true });
+  await closeExistingProfileBrowsers(config.userDataDir);
   const { chromium } = await import("playwright");
   const headless = forceHeaded ? false : config.headless;
   const args = ["--disable-blink-features=AutomationControlled"];
