@@ -1,4 +1,4 @@
-import { mkdir } from "fs/promises";
+import { access, mkdir } from "fs/promises";
 import type { BrowserContext, Page } from "playwright";
 
 import type { GeneratedImagePayload, ImageGenerationRequest } from "@/lib/image-generation";
@@ -37,6 +37,35 @@ type ExtractedImage = {
 
 let sharedContext: BrowserContext | null = null;
 let sharedPage: Page | null = null;
+
+async function fileExists(filePath: string) {
+  try {
+    await access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function findChromeExecutablePath() {
+  const candidates = [
+    process.env.CHROME_EXECUTABLE_PATH,
+    process.platform === "win32" ? "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" : "",
+    process.platform === "win32" ? "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe" : "",
+    process.platform === "win32" && process.env.LOCALAPPDATA ? `${process.env.LOCALAPPDATA}\\Google\\Chrome\\Application\\chrome.exe` : "",
+    process.platform === "darwin" ? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" : "",
+    process.platform === "linux" ? "/usr/bin/google-chrome" : "",
+    process.platform === "linux" ? "/usr/bin/google-chrome-stable" : "",
+  ].filter((value): value is string => Boolean(value));
+
+  for (const candidate of candidates) {
+    if (await fileExists(candidate)) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
 
 function assertEnabled(config: ChatGPTWebRuntimeConfig) {
   if (!config.enabled) {
@@ -80,6 +109,20 @@ async function launchPersistentContext(config: ChatGPTWebRuntimeConfig, forceHea
   const { chromium } = await import("playwright");
   const headless = forceHeaded ? false : config.headless;
   const args = ["--disable-blink-features=AutomationControlled"];
+  const chromeExecutablePath = await findChromeExecutablePath();
+
+  if (chromeExecutablePath) {
+    try {
+      return await chromium.launchPersistentContext(config.userDataDir, {
+        executablePath: chromeExecutablePath,
+        headless,
+        args,
+        viewport: { width: 1440, height: 1000 },
+      });
+    } catch {
+      // Fall back to Playwright channel discovery below.
+    }
+  }
 
   try {
     return await chromium.launchPersistentContext(config.userDataDir, {
@@ -97,11 +140,10 @@ async function launchPersistentContext(config: ChatGPTWebRuntimeConfig, forceHea
         viewport: { width: 1440, height: 1000 },
       });
     } catch {
-      return chromium.launchPersistentContext(config.userDataDir, {
-        headless,
-        args,
-        viewport: { width: 1440, height: 1000 },
-      });
+      throw new ChatGPTWebError(
+        "CHATGPT_WEB_BROWSER_FAILED",
+        "没有找到可用的 Google Chrome 或 Edge。请安装 Chrome，或设置 CHROME_EXECUTABLE_PATH 指向 chrome.exe。",
+      );
     }
   }
 }
