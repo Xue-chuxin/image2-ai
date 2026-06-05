@@ -2,7 +2,7 @@
 
 import { type ChangeEvent, type DragEvent, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
-import { ImageUp, Loader2, RotateCcw, Send, UploadCloud, Wand2, X } from "lucide-react";
+import { Loader2, RotateCcw, Send, UploadCloud, Wand2, X } from "lucide-react";
 
 type ReferenceImageResult = {
   id: string;
@@ -218,7 +218,7 @@ export function GenerateComposer({ initialPrompt = "", initialReferenceImages = 
       for (const file of pendingFiles) {
         await uploadReferenceFile(file);
       }
-      setNotice("参考图已上传并保存。当前阶段会把参考图关联到任务，自动上传到 ChatGPT Web 放到下一阶段。");
+      setNotice("参考图已上传并保存到本次任务。");
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "上传参考图失败");
     } finally {
@@ -247,7 +247,7 @@ export function GenerateComposer({ initialPrompt = "", initialReferenceImages = 
     const rawPrompt = prompt.trim();
 
     if (!rawPrompt) {
-      setError("先输入一段画面描述。");
+      setError("请先输入一段画面描述。");
       return;
     }
 
@@ -278,8 +278,8 @@ export function GenerateComposer({ initialPrompt = "", initialReferenceImages = 
       setPrompt(polishedZh);
       setPolishedPromptEn(data.promptEn || "");
       setNegativePrompt(data.negativePrompt || "");
-      setPolishProvider(result.source === "local" ? "本地兜底" : data.provider || "DeepSeek");
-      setNotice(result.warning || "DeepSeek 已润色并回填到输入框。");
+      setPolishProvider(result.source === "local" ? "本地整理" : data.provider || "DeepSeek");
+      setNotice(result.warning || "描述已整理并回填到输入框。");
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "润色失败");
     } finally {
@@ -328,7 +328,7 @@ export function GenerateComposer({ initialPrompt = "", initialReferenceImages = 
 
       let finalJob = result.job;
       if (!isTerminalStatus(finalJob.status)) {
-        setNotice(referenceImages.length ? "生成任务已提交，参考图已关联到任务；当前通道先按文本生图。" : "生成任务已提交，正在等待结果。");
+        setNotice(referenceImages.length ? "任务已提交，参考图已关联到任务。" : "任务已提交，正在等待结果。");
         finalJob = await pollGenerationJob(finalJob);
       }
 
@@ -336,7 +336,7 @@ export function GenerateComposer({ initialPrompt = "", initialReferenceImages = 
         throw new Error(finalJob.errorMessage || "生成失败");
       }
 
-      setNotice("生成完成，积分已扣除，结果已保存到历史记录。");
+      setNotice("生成完成，结果已保存到历史记录。");
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "生成失败");
     } finally {
@@ -363,8 +363,8 @@ export function GenerateComposer({ initialPrompt = "", initialReferenceImages = 
       <div className="composer-head">
         <div>
           <span className="eyebrow">Create</span>
-          <h1>一句话生成你的视觉草图</h1>
-          <p>输入想法后可先用 DeepSeek 润色，也可以上传参考图并保存到本次任务。</p>
+          <h1>把一句描述整理成画面</h1>
+          <p>写下画面、选择比例和张数。需要时可以先整理文字，再提交生成。</p>
         </div>
         <button className="icon-button" type="button" onClick={resetComposer} aria-label="重置">
           <RotateCcw size={18} />
@@ -372,7 +372,7 @@ export function GenerateComposer({ initialPrompt = "", initialReferenceImages = 
       </div>
 
       <div
-        className={clsx("upload-card", isDragging && "ring-2 ring-ocean-300")}
+        className={clsx("upload-card", isDragging && "ring-2 ring-slate-300")}
         onDragOver={(event) => {
           event.preventDefault();
           setIsDragging(true);
@@ -382,8 +382,8 @@ export function GenerateComposer({ initialPrompt = "", initialReferenceImages = 
       >
         <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" multiple className="hidden" onChange={onReferenceInputChange} />
         <button type="button" onClick={() => fileInputRef.current?.click()} className="flex w-full flex-col items-center gap-2 text-center">
-          {isUploadingReference ? <Loader2 className="animate-spin" size={24} /> : <ImageUp size={24} />}
-          <span>{isUploadingReference ? "参考图上传中" : "拖入参考图或点击上传"}</span>
+          {isUploadingReference ? <Loader2 className="animate-spin" size={24} /> : <UploadCloud size={24} />}
+          <span>{isUploadingReference ? "参考图上传中" : "拖入参考图，或点击上传"}</span>
           <small>PNG / JPG / WEBP，单张不超过 8MB，最多 4 张</small>
         </button>
       </div>
@@ -419,7 +419,7 @@ export function GenerateComposer({ initialPrompt = "", initialReferenceImages = 
             setPolishedPromptEn("");
             setNegativePrompt("");
           }}
-          placeholder="例如：一位穿黑色风衣的年轻女性站在雨夜霓虹街头，电影级打光，浅景深，35mm 镜头"
+          placeholder="例如：雨夜街头的人像写真，浅景深，侧光，35mm 镜头，背景干净，真实皮肤质感。"
           rows={5}
         />
       </label>
@@ -474,7 +474,7 @@ export function GenerateComposer({ initialPrompt = "", initialReferenceImages = 
         <div className="prompt-preview">
           <div>
             <span>{polishProvider}</span>
-            <strong>已回填中文润色结果</strong>
+            <strong>已回填整理结果</strong>
           </div>
           {polishedPromptEn ? <p>{polishedPromptEn}</p> : null}
           {negativePrompt ? <small>避免：{negativePrompt}</small> : null}
@@ -495,7 +495,7 @@ export function GenerateComposer({ initialPrompt = "", initialReferenceImages = 
       <div className="composer-actions">
         <button type="button" onClick={polishPrompt} disabled={isPolishing || isGenerating} className="secondary-action">
           {isPolishing ? <Loader2 className="animate-spin" size={18} /> : <Wand2 size={18} />}
-          AI 润色
+          整理描述
         </button>
         <button type="button" onClick={startGeneration} disabled={!canGenerate} className="primary-action">
           {isGenerating ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
@@ -503,7 +503,7 @@ export function GenerateComposer({ initialPrompt = "", initialReferenceImages = 
         </button>
       </div>
 
-      {referenceImages.length > 0 ? <p className="text-xs font-bold leading-6 text-slate-400">参考图会保存到任务记录中。当前版本暂不自动上传参考图到 ChatGPT Web。</p> : null}
+      {referenceImages.length > 0 ? <p className="text-xs font-bold leading-6 text-slate-400">参考图会保存到任务记录中。当前版本不会把参考图自动上传到 ChatGPT Web。</p> : null}
     </section>
   );
 }

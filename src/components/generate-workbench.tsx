@@ -89,7 +89,7 @@ export function GenerateWorkbench({ initialPrompt = "", initialReferenceImages =
             <div className="preview-empty">
               <Sparkles size={28} />
               <span>生成结果会显示在这里</span>
-              <small>生成前会检查积分。成功后扣除积分，失败会退还冻结积分。</small>
+              <small>生成前会检查积分。成功后扣除积分，失败会退回冻结积分。</small>
             </div>
           )}
         </div>
@@ -108,7 +108,7 @@ export function GenerateWorkbench({ initialPrompt = "", initialReferenceImages =
                 <img key={image.id} src={image.thumbnailUrl || image.url} alt="参考图" className="h-24 w-full rounded-2xl border border-slate-200 object-cover" />
               ))}
             </div>
-            <p className="mt-3 text-xs font-bold leading-6 text-slate-400">当前版本会记录参考图，自动上传到 ChatGPT Web 放到下一阶段。</p>
+            <p className="mt-3 text-xs font-bold leading-6 text-slate-400">参考图会保存在任务记录里，便于后续复用。</p>
           </div>
         ) : null}
 
@@ -153,18 +153,18 @@ export function GenerateWorkbench({ initialPrompt = "", initialReferenceImages =
               {job.errorMessage ? <p className="job-error">{job.errorMessage}</p> : null}
             </>
           ) : (
-            <p className="muted-copy">输入提示词并点击“开始生成”后，这里会展示当前任务信息。</p>
+            <p className="muted-copy">输入描述并点击“开始生成”后，这里会显示当前任务信息。</p>
           )}
         </div>
 
         <div className="job-card compact">
           <div className="rule-row">
             <Coins size={18} />
-            <span>标准 5 积分 / 张，高清 12 积分 / 张，省积分 3 积分 / 张</span>
+            <span>标准 5 积分 / 张，高清 12 积分 / 张，省积分 3 积分 / 张。</span>
           </div>
           <div className="rule-row">
             <Clock size={18} />
-            <span>阶段 8B 已支持参考图上传和任务关联，真实图生图放到下一阶段。</span>
+            <span>如果任务还在处理中，可以到“记录”页面继续查看。</span>
           </div>
         </div>
       </aside>

@@ -14,35 +14,42 @@ const navItems = [
   { href: "/account", label: "账户", icon: UserRound },
 ];
 
+function isActivePath(pathname: string, href: string) {
+  if (href === "/") {
+    return pathname === "/";
+  }
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 export function AppShell({ children, settings }: { children: React.ReactNode; settings: PublicAppSettings }) {
   const pathname = usePathname();
 
   return (
     <div className="min-h-screen">
-      <header className="liquid-glass sticky inset-x-0 top-0 z-40 w-full border-b border-white/60 px-4 py-3 md:px-8">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
-          <Link href="/" className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] border border-slate-200 bg-white text-ocean-700 shadow-card">
+      <header className="sticky inset-x-0 top-0 z-40 w-full border-b border-slate-200/70 bg-[#f8fafc]/88 px-4 py-3 backdrop-blur-xl md:px-8">
+        <div className="mx-auto flex max-w-[1380px] items-center justify-between gap-4">
+          <Link href="/" className="group flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[15px] border border-slate-200 bg-white text-[#254c73] shadow-card transition duration-200 group-hover:-translate-y-0.5">
               <Palette className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <p className="truncate text-base font-black leading-none tracking-tight text-slate-950">{settings.siteTitle}</p>
-              <p className="mt-1 truncate text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">{settings.siteSubtitle}</p>
+              <p className="truncate text-base font-black leading-none tracking-[-0.04em] text-slate-950">{settings.siteTitle}</p>
+              <p className="mt-1 truncate text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">{settings.siteSubtitle}</p>
             </div>
           </Link>
 
-          <nav className="hidden items-center gap-1 rounded-2xl border border-slate-200 bg-white/80 p-1 md:flex">
+          <nav className="hidden items-center gap-1 rounded-[18px] border border-slate-200 bg-white/76 p-1 shadow-card md:flex">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const active = pathname === item.href;
+              const active = isActivePath(pathname, item.href);
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   className={clsx(
-                    "inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-black transition duration-200",
+                    "inline-flex min-h-10 items-center gap-2 rounded-[14px] px-4 py-2 text-sm font-black transition duration-200 focus:outline-none focus:ring-4 focus:ring-slate-200",
                     active ? "bg-slate-950 text-white shadow-card" : "text-slate-500 hover:bg-slate-50 hover:text-slate-950",
-                    item.primary && !active && "bg-ocean-50 text-ocean-800 hover:bg-ocean-100 hover:text-ocean-900",
+                    item.primary && !active && "bg-[#edf4fa] text-[#254c73] hover:bg-[#e4edf6]",
                   )}
                 >
                   <Icon className="h-4 w-4" />
@@ -54,33 +61,31 @@ export function AppShell({ children, settings }: { children: React.ReactNode; se
 
           <div className="flex shrink-0 items-center gap-2">
             <Link
-              href="/admin/settings"
-              className="hidden items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-500 shadow-card sm:flex"
+              href="/admin/users"
+              className="hidden items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-500 shadow-card transition hover:-translate-y-0.5 hover:text-slate-950 sm:flex"
             >
               <Settings className="h-3.5 w-3.5" />
               后台
             </Link>
-            <Link href="/signin" className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-700 shadow-card">
+            <Link href="/signin" className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-700 shadow-card transition hover:-translate-y-0.5 hover:text-slate-950">
               登录
             </Link>
           </div>
         </div>
       </header>
 
-      <div className="mx-auto flex min-h-[calc(100vh-4.75rem)] max-w-7xl flex-col px-3 pb-28 pt-4 md:px-6 md:pb-4">
-        <div className="liquid-glass relative flex-1 overflow-hidden rounded-[34px] p-3 md:p-5">
-          <div className="liquid-mask" />
-          <div className="pointer-events-none absolute inset-x-8 top-0 h-28 rounded-full bg-white/40 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-20 -right-20 h-72 w-72 rounded-full bg-blue-100/40 blur-3xl" />
+      <div className="mx-auto flex min-h-[calc(100dvh-4.25rem)] max-w-[1380px] flex-col px-3 pb-28 pt-4 md:px-6 md:pb-8">
+        <div className="relative flex-1 overflow-visible rounded-[34px] border border-slate-200/80 bg-white/54 p-3 shadow-[0_28px_90px_rgba(31,49,70,0.08)] backdrop-blur-xl md:p-5">
+          <div className="pointer-events-none absolute inset-x-8 top-0 h-24 rounded-full bg-white/50 blur-3xl" />
           <div className="relative">
-            <div className="liquid-glass mb-4 hidden items-center justify-between rounded-[22px] px-4 py-3 md:flex">
+            <div className="mb-4 hidden items-center justify-between rounded-[22px] border border-slate-200/70 bg-white/78 px-4 py-3 shadow-card md:flex">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400">Workspace</p>
-                <p className="mt-1 text-sm font-black text-slate-950">图片创作工作区</p>
+                <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Studio desk</p>
+                <p className="mt-1 text-sm font-black text-slate-950">一个安静的图片创作工作台</p>
               </div>
               <div className="flex items-center gap-2 text-xs font-black text-slate-500">
                 <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                自动保存
+                本地保存
               </div>
             </div>
             {children}
@@ -88,22 +93,22 @@ export function AppShell({ children, settings }: { children: React.ReactNode; se
         </div>
 
         <nav
-          className="fixed left-1/2 z-50 w-[min(420px,calc(100vw-32px))] -translate-x-1/2 rounded-[26px] border border-white/70 bg-white/72 px-2 py-2 shadow-[0_20px_60px_rgba(15,23,42,0.16)] backdrop-blur-2xl md:hidden"
-          style={{ bottom: "max(14px, env(safe-area-inset-bottom))" }}
+          className="fixed left-1/2 z-50 w-[min(420px,calc(100vw-28px))] -translate-x-1/2 rounded-[24px] border border-slate-200/80 bg-white/84 px-2 py-2 shadow-[0_18px_55px_rgba(31,49,70,0.18)] backdrop-blur-2xl md:hidden"
+          style={{ bottom: "max(12px, env(safe-area-inset-bottom))" }}
         >
           <div className="grid grid-cols-5 items-end gap-1">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const active = pathname === item.href;
+              const active = isActivePath(pathname, item.href);
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   className={clsx(
-                    "flex min-h-12 flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-bold transition",
-                    item.primary && "-mt-7 h-16 rounded-[22px] bg-slate-950 text-white shadow-card",
-                    !item.primary && active && "bg-ocean-50 text-ocean-800",
-                    !item.primary && !active && "text-slate-400 hover:text-slate-600",
+                    "flex min-h-12 flex-col items-center justify-center gap-1 rounded-[18px] px-2 py-2 text-[11px] font-bold transition duration-200 active:scale-[0.98]",
+                    item.primary && "h-14 rounded-[20px]",
+                    active ? "bg-slate-950 text-white shadow-card" : "text-slate-400 hover:bg-slate-50 hover:text-slate-700",
+                    item.primary && !active && "bg-[#edf4fa] text-[#254c73]",
                   )}
                 >
                   <Icon className="h-4 w-4" />

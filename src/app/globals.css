@@ -3,10 +3,15 @@
 @tailwind utilities;
 
 :root {
-  --background: #fbfdff;
-  --foreground: #101828;
-  --primary: #2563eb;
-  --accent: #bfdbfe;
+  --background: #f5f8fb;
+  --foreground: #111827;
+  --ink: #111827;
+  --muted: #64748b;
+  --line: rgba(148, 163, 184, 0.28);
+  --paper: rgba(255, 255, 255, 0.88);
+  --paper-strong: rgba(255, 255, 255, 0.96);
+  --primary: #254c73;
+  --accent: #dbe8f3;
 }
 
 * {
@@ -16,6 +21,7 @@
 html {
   min-height: 100%;
   background: var(--background);
+  scroll-behavior: smooth;
 }
 
 body {
@@ -23,29 +29,41 @@ body {
   margin: 0;
   color: var(--foreground);
   background:
-    url("/liquid-app-background.png") center top / cover fixed no-repeat,
-    linear-gradient(rgba(96, 165, 250, 0.055) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(96, 165, 250, 0.055) 1px, transparent 1px),
-    radial-gradient(circle at 16% 8%, rgba(219, 234, 254, 0.72), transparent 28rem),
-    radial-gradient(circle at 92% 0%, rgba(224, 242, 254, 0.8), transparent 30rem),
-    linear-gradient(180deg, #fbfdff 0%, #f7fbff 58%, #ffffff 100%);
-  background-size: cover, 56px 56px, 56px 56px, auto, auto, auto;
-  background-position: center top, 0 0, 0 0, center, center, center;
-  font-family: "MiSans", "Source Han Sans SC", "Noto Sans CJK SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+    linear-gradient(rgba(17, 24, 39, 0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(17, 24, 39, 0.016) 1px, transparent 1px),
+    radial-gradient(circle at 18% 4%, rgba(220, 232, 244, 0.86), transparent 28rem),
+    radial-gradient(circle at 88% 10%, rgba(238, 245, 251, 0.9), transparent 34rem),
+    linear-gradient(180deg, #f7fafc 0%, #f2f6fa 52%, #f8fafc 100%);
+  background-size: 64px 64px, 64px 64px, auto, auto, auto;
+  background-position: 0 0, 0 0, center, center, center;
+  font-family: "Avenir Next", "HarmonyOS Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-variant-numeric: tabular-nums;
+  text-rendering: geometricPrecision;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+p,
+li {
+  text-wrap: pretty;
 }
 
 .liquid-glass {
   position: relative;
-  border: 1px solid rgba(255, 255, 255, 0.68);
+  border: 1px solid rgba(148, 163, 184, 0.28);
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.38)),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.5));
+    linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(248, 250, 252, 0.74)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(241, 245, 249, 0.62));
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    inset 0 -1px 0 rgba(148, 163, 184, 0.12),
-    0 26px 80px rgba(15, 23, 42, 0.10);
-  backdrop-filter: blur(28px) saturate(1.35);
-  -webkit-backdrop-filter: blur(28px) saturate(1.35);
+    inset 0 -1px 0 rgba(15, 23, 42, 0.04),
+    0 24px 70px rgba(31, 49, 70, 0.08);
+  backdrop-filter: blur(22px) saturate(1.12);
+  -webkit-backdrop-filter: blur(22px) saturate(1.12);
 }
 
 .liquid-glass::before {
@@ -55,10 +73,9 @@ body {
   pointer-events: none;
   border-radius: inherit;
   background:
-    radial-gradient(circle at 18% 12%, rgba(255, 255, 255, 0.78), transparent 24%),
-    radial-gradient(circle at 86% 14%, rgba(186, 230, 253, 0.28), transparent 28%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.55), transparent 34%);
-  mix-blend-mode: screen;
+    radial-gradient(circle at 16% 8%, rgba(255, 255, 255, 0.78), transparent 22%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.42), transparent 36%);
+  mix-blend-mode: normal;
 }
 
 .liquid-mask {
@@ -67,9 +84,8 @@ body {
   pointer-events: none;
   border-radius: inherit;
   background:
-    radial-gradient(ellipse at 16% 0%, rgba(255, 255, 255, 0.64), transparent 34%),
-    radial-gradient(ellipse at 88% 14%, rgba(125, 211, 252, 0.18), transparent 36%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.22), transparent 44%);
+    radial-gradient(ellipse at 16% 0%, rgba(255, 255, 255, 0.54), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent 44%);
   mask-image: linear-gradient(180deg, #000, rgba(0, 0, 0, 0.82) 52%, transparent 100%);
   -webkit-mask-image: linear-gradient(180deg, #000, rgba(0, 0, 0, 0.82) 52%, transparent 100%);
 }
@@ -92,10 +108,10 @@ textarea {
 
 .eyebrow {
   display: block;
-  color: #91a4bd;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.24em;
+  color: #7b8da3;
+  font-size: 0.76rem;
+  font-weight: 750;
+  letter-spacing: 0.18em;
   line-height: 1;
   text-transform: uppercase;
 }
@@ -103,7 +119,7 @@ textarea {
 .generate-workbench {
   display: grid;
   grid-template-columns: minmax(0, 1.08fr) minmax(280px, 0.72fr);
-  gap: 18px;
+  gap: 22px;
   align-items: start;
   width: 100%;
   margin-top: 18px;
@@ -119,13 +135,13 @@ textarea {
   overflow: hidden;
   border: 1px solid rgba(203, 213, 225, 0.62);
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.84), rgba(255, 255, 255, 0.46)),
-    radial-gradient(circle at 86% 10%, rgba(186, 230, 253, 0.34), transparent 34rem);
+    linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.76)),
+    radial-gradient(circle at 86% 10%, rgba(226, 236, 246, 0.42), transparent 34rem);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.88),
-    0 22px 58px rgba(15, 23, 42, 0.08);
-  backdrop-filter: blur(24px) saturate(1.25);
-  -webkit-backdrop-filter: blur(24px) saturate(1.25);
+    0 20px 54px rgba(31, 49, 70, 0.075);
+  backdrop-filter: blur(20px) saturate(1.08);
+  -webkit-backdrop-filter: blur(20px) saturate(1.08);
 }
 
 .composer-panel {
@@ -133,8 +149,8 @@ textarea {
   flex-direction: column;
   gap: 18px;
   min-width: 0;
-  padding: 22px;
-  border-radius: 30px;
+  padding: clamp(18px, 2.2vw, 28px);
+  border-radius: 28px;
 }
 
 .composer-head {
@@ -146,13 +162,14 @@ textarea {
 
 .composer-head h1,
 .section-heading h1 {
-  max-width: 9.5em;
+  max-width: 11em;
   margin: 8px 0 12px;
-  color: #07111f;
-  font-size: clamp(2rem, 4vw, 3.35rem);
+  color: #111827;
+  font-family: "Songti SC", "Noto Serif SC", "Source Han Serif SC", serif;
+  font-size: clamp(2.15rem, 4vw, 3.6rem);
   font-weight: 900;
-  letter-spacing: -0.08em;
-  line-height: 0.96;
+  letter-spacing: -0.06em;
+  line-height: 0.98;
 }
 
 .composer-head p,
@@ -162,7 +179,7 @@ textarea {
 .upload-card small {
   margin: 0;
   color: #64748b;
-  font-size: 0.92rem;
+  font-size: 0.95rem;
   line-height: 1.8;
 }
 
@@ -198,8 +215,8 @@ textarea {
   border-radius: 24px;
   color: #5b7190;
   background:
-    linear-gradient(180deg, rgba(248, 251, 255, 0.86), rgba(255, 255, 255, 0.52)),
-    radial-gradient(circle at 50% 0%, rgba(219, 234, 254, 0.58), transparent 70%);
+    linear-gradient(180deg, rgba(248, 250, 252, 0.9), rgba(255, 255, 255, 0.58)),
+    radial-gradient(circle at 50% 0%, rgba(226, 232, 240, 0.52), transparent 70%);
 }
 
 .upload-card span,
@@ -232,11 +249,11 @@ textarea {
 }
 
 .field-block textarea:focus {
-  border-color: rgba(37, 99, 235, 0.42);
+  border-color: rgba(37, 76, 115, 0.42);
   background: rgba(255, 255, 255, 0.92);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.88),
-    0 0 0 4px rgba(37, 99, 235, 0.08);
+    0 0 0 4px rgba(37, 76, 115, 0.08);
 }
 
 .option-grid {
@@ -271,14 +288,14 @@ textarea {
 
 .chip:hover {
   transform: translateY(-1px);
-  border-color: rgba(37, 99, 235, 0.24);
-  color: #1d4ed8;
+  border-color: rgba(37, 76, 115, 0.26);
+  color: #254c73;
 }
 
 .chip.active {
-  border-color: #07111f;
+  border-color: #111827;
   color: #ffffff;
-  background: #07111f;
+  background: #111827;
   box-shadow: 0 12px 26px rgba(15, 23, 42, 0.16);
 }
 
@@ -304,7 +321,7 @@ textarea {
 }
 
 .prompt-preview span {
-  color: #2563eb;
+  color: #254c73;
   font-size: 0.75rem;
   font-weight: 900;
   letter-spacing: 0.14em;
@@ -364,7 +381,9 @@ textarea {
 }
 
 .ghost-button,
-.primary-button {
+.primary-button,
+.secondary-action,
+.primary-action {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -373,29 +392,35 @@ textarea {
   border-radius: 16px;
   font-weight: 900;
   cursor: pointer;
-  transition: transform 180ms ease, box-shadow 180ms ease, opacity 180ms ease;
+  transition: transform 180ms ease, box-shadow 180ms ease, opacity 180ms ease, background 180ms ease;
 }
 
-.ghost-button {
+.ghost-button,
+.secondary-action {
   border: 1px solid rgba(203, 213, 225, 0.8);
   color: #344966;
   background: rgba(255, 255, 255, 0.72);
 }
 
-.primary-button {
-  border: 1px solid #07111f;
+.primary-button,
+.primary-action {
+  border: 1px solid #111827;
   color: #ffffff;
-  background: #07111f;
+  background: #111827;
   box-shadow: 0 18px 36px rgba(15, 23, 42, 0.18);
 }
 
 .ghost-button:hover,
-.primary-button:hover {
+.primary-button:hover,
+.secondary-action:hover,
+.primary-action:hover {
   transform: translateY(-1px);
 }
 
 .ghost-button:disabled,
-.primary-button:disabled {
+.primary-button:disabled,
+.secondary-action:disabled,
+.primary-action:disabled {
   cursor: not-allowed;
   opacity: 0.56;
   transform: none;
@@ -416,6 +441,8 @@ textarea {
   display: grid;
   gap: 14px;
   min-width: 0;
+  position: sticky;
+  top: 92px;
 }
 
 .preview-card {
@@ -463,7 +490,7 @@ textarea {
 
 .job-card h2 {
   margin: 7px 0 0;
-  color: #07111f;
+  color: #111827;
   font-size: 1.35rem;
   letter-spacing: -0.04em;
 }
@@ -588,7 +615,7 @@ textarea {
 
 .history-title-row h2 {
   margin: 8px 0 0;
-  color: #07111f;
+  color: #111827;
   font-size: 1.35rem;
   font-weight: 900;
   letter-spacing: -0.05em;
@@ -639,7 +666,7 @@ textarea {
 }
 
 .empty-state span {
-  color: #07111f;
+  color: #111827;
   font-size: 1.25rem;
   font-weight: 900;
 }
@@ -652,6 +679,10 @@ textarea {
 @media (max-width: 980px) {
   .generate-workbench {
     grid-template-columns: 1fr;
+  }
+
+  .preview-panel {
+    position: static;
   }
 
   .option-grid {
@@ -680,6 +711,10 @@ textarea {
   .composer-panel,
   .section-heading {
     padding: 18px;
+  }
+
+  body {
+    background-size: 48px 48px, 48px 48px, auto, auto, auto;
   }
 
   .composer-head {
