@@ -32,6 +32,32 @@ export default async function HomePage() {
                 </p>
               </div>
             </div>
+
+            <div className="grid gap-4">
+              <div className="rounded-[1.65rem] border border-slate-200/80 bg-white/58 p-5 shadow-[0_18px_42px_rgba(48,73,99,0.08)]">
+                <p className="text-[0.68rem] font-black uppercase tracking-[0.26em] text-slate-400">
+                  Current Brief
+                </p>
+                <p className="mt-3 text-sm leading-7 text-slate-600">
+                  雨夜街头的人像写真，浅景深，侧光，自然肤色，中性背景，画面干净。
+                </p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                {["写清主体", "确定比例", "保存结果"].map((item, index) => (
+                  <div
+                    key={item}
+                    className="rounded-[1.25rem] border border-slate-200/75 bg-white/48 px-4 py-4 text-sm font-bold text-slate-700"
+                  >
+                    <span className="mb-4 block text-[0.68rem] font-black uppercase tracking-[0.22em] text-slate-400">
+                      0{index + 1}
+                    </span>
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div className="grid gap-3 sm:grid-cols-3">
               {[
                 [publicWorks.length ? String(publicWorks.length) : "48", "公开作品"],
