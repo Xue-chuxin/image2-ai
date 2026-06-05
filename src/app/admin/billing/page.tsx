@@ -53,6 +53,9 @@ export default async function AdminBillingPage() {
             <Link href="/admin/settings" className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-600 shadow-card">
               后台配置
             </Link>
+            <Link href="/admin/health" className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-600 shadow-card">
+              上线自检
+            </Link>
             <div className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-500 shadow-card">{session.email}</div>
           </div>
         </div>
