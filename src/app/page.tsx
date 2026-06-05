@@ -33,42 +33,51 @@ export default async function HomePage() {
               </div>
             </div>
 
-            <div className="grid gap-4">
-              <div className="rounded-[1.65rem] border border-slate-200/80 bg-white/58 p-5 shadow-[0_18px_42px_rgba(48,73,99,0.08)]">
-                <p className="text-[0.68rem] font-black uppercase tracking-[0.26em] text-slate-400">
-                  Current Brief
-                </p>
-                <p className="mt-3 text-sm leading-7 text-slate-600">
-                  雨夜街头的人像写真，浅景深，侧光，自然肤色，中性背景，画面干净。
-                </p>
+            <div className="relative mt-4 min-h-[23rem] overflow-hidden rounded-[2rem] border border-white/75 bg-[#eef4f8] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_24px_70px_rgba(55,82,112,0.12)]">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_12%,rgba(255,255,255,0.95),transparent_28%),radial-gradient(circle_at_84%_78%,rgba(193,214,229,0.8),transparent_34%)]" />
+              <div className="absolute left-6 top-7 z-10 rounded-full border border-white/80 bg-white/70 px-3 py-1 text-[0.66rem] font-black uppercase tracking-[0.24em] text-slate-500 shadow-sm">
+                Selected works
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-3">
-                {["写清主体", "确定比例", "保存结果"].map((item, index) => (
-                  <div
-                    key={item}
-                    className="rounded-[1.25rem] border border-slate-200/75 bg-white/48 px-4 py-4 text-sm font-bold text-slate-700"
-                  >
-                    <span className="mb-4 block text-[0.68rem] font-black uppercase tracking-[0.22em] text-slate-400">
-                      0{index + 1}
-                    </span>
-                    {item}
-                  </div>
-                ))}
-              </div>
-            </div>
+              <figure className="relative z-[1] h-[20rem] overflow-hidden rounded-[1.55rem] border border-white/80 bg-slate-200 shadow-[0_24px_60px_rgba(31,52,76,0.18)]">
+                <img
+                  src="https://picsum.photos/seed/image-studio-mist/920/1120"
+                  alt="蓝灰色调的湖面与山雾作品预览"
+                  className="h-full w-full object-cover grayscale-[18%] saturate-[0.82]"
+                />
+                <div className="absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-slate-950/42" />
+                <figcaption className="absolute bottom-5 left-5 max-w-[15rem] text-white">
+                  <p className="text-[0.66rem] font-black uppercase tracking-[0.28em] text-white/68">
+                    Gallery 01
+                  </p>
+                  <p className="mt-2 text-2xl font-black tracking-[-0.05em]">
+                    雨后山谷
+                  </p>
+                </figcaption>
+              </figure>
 
-            <div className="grid gap-3 sm:grid-cols-3">
-              {[
-                [publicWorks.length ? String(publicWorks.length) : "48", "公开作品"],
-                ["5 分", "标准生成"],
-                ["3 步", "完成流程"],
-              ].map(([value, label]) => (
-                <div key={label} className="rounded-[18px] border border-slate-200 bg-slate-50/86 p-4">
-                  <p className="text-2xl font-black text-slate-950">{value}</p>
-                  <p className="mt-1 text-xs font-bold text-slate-500">{label}</p>
-                </div>
-              ))}
+              <figure className="absolute right-5 top-20 z-[2] hidden w-36 overflow-hidden rounded-[1.35rem] border border-white/85 bg-white shadow-[0_22px_48px_rgba(31,52,76,0.2)] sm:block">
+                <img
+                  src="https://picsum.photos/seed/image-studio-portrait/420/560"
+                  alt="柔和自然光人像作品预览"
+                  className="h-44 w-full object-cover grayscale-[10%] saturate-[0.78]"
+                />
+                <figcaption className="px-3 py-3 text-xs font-bold text-slate-600">
+                  柔光人像
+                </figcaption>
+              </figure>
+
+              <figure className="absolute bottom-7 right-10 z-[2] hidden w-44 -rotate-3 overflow-hidden rounded-[1.45rem] border border-white/85 bg-white shadow-[0_26px_52px_rgba(31,52,76,0.22)] sm:block">
+                <img
+                  src="https://picsum.photos/seed/image-studio-still-life/520/390"
+                  alt="静物产品布景作品预览"
+                  className="h-28 w-full object-cover grayscale-[8%] saturate-[0.76]"
+                />
+                <figcaption className="flex items-center justify-between px-3 py-3 text-xs font-bold text-slate-600">
+                  <span>静物布景</span>
+                  <span className="font-mono text-slate-400">3:4</span>
+                </figcaption>
+              </figure>
             </div>
           </div>
         </div>
