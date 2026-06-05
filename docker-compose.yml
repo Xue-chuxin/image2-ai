@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: image2-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: image2_app
+      POSTGRES_USER: image2_app
+      POSTGRES_PASSWORD: image2_password
+    volumes:
+      - image2_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U image2_app -d image2_app"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: image2-web
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env.production
+    environment:
+      DATABASE_URL: postgresql://image2_app:image2_password@postgres:5432/image2_app
+    ports:
+      - "3000:3000"
+    volumes:
+      - image2_generated:/app/public/generated
+
+volumes:
+  image2_postgres_data:
+  image2_generated:

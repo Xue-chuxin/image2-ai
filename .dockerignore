@@ -1,0 +1,17 @@
+node_modules
+.next
+.git
+.local
+.npm-cache
+output
+public/uploads
+public/generated
+dev-server.log
+dev-server.err
+dev-server.out.log
+dev-server.err.log
+*.log
+.env
+.env.local
+.env.*.local
+.env.production
