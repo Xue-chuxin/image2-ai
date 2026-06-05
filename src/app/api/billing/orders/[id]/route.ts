@@ -23,6 +23,27 @@ export async function GET(_request: Request, context: RouteContext) {
         id,
         userId: session.userId,
       },
+      select: {
+        id: true,
+        orderNo: true,
+        packageId: true,
+        packageNameSnapshot: true,
+        provider: true,
+        status: true,
+        amountCents: true,
+        currency: true,
+        credits: true,
+        bonusCredits: true,
+        totalCredits: true,
+        paymentUrl: true,
+        qrCodeUrl: true,
+        providerTradeNo: true,
+        paidAt: true,
+        canceledAt: true,
+        expiresAt: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
 
     if (!order) {

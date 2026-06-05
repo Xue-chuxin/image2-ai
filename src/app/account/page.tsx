@@ -34,7 +34,7 @@ export default async function AccountPage() {
         <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="text-3xl font-black text-slate-950">账户与积分</h1>
-            <p className="mt-2 text-sm leading-6 text-slate-500">{session.email} · 在线支付成功后积分自动到账。</p>
+            <p className="mt-2 text-sm leading-6 text-slate-500">{session.email} · 在线支付成功后积分会自动到账。</p>
           </div>
           <Link href="/generate" className="rounded-full bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-card">
             去创作
