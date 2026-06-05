@@ -9,6 +9,11 @@ import type { PaymentChannelView, PaymentProviderName } from "@/lib/payments";
 type BillingPayload = {
   ok: boolean;
   order?: RechargeOrderView;
+  orders?: RechargeOrderView[];
+  balance?: {
+    available: number;
+    frozen: number;
+  };
   error?: string;
 };
 
@@ -96,6 +101,7 @@ export function AccountBillingPanel({
   channels: PaymentChannelView[];
 }) {
   const availableChannels = channels.filter((channel) => channel.enabled && channel.configured);
+  const [currentBalance, setCurrentBalance] = useState(balance);
   const [orders, setOrders] = useState(initialOrders);
   const [selectedProvider, setSelectedProvider] = useState<PaymentProviderName>(availableChannels[0]?.provider || "epay");
   const [pending, setPending] = useState("");
@@ -154,6 +160,14 @@ export function AccountBillingPanel({
     return payload.order;
   }
 
+  async function fetchOverview() {
+    const payload = await requestJson("/api/billing/overview", {
+      method: "GET",
+      cache: "no-store",
+    });
+    return payload;
+  }
+
   async function refreshOrder(orderId: string, silent = false) {
     if (!silent) {
       setPending(`refresh:${orderId}`);
@@ -163,8 +177,11 @@ export function AccountBillingPanel({
     try {
       const nextOrder = await fetchOrder(orderId);
       setOrders((current) => upsertOrder(current, nextOrder));
+      if (nextOrder.status === "PAID") {
+        await refreshOverview(true);
+      }
       if (!silent) {
-        setMessage(nextOrder.status === "PAID" ? "订单已到账，积分余额刷新后可见。" : "订单状态已刷新。");
+        setMessage(nextOrder.status === "PAID" ? "订单已到账，积分余额已刷新。" : nextOrder.status === "EXPIRED" ? "订单已过期，请重新创建充值订单。" : "订单状态已刷新。");
       }
       return nextOrder;
     } catch (error) {
@@ -187,14 +204,52 @@ export function AccountBillingPanel({
 
     setPolling(true);
     try {
-      const results = await Promise.all(pendingList.map((order) => fetchOrder(order.id).catch(() => null)));
-      const paidOrder = results.find((order) => order?.status === "PAID");
-      setOrders((current) => results.reduce((nextOrders, order) => (order ? upsertOrder(nextOrders, order) : nextOrders), current));
+      const pendingIds = new Set(pendingList.map((order) => order.id));
+      const payload = await fetchOverview();
+      const nextOrders = payload.orders || [];
+      const paidOrder = nextOrders.find((order) => pendingIds.has(order.id) && order.status === "PAID");
+      const expiredOrder = nextOrders.find((order) => pendingIds.has(order.id) && order.status === "EXPIRED");
+      if (payload.balance) {
+        setCurrentBalance(payload.balance);
+      }
+      if (nextOrders.length > 0) {
+        setOrders(nextOrders);
+      }
       if (paidOrder) {
-        setMessage("检测到订单已支付，积分余额刷新后可见。");
+        setMessage("检测到订单已支付，积分余额已刷新。");
+      } else if (expiredOrder) {
+        setMessage("有待支付订单已过期，如需充值请重新创建订单。");
       }
     } finally {
       setPolling(false);
+    }
+  }
+
+  async function refreshOverview(silent = false) {
+    if (!silent) {
+      setPolling(true);
+      setMessage("");
+    }
+
+    try {
+      const payload = await fetchOverview();
+      if (payload.balance) {
+        setCurrentBalance(payload.balance);
+      }
+      if (payload.orders) {
+        setOrders(payload.orders);
+      }
+      if (!silent) {
+        setMessage("账户余额和订单状态已刷新。");
+      }
+    } catch (error) {
+      if (!silent) {
+        setMessage(error instanceof Error ? error.message : "刷新账户概览失败");
+      }
+    } finally {
+      if (!silent) {
+        setPolling(false);
+      }
     }
   }
 
@@ -249,8 +304,8 @@ export function AccountBillingPanel({
     <section className="space-y-5">
       <div className="grid gap-3 md:grid-cols-3">
         {[
-          ["可用积分", balance.available, CheckCircle2],
-          ["冻结积分", balance.frozen, Clock3],
+          ["可用积分", currentBalance.available, CheckCircle2],
+          ["冻结积分", currentBalance.frozen, Clock3],
           ["待支付订单", pendingOrders, CreditCard],
         ].map(([label, value, Icon]) => {
           const TypedIcon = Icon as typeof CheckCircle2;

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getUserSession } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { expireRechargeOrderForUser } from "@/lib/recharge-order-expiration";
 
 type RouteContext = {
   params: Promise<{
@@ -18,6 +19,8 @@ export async function GET(_request: Request, context: RouteContext) {
   const { id } = await context.params;
 
   try {
+    await expireRechargeOrderForUser(session.userId, id);
+
     const order = await prisma.rechargeOrder.findFirst({
       where: {
         id,
