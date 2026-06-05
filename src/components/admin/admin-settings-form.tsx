@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { CheckCircle2, ExternalLink, Loader2, LogOut, RefreshCw, Save, ShieldAlert, XCircle } from "lucide-react";
 
-import type { AdminAppSettings, AdminDiagnosticStatus, GenerationProviderName } from "@/lib/settings";
+import type { AdminAppSettings, AdminDiagnosticStatus, GenerationProviderName, StorageProviderName } from "@/lib/settings";
 
 type SettingsResponse = {
   ok: boolean;
@@ -115,6 +115,14 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
           chatgptWebUserDataDir: settings.chatgptWebUserDataDir,
           chatgptWebHeadless: settings.chatgptWebHeadless,
           chatgptWebTimeoutSeconds: settings.chatgptWebTimeoutSeconds,
+          storageProvider: settings.storageProvider,
+          storageLocalBaseDir: settings.storageLocalBaseDir,
+          storagePublicBaseUrl: settings.storagePublicBaseUrl,
+          storageGeneratedPrefix: settings.storageGeneratedPrefix,
+          storageUploadsPrefix: settings.storageUploadsPrefix,
+          storageEndpoint: settings.storageEndpoint,
+          storageBucket: settings.storageBucket,
+          storageRegion: settings.storageRegion,
           deepseekApiKey,
           openaiApiKey,
         }),
@@ -247,6 +255,97 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
                 type="password"
               />
             </label>
+          </div>
+        </div>
+
+        <div className="rounded-[28px] border border-slate-200 bg-white/88 p-5 shadow-card backdrop-blur">
+          <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-400">Storage</p>
+          <h2 className="mt-2 text-2xl font-black text-slate-950">图片存储</h2>
+          <p className="mt-2 text-sm font-bold leading-6 text-slate-500">
+            当前版本已统一走 StorageService。local 可直接使用，OSS / COS / S3 先预留配置，后续接入对应 SDK。
+          </p>
+          <div className="mt-5 grid gap-4">
+            <label className="block">
+              <span className="text-sm font-bold text-slate-700">存储类型</span>
+              <select
+                value={settings.storageProvider}
+                onChange={(event) => update("storageProvider", event.target.value as StorageProviderName)}
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
+              >
+                <option value="local">Local 本地存储</option>
+                <option value="oss">阿里云 OSS（预留）</option>
+                <option value="cos">腾讯云 COS（预留）</option>
+                <option value="s3">S3 兼容存储（预留）</option>
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-sm font-bold text-slate-700">本地根目录</span>
+              <input
+                value={settings.storageLocalBaseDir}
+                onChange={(event) => update("storageLocalBaseDir", event.target.value)}
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
+                placeholder="public"
+              />
+              <span className="mt-2 block text-xs font-bold leading-5 text-slate-400">相对路径会基于项目根目录解析。默认 public 会继续生成 /generated 与 /uploads URL。</span>
+            </label>
+            <label className="block">
+              <span className="text-sm font-bold text-slate-700">公开访问域名</span>
+              <input
+                value={settings.storagePublicBaseUrl}
+                onChange={(event) => update("storagePublicBaseUrl", event.target.value)}
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
+                placeholder="留空使用当前站点相对路径"
+              />
+            </label>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block">
+                <span className="text-sm font-bold text-slate-700">生成图前缀</span>
+                <input
+                  value={settings.storageGeneratedPrefix}
+                  onChange={(event) => update("storageGeneratedPrefix", event.target.value)}
+                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
+                  placeholder="generated"
+                />
+              </label>
+              <label className="block">
+                <span className="text-sm font-bold text-slate-700">上传图前缀</span>
+                <input
+                  value={settings.storageUploadsPrefix}
+                  onChange={(event) => update("storageUploadsPrefix", event.target.value)}
+                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
+                  placeholder="uploads"
+                />
+              </label>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <label className="block">
+                <span className="text-sm font-bold text-slate-700">Endpoint</span>
+                <input
+                  value={settings.storageEndpoint}
+                  onChange={(event) => update("storageEndpoint", event.target.value)}
+                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
+                  placeholder="预留"
+                />
+              </label>
+              <label className="block">
+                <span className="text-sm font-bold text-slate-700">Bucket</span>
+                <input
+                  value={settings.storageBucket}
+                  onChange={(event) => update("storageBucket", event.target.value)}
+                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
+                  placeholder="预留"
+                />
+              </label>
+              <label className="block">
+                <span className="text-sm font-bold text-slate-700">Region</span>
+                <input
+                  value={settings.storageRegion}
+                  onChange={(event) => update("storageRegion", event.target.value)}
+                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
+                  placeholder="预留"
+                />
+              </label>
+            </div>
           </div>
         </div>
 

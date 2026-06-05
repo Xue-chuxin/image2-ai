@@ -4,6 +4,7 @@ import path from "path";
 import { getBillingPaymentSettings } from "@/lib/billing";
 import { prisma } from "@/lib/db";
 import { getPaymentDiagnostics } from "@/lib/payment-diagnostics";
+import { getStorageRuntimeConfig } from "@/lib/settings";
 
 export type AdminHealthStatus = "ok" | "warning" | "error";
 
@@ -119,13 +120,19 @@ export async function getAdminHealthReport(originValue?: string | null): Promise
     }),
   );
 
-  const generatedDir = path.join(process.cwd(), "public", "generated");
+  const storageConfig = await getStorageRuntimeConfig();
+  const generatedDir = path.join(storageConfig.localBaseDir, storageConfig.generatedPrefix);
   items.push(
     makeItem({
       id: "generated-storage",
-      label: "本地生成图目录",
-      status: existsSync(generatedDir) ? "ok" : "warning",
-      description: existsSync(generatedDir) ? "public/generated 已存在，本地图片落盘目录可用。" : "public/generated 不存在，首次生图保存本地文件前需要创建目录。",
+      label: "图片存储",
+      status: storageConfig.provider === "local" && existsSync(generatedDir) ? "ok" : "warning",
+      description:
+        storageConfig.provider === "local"
+          ? existsSync(generatedDir)
+            ? `local 存储目录已存在：${generatedDir}`
+            : `local 存储目录尚不存在，首次保存图片时会自动创建：${generatedDir}`
+          : `${storageConfig.provider} 已预留配置，当前版本仍建议使用 local 存储。`,
     }),
   );
 

@@ -2,6 +2,8 @@ import { randomBytes } from "crypto";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 
+import { getStorageRuntimeConfig, type StorageProviderName, type StorageRuntimeConfig } from "@/lib/settings";
+
 export type StoredImage = {
   url: string;
   thumbnailUrl?: string;
@@ -11,10 +13,17 @@ export type StoredImage = {
   mimeType?: string;
 };
 
+export type StorageSaveInput = {
+  namespace: "generated" | "reference" | "payment-proof";
+  ownerId: string;
+  buffer: Buffer;
+  mimeType: string;
+  filename?: string;
+};
+
 export interface StorageService {
-  saveGeneratedImage(jobId: string, index: number, buffer: Buffer, mimeType: string): Promise<StoredImage>;
-  saveReferenceImage(userId: string, buffer: Buffer, mimeType: string): Promise<StoredImage>;
-  savePaymentProof(userId: string, orderId: string, buffer: Buffer, mimeType: string): Promise<StoredImage>;
+  provider: StorageProviderName;
+  save(input: StorageSaveInput): Promise<StoredImage>;
 }
 
 function extensionFromMime(mimeType: string) {
@@ -27,72 +36,126 @@ function extensionFromMime(mimeType: string) {
   return "png";
 }
 
-export const localStorageService: StorageService = {
-  async saveGeneratedImage(jobId: string, index: number, buffer: Buffer, mimeType: string): Promise<StoredImage> {
-    const extension = extensionFromMime(mimeType);
-    const directory = path.join(process.cwd(), "public", "generated");
-    const thumbnailDirectory = path.join(directory, "thumbs");
-    const filename = `${jobId}-${index + 1}.${extension}`;
+function sanitizeSegment(value: string) {
+  return value.replace(/[^a-zA-Z0-9_-]/g, "");
+}
 
-    await mkdir(directory, { recursive: true });
-    await mkdir(thumbnailDirectory, { recursive: true });
-    await writeFile(path.join(directory, filename), buffer);
-    await writeFile(path.join(thumbnailDirectory, filename), buffer);
+function joinUrl(baseUrl: string, ...segments: string[]) {
+  const pathValue = segments
+    .map((segment) => segment.replace(/^\/+|\/+$/g, ""))
+    .filter(Boolean)
+    .join("/");
 
-    return {
-      url: `/generated/${filename}`,
-      thumbnailUrl: `/generated/thumbs/${filename}`,
-      fileSize: buffer.byteLength,
-      mimeType,
-    };
-  },
+  if (!baseUrl) {
+    return `/${pathValue}`;
+  }
 
-  async saveReferenceImage(userId: string, buffer: Buffer, mimeType: string): Promise<StoredImage> {
-    const extension = extensionFromMime(mimeType);
-    const directory = path.join(process.cwd(), "public", "uploads", "reference");
-    const thumbnailDirectory = path.join(directory, "thumbs");
-    const safeUserId = userId.replace(/[^a-zA-Z0-9_-]/g, "");
-    const filename = `${safeUserId}-${Date.now()}-${randomBytes(6).toString("hex")}.${extension}`;
+  return `${baseUrl.replace(/\/+$/, "")}/${pathValue}`;
+}
 
-    await mkdir(directory, { recursive: true });
-    await mkdir(thumbnailDirectory, { recursive: true });
-    await writeFile(path.join(directory, filename), buffer);
-    await writeFile(path.join(thumbnailDirectory, filename), buffer);
+function getNamespacePrefix(config: StorageRuntimeConfig, namespace: StorageSaveInput["namespace"]) {
+  if (namespace === "generated") {
+    return config.generatedPrefix;
+  }
 
-    return {
-      url: `/uploads/reference/${filename}`,
-      thumbnailUrl: `/uploads/reference/thumbs/${filename}`,
-      fileSize: buffer.byteLength,
-      mimeType,
-    };
-  },
+  if (namespace === "reference") {
+    return `${config.uploadsPrefix}/reference`;
+  }
 
-  async savePaymentProof(userId: string, orderId: string, buffer: Buffer, mimeType: string): Promise<StoredImage> {
-    const extension = extensionFromMime(mimeType);
-    const directory = path.join(process.cwd(), "public", "uploads", "payments");
-    const safeUserId = userId.replace(/[^a-zA-Z0-9_-]/g, "");
-    const safeOrderId = orderId.replace(/[^a-zA-Z0-9_-]/g, "");
-    const filename = `${safeUserId}-${safeOrderId}-${Date.now()}-${randomBytes(6).toString("hex")}.${extension}`;
+  return `${config.uploadsPrefix}/payments`;
+}
 
-    await mkdir(directory, { recursive: true });
-    await writeFile(path.join(directory, filename), buffer);
+function createGeneratedFilename(ownerId: string, requestedFilename: string | undefined, mimeType: string) {
+  if (requestedFilename) {
+    return requestedFilename;
+  }
 
-    return {
-      url: `/uploads/payments/${filename}`,
-      fileSize: buffer.byteLength,
-      mimeType,
-    };
-  },
-};
+  return `${sanitizeSegment(ownerId)}-${Date.now()}-${randomBytes(6).toString("hex")}.${extensionFromMime(mimeType)}`;
+}
+
+function assertLocalStorage(config: StorageRuntimeConfig) {
+  if (config.provider !== "local") {
+    throw new Error(`当前版本仅实现 local 存储，${config.provider} 已预留配置但尚未接入对象存储 SDK。`);
+  }
+}
+
+export function createLocalStorageService(config: StorageRuntimeConfig): StorageService {
+  return {
+    provider: "local",
+    async save(input: StorageSaveInput): Promise<StoredImage> {
+      assertLocalStorage(config);
+
+      const filename = createGeneratedFilename(input.ownerId, input.filename, input.mimeType);
+      const namespacePrefix = getNamespacePrefix(config, input.namespace);
+      const directory = path.join(config.localBaseDir, namespacePrefix);
+      const thumbnailDirectory = path.join(directory, "thumbs");
+
+      await mkdir(directory, { recursive: true });
+      await writeFile(path.join(directory, filename), input.buffer);
+
+      if (input.namespace !== "payment-proof") {
+        await mkdir(thumbnailDirectory, { recursive: true });
+        await writeFile(path.join(thumbnailDirectory, filename), input.buffer);
+      }
+
+      return {
+        url: joinUrl(config.publicBaseUrl, namespacePrefix, filename),
+        thumbnailUrl: input.namespace === "payment-proof" ? undefined : joinUrl(config.publicBaseUrl, namespacePrefix, "thumbs", filename),
+        fileSize: input.buffer.byteLength,
+        mimeType: input.mimeType,
+      };
+    },
+  };
+}
+
+export function createStorageService(config: StorageRuntimeConfig): StorageService {
+  if (config.provider === "local") {
+    return createLocalStorageService(config);
+  }
+
+  return {
+    provider: config.provider,
+    async save() {
+      throw new Error(`当前版本仅实现 local 存储，${config.provider} 已预留配置但尚未接入对象存储 SDK。`);
+    },
+  };
+}
+
+export async function getStorageService() {
+  return createStorageService(await getStorageRuntimeConfig());
+}
 
 export async function saveGeneratedImage(jobId: string, index: number, buffer: Buffer, mimeType: string): Promise<StoredImage> {
-  return localStorageService.saveGeneratedImage(jobId, index, buffer, mimeType);
+  const service = await getStorageService();
+  const extension = extensionFromMime(mimeType);
+
+  return service.save({
+    namespace: "generated",
+    ownerId: jobId,
+    buffer,
+    mimeType,
+    filename: `${sanitizeSegment(jobId)}-${index + 1}.${extension}`,
+  });
 }
 
 export async function saveReferenceImage(userId: string, buffer: Buffer, mimeType: string): Promise<StoredImage> {
-  return localStorageService.saveReferenceImage(userId, buffer, mimeType);
+  const service = await getStorageService();
+
+  return service.save({
+    namespace: "reference",
+    ownerId: userId,
+    buffer,
+    mimeType,
+  });
 }
 
 export async function savePaymentProof(userId: string, orderId: string, buffer: Buffer, mimeType: string): Promise<StoredImage> {
-  return localStorageService.savePaymentProof(userId, orderId, buffer, mimeType);
+  const service = await getStorageService();
+
+  return service.save({
+    namespace: "payment-proof",
+    ownerId: `${userId}-${orderId}`,
+    buffer,
+    mimeType,
+  });
 }

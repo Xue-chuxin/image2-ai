@@ -4,6 +4,7 @@ import { randomBytes } from "crypto";
 import { decryptSecret, encryptSecret, hasSettingsEncryptionKey } from "@/lib/app-crypto";
 
 export type GenerationProviderName = "openai" | "chatgpt_web";
+export type StorageProviderName = "local" | "oss" | "cos" | "s3";
 
 export type PublicAppSettings = {
   browserTitle: string;
@@ -17,6 +18,14 @@ export type PublicAppSettings = {
   chatgptWebUserDataDir: string;
   chatgptWebHeadless: boolean;
   chatgptWebTimeoutSeconds: number;
+  storageProvider: StorageProviderName;
+  storageLocalBaseDir: string;
+  storagePublicBaseUrl: string;
+  storageGeneratedPrefix: string;
+  storageUploadsPrefix: string;
+  storageEndpoint: string;
+  storageBucket: string;
+  storageRegion: string;
 };
 
 export type AdminDiagnosticStatus = "ok" | "warning" | "error";
@@ -47,6 +56,17 @@ export type ChatGPTWebRuntimeConfig = {
   userDataDir: string;
   headless: boolean;
   timeoutMs: number;
+};
+
+export type StorageRuntimeConfig = {
+  provider: StorageProviderName;
+  localBaseDir: string;
+  publicBaseUrl: string;
+  generatedPrefix: string;
+  uploadsPrefix: string;
+  endpoint: string;
+  bucket: string;
+  region: string;
 };
 
 type SettingRow = {
@@ -81,6 +101,14 @@ const defaultSettings: PublicAppSettings = {
   chatgptWebUserDataDir: "chatgpt-web-profile",
   chatgptWebHeadless: false,
   chatgptWebTimeoutSeconds: 180,
+  storageProvider: "local",
+  storageLocalBaseDir: "public",
+  storagePublicBaseUrl: "",
+  storageGeneratedPrefix: "generated",
+  storageUploadsPrefix: "uploads",
+  storageEndpoint: "",
+  storageBucket: "",
+  storageRegion: "",
 };
 
 function createId() {
@@ -91,12 +119,28 @@ function normalizeProvider(value?: string): GenerationProviderName {
   return value === "chatgpt_web" ? "chatgpt_web" : "openai";
 }
 
+function normalizeStorageProvider(value?: string): StorageProviderName {
+  if (value === "oss" || value === "cos" || value === "s3") {
+    return value;
+  }
+  return "local";
+}
+
 function normalizeText(value: unknown, fallback: string, maxLength = 120) {
   if (typeof value !== "string") {
     return fallback;
   }
   const clean = value.trim();
   return clean ? clean.slice(0, maxLength) : fallback;
+}
+
+function normalizeStoragePrefix(value: unknown, fallback: string) {
+  const clean = normalizeText(value, fallback, 80)
+    .replace(/\\/g, "/")
+    .replace(/^\/+|\/+$/g, "")
+    .replace(/[^a-zA-Z0-9/_-]/g, "");
+
+  return clean || fallback;
 }
 
 function normalizeBoolean(value: unknown, fallback: boolean) {
@@ -150,6 +194,10 @@ function getStoredNumber(map: Map<string, SettingRow>, key: keyof PublicAppSetti
 
 function resolveLocalPath(value: string) {
   return path.isAbsolute(value) ? value : path.resolve(getLocalProfileBaseDir(), value);
+}
+
+function resolveStorageLocalBaseDir(value: string) {
+  return path.isAbsolute(value) ? value : path.resolve(process.cwd(), value);
 }
 
 async function readSettingRows() {
@@ -259,6 +307,15 @@ async function buildDiagnostics(
       status: providerIsChatGPTWeb && !settings.chatgptWebEnabled ? "error" : "ok",
       message: providerIsChatGPTWeb ? "默认使用 ChatGPT Web 本机浏览器通道。" : "默认使用 OpenAI 官方 API。",
     },
+    {
+      key: "storage",
+      label: "图片存储",
+      status: settings.storageProvider === "local" ? "ok" : "warning",
+      message:
+        settings.storageProvider === "local"
+          ? `当前使用本地存储，根目录：${settings.storageLocalBaseDir}。`
+          : `${settings.storageProvider} 已预留配置，当前版本尚未接入对应对象存储 SDK。`,
+    },
   ];
 }
 
@@ -289,6 +346,14 @@ export async function getPublicAppSettings(): Promise<PublicAppSettings> {
       process.env.CHATGPT_WEB_TIMEOUT_SECONDS,
       defaultSettings.chatgptWebTimeoutSeconds,
     ),
+    storageProvider: normalizeStorageProvider(getStoredSetting(map, "storageProvider") || process.env.STORAGE_PROVIDER || defaultSettings.storageProvider),
+    storageLocalBaseDir: normalizeText(getStoredSetting(map, "storageLocalBaseDir") || process.env.STORAGE_LOCAL_BASE_DIR, defaultSettings.storageLocalBaseDir, 300),
+    storagePublicBaseUrl: normalizeText(getStoredSetting(map, "storagePublicBaseUrl") || process.env.STORAGE_PUBLIC_BASE_URL, defaultSettings.storagePublicBaseUrl, 300),
+    storageGeneratedPrefix: normalizeStoragePrefix(getStoredSetting(map, "storageGeneratedPrefix") || process.env.STORAGE_GENERATED_PREFIX, defaultSettings.storageGeneratedPrefix),
+    storageUploadsPrefix: normalizeStoragePrefix(getStoredSetting(map, "storageUploadsPrefix") || process.env.STORAGE_UPLOADS_PREFIX, defaultSettings.storageUploadsPrefix),
+    storageEndpoint: normalizeText(getStoredSetting(map, "storageEndpoint") || process.env.STORAGE_ENDPOINT, defaultSettings.storageEndpoint, 300),
+    storageBucket: normalizeText(getStoredSetting(map, "storageBucket") || process.env.STORAGE_BUCKET, defaultSettings.storageBucket, 160),
+    storageRegion: normalizeText(getStoredSetting(map, "storageRegion") || process.env.STORAGE_REGION, defaultSettings.storageRegion, 120),
   };
 }
 
@@ -321,6 +386,14 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
   const chatgptWebUserDataDir = normalizeText(input.chatgptWebUserDataDir, defaultSettings.chatgptWebUserDataDir, 300);
   const chatgptWebHeadless = normalizeBoolean(input.chatgptWebHeadless, defaultSettings.chatgptWebHeadless);
   const chatgptWebTimeoutSeconds = normalizeTimeoutSeconds(input.chatgptWebTimeoutSeconds, defaultSettings.chatgptWebTimeoutSeconds);
+  const storageProvider = normalizeStorageProvider(input.storageProvider);
+  const storageLocalBaseDir = normalizeText(input.storageLocalBaseDir, defaultSettings.storageLocalBaseDir, 300);
+  const storagePublicBaseUrl = normalizeText(input.storagePublicBaseUrl, defaultSettings.storagePublicBaseUrl, 300);
+  const storageGeneratedPrefix = normalizeStoragePrefix(input.storageGeneratedPrefix, defaultSettings.storageGeneratedPrefix);
+  const storageUploadsPrefix = normalizeStoragePrefix(input.storageUploadsPrefix, defaultSettings.storageUploadsPrefix);
+  const storageEndpoint = normalizeText(input.storageEndpoint, defaultSettings.storageEndpoint, 300);
+  const storageBucket = normalizeText(input.storageBucket, defaultSettings.storageBucket, 160);
+  const storageRegion = normalizeText(input.storageRegion, defaultSettings.storageRegion, 120);
 
   await upsertSetting("browserTitle", browserTitle);
   await upsertSetting("siteTitle", siteTitle);
@@ -334,6 +407,14 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
   await upsertSetting("chatgptWebUserDataDir", chatgptWebUserDataDir);
   await upsertSetting("chatgptWebHeadless", String(chatgptWebHeadless));
   await upsertSetting("chatgptWebTimeoutSeconds", String(chatgptWebTimeoutSeconds));
+  await upsertSetting("storageProvider", storageProvider);
+  await upsertSetting("storageLocalBaseDir", storageLocalBaseDir);
+  await upsertSetting("storagePublicBaseUrl", storagePublicBaseUrl);
+  await upsertSetting("storageGeneratedPrefix", storageGeneratedPrefix);
+  await upsertSetting("storageUploadsPrefix", storageUploadsPrefix);
+  await upsertSetting("storageEndpoint", storageEndpoint);
+  await upsertSetting("storageBucket", storageBucket);
+  await upsertSetting("storageRegion", storageRegion);
 
   if (input.deepseekApiKey?.trim()) {
     await upsertSetting("deepseekApiKey", encryptSecret(input.deepseekApiKey.trim()), true);
@@ -384,5 +465,20 @@ export async function getChatGPTWebRuntimeConfig(): Promise<ChatGPTWebRuntimeCon
     userDataDir: resolveLocalPath(settings.chatgptWebUserDataDir),
     headless: settings.chatgptWebHeadless,
     timeoutMs: settings.chatgptWebTimeoutSeconds * 1000,
+  };
+}
+
+export async function getStorageRuntimeConfig(): Promise<StorageRuntimeConfig> {
+  const settings = await getPublicAppSettings();
+
+  return {
+    provider: settings.storageProvider,
+    localBaseDir: resolveStorageLocalBaseDir(settings.storageLocalBaseDir),
+    publicBaseUrl: settings.storagePublicBaseUrl,
+    generatedPrefix: settings.storageGeneratedPrefix,
+    uploadsPrefix: settings.storageUploadsPrefix,
+    endpoint: settings.storageEndpoint,
+    bucket: settings.storageBucket,
+    region: settings.storageRegion,
   };
 }

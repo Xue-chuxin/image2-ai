@@ -19,7 +19,7 @@
 当前仍未正式完成：
 
 - Redis/BullMQ 队列
-- 对象存储 StorageService
+- 对象存储 SDK 接入。StorageService 已统一，当前正式实现 local。
 - 云服务器托管 ChatGPT Web Cookie
 
 因此第一版生产部署建议使用 `openai` Provider。`chatgpt_web` 更适合本机部署，不建议直接放到普通云服务器无人值守运行。
@@ -94,10 +94,11 @@ Web 容器启动时会执行：
 npx prisma migrate deploy
 ```
 
-本地生成图目录挂载为 Docker volume：
+本地图片目录挂载为 Docker volume：
 
 ```text
 image2_generated -> /app/public/generated
+image2_uploads -> /app/public/uploads
 ```
 
 PostgreSQL 数据挂载为：
