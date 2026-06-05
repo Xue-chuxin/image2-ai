@@ -36,14 +36,7 @@ export async function POST(request: Request) {
 
   try {
     const body = (await request.json()) as Record<string, unknown>;
-    const settings = await saveBillingPaymentSettings({
-      paymentEnabled: body.paymentEnabled === false ? false : true,
-      paymentTitle: typeof body.paymentTitle === "string" ? body.paymentTitle : "",
-      paymentReceiverName: typeof body.paymentReceiverName === "string" ? body.paymentReceiverName : "",
-      paymentReceiverAccount: typeof body.paymentReceiverAccount === "string" ? body.paymentReceiverAccount : "",
-      paymentQrUrl: typeof body.paymentQrUrl === "string" ? body.paymentQrUrl : "",
-      paymentInstructions: typeof body.paymentInstructions === "string" ? body.paymentInstructions : "",
-    });
+    const settings = await saveBillingPaymentSettings(body as any);
 
     return NextResponse.json({
       ok: true,

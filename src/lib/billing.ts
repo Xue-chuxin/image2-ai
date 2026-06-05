@@ -1,8 +1,16 @@
-import { randomBytes } from "crypto";
+import { createHash, randomBytes } from "crypto";
 import type { RechargeOrderStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
 import { getUserCreditBalance } from "@/lib/credits";
+import {
+  createPaymentForOrder,
+  getPaymentProviderSettings,
+  listEnabledPaymentChannels,
+  type PaymentChannelView,
+  type PaymentProviderName,
+  type PaymentProviderSettings,
+} from "@/lib/payments";
 
 const defaultPackages = [
   {
@@ -31,32 +39,7 @@ const defaultPackages = [
   },
 ];
 
-const billingSettingKeys = [
-  "paymentEnabled",
-  "paymentTitle",
-  "paymentReceiverName",
-  "paymentReceiverAccount",
-  "paymentQrUrl",
-  "paymentInstructions",
-] as const;
-
-const defaultPaymentSettings: BillingPaymentSettings = {
-  paymentEnabled: true,
-  paymentTitle: "人工充值",
-  paymentReceiverName: "",
-  paymentReceiverAccount: "",
-  paymentQrUrl: "",
-  paymentInstructions: "创建订单后，请按页面展示的收款信息完成转账，并上传付款截图。管理员确认到账后，积分会自动发放到当前账号。",
-};
-
-export type BillingPaymentSettings = {
-  paymentEnabled: boolean;
-  paymentTitle: string;
-  paymentReceiverName: string;
-  paymentReceiverAccount: string;
-  paymentQrUrl: string;
-  paymentInstructions: string;
-};
+export type BillingPaymentSettings = PaymentProviderSettings;
 
 export type CreditPackageView = {
   id: string;
@@ -87,6 +70,13 @@ export type RechargeOrderView = {
   currency: string;
   status: RechargeOrderStatus;
   provider: string;
+  paymentUrl: string | null;
+  qrCodeUrl: string | null;
+  providerTradeNo: string | null;
+  providerPayload: string | null;
+  notifyPayloadDigest: string | null;
+  notifiedAt: string | null;
+  capturedAt: string | null;
   paymentMethod: string;
   paymentNote: string | null;
   paymentProofUrl: string | null;
@@ -99,6 +89,16 @@ export type RechargeOrderView = {
   expiresAt: string | null;
   createdAt: string;
   updatedAt: string;
+};
+
+export type BillingOverview = {
+  balance: {
+    available: number;
+    frozen: number;
+  };
+  packages: CreditPackageView[];
+  orders: RechargeOrderView[];
+  channels: PaymentChannelView[];
 };
 
 function serializePackage(pkg: any): CreditPackageView {
@@ -133,7 +133,14 @@ function serializeOrder(order: any): RechargeOrderView {
     currency: order.currency,
     status: order.status,
     provider: order.provider,
-    paymentMethod: order.paymentMethod || "manual_transfer",
+    paymentUrl: order.paymentUrl || null,
+    qrCodeUrl: order.qrCodeUrl || null,
+    providerTradeNo: order.providerTradeNo || null,
+    providerPayload: order.providerPayload || null,
+    notifyPayloadDigest: order.notifyPayloadDigest || null,
+    notifiedAt: order.notifiedAt ? order.notifiedAt.toISOString() : null,
+    capturedAt: order.capturedAt ? order.capturedAt.toISOString() : null,
+    paymentMethod: order.paymentMethod || order.provider || "online",
     paymentNote: order.paymentNote || null,
     paymentProofUrl: order.paymentProofUrl || null,
     paymentProofName: order.paymentProofName || null,
@@ -160,24 +167,6 @@ function normalizeText(value: unknown, maxLength = 800) {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
 }
 
-function normalizeBoolean(value: unknown, fallback: boolean) {
-  if (typeof value === "boolean") {
-    return value;
-  }
-
-  if (typeof value === "string") {
-    const clean = value.trim().toLowerCase();
-    if (["true", "1", "yes", "on"].includes(clean)) {
-      return true;
-    }
-    if (["false", "0", "no", "off"].includes(clean)) {
-      return false;
-    }
-  }
-
-  return fallback;
-}
-
 function createOrderNo() {
   const date = new Date();
   const ymd = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}`;
@@ -194,60 +183,10 @@ export function formatCurrency(priceCents: number, currency = "CNY") {
 }
 
 export async function getBillingPaymentSettings(): Promise<BillingPaymentSettings> {
-  try {
-    const rows = await prisma.appSetting.findMany({
-      where: {
-        key: {
-          in: [...billingSettingKeys],
-        },
-      },
-    });
-    const map = new Map(rows.map((row) => [row.key, row.value]));
-
-    return {
-      paymentEnabled: normalizeBoolean(map.get("paymentEnabled"), defaultPaymentSettings.paymentEnabled),
-      paymentTitle: normalizeText(map.get("paymentTitle"), 80) || defaultPaymentSettings.paymentTitle,
-      paymentReceiverName: normalizeText(map.get("paymentReceiverName"), 120),
-      paymentReceiverAccount: normalizeText(map.get("paymentReceiverAccount"), 240),
-      paymentQrUrl: normalizeText(map.get("paymentQrUrl"), 500),
-      paymentInstructions: normalizeText(map.get("paymentInstructions"), 2000) || defaultPaymentSettings.paymentInstructions,
-    };
-  } catch {
-    return defaultPaymentSettings;
-  }
+  return getPaymentProviderSettings();
 }
 
-export async function saveBillingPaymentSettings(input: Partial<BillingPaymentSettings>) {
-  const settings: BillingPaymentSettings = {
-    paymentEnabled: normalizeBoolean(input.paymentEnabled, defaultPaymentSettings.paymentEnabled),
-    paymentTitle: normalizeText(input.paymentTitle, 80) || defaultPaymentSettings.paymentTitle,
-    paymentReceiverName: normalizeText(input.paymentReceiverName, 120),
-    paymentReceiverAccount: normalizeText(input.paymentReceiverAccount, 240),
-    paymentQrUrl: normalizeText(input.paymentQrUrl, 500),
-    paymentInstructions: normalizeText(input.paymentInstructions, 2000) || defaultPaymentSettings.paymentInstructions,
-  };
-
-  await Promise.all(
-    Object.entries(settings).map(([key, value]) =>
-      prisma.appSetting.upsert({
-        where: {
-          key,
-        },
-        update: {
-          value: String(value),
-          isEncrypted: false,
-        },
-        create: {
-          key,
-          value: String(value),
-          isEncrypted: false,
-        },
-      }),
-    ),
-  );
-
-  return settings;
-}
+export { savePaymentProviderSettings as saveBillingPaymentSettings } from "@/lib/payments";
 
 export async function ensureDefaultCreditPackages() {
   const count = await prisma.creditPackage.count();
@@ -340,12 +279,12 @@ export async function upsertCreditPackage(input: {
   return serializePackage(pkg);
 }
 
-export async function createRechargeOrder(userId: string, packageId: string) {
+export async function createRechargeOrder(userId: string, packageId: string, provider: PaymentProviderName, origin: string) {
   await ensureDefaultCreditPackages();
 
-  const settings = await getBillingPaymentSettings();
-  if (!settings.paymentEnabled) {
-    throw new Error("充值通道暂未开启，请稍后再试。");
+  const channels = await listEnabledPaymentChannels();
+  if (!channels.some((channel) => channel.provider === provider && channel.enabled && channel.configured)) {
+    throw new Error("该支付渠道未启用或尚未配置完整。");
   }
 
   const pkg = await prisma.creditPackage.findFirst({
@@ -370,9 +309,9 @@ export async function createRechargeOrder(userId: string, packageId: string) {
       amountCents: pkg.priceCents,
       currency: pkg.currency,
       status: "PENDING",
-      provider: "manual",
-      paymentMethod: "manual_transfer",
-      expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24),
+      provider,
+      paymentMethod: provider,
+      expiresAt: new Date(Date.now() + 1000 * 60 * 30),
     },
     include: {
       user: {
@@ -383,46 +322,27 @@ export async function createRechargeOrder(userId: string, packageId: string) {
     },
   });
 
-  return serializeOrder(order);
-}
-
-export async function submitRechargeOrderPaymentProofForUser(input: {
-  userId: string;
-  orderId: string;
-  paymentMethod?: string | null;
-  paymentNote?: string | null;
-  proofUrl: string;
-  proofName?: string | null;
-  proofMimeType?: string | null;
-  proofSize?: number | null;
-}) {
-  const order = await prisma.rechargeOrder.findFirst({
-    where: {
-      id: input.orderId,
-      userId: input.userId,
+  const payment = await createPaymentForOrder({
+    provider,
+    order: {
+      id: order.id,
+      orderNo: order.orderNo,
+      packageNameSnapshot: order.packageNameSnapshot,
+      amountCents: order.amountCents,
+      currency: order.currency,
     },
+    origin,
   });
-
-  if (!order) {
-    throw new Error("订单不存在。");
-  }
-
-  if (order.status !== "PENDING") {
-    throw new Error("只有待确认订单可以提交付款凭证。");
-  }
 
   const updated = await prisma.rechargeOrder.update({
     where: {
       id: order.id,
     },
     data: {
-      paymentMethod: normalizeText(input.paymentMethod, 40) || "manual_transfer",
-      paymentNote: normalizeText(input.paymentNote, 500) || null,
-      paymentProofUrl: input.proofUrl,
-      paymentProofName: normalizeText(input.proofName, 180) || null,
-      paymentProofMimeType: normalizeText(input.proofMimeType, 80) || null,
-      paymentProofSize: input.proofSize || null,
-      submittedAt: new Date(),
+      paymentUrl: payment.paymentUrl || null,
+      qrCodeUrl: payment.qrCodeUrl || null,
+      providerTradeNo: payment.providerTradeNo || null,
+      providerPayload: payment.providerPayload ? JSON.stringify(payment.providerPayload).slice(0, 6000) : null,
     },
     include: {
       user: {
@@ -457,17 +377,19 @@ export async function listUserRechargeOrders(userId: string, limit = 20) {
   return orders.map(serializeOrder);
 }
 
-export async function getUserBillingOverview(userId: string) {
-  const [balance, packages, orders] = await Promise.all([
+export async function getUserBillingOverview(userId: string): Promise<BillingOverview> {
+  const [balance, packages, orders, channels] = await Promise.all([
     getUserCreditBalance(userId),
     listActiveCreditPackages(),
     listUserRechargeOrders(userId, 20),
+    listEnabledPaymentChannels(),
   ]);
 
   return {
     balance,
     packages,
     orders,
+    channels,
   };
 }
 
@@ -502,7 +424,13 @@ export async function listAdminRechargeOrders({
                 },
               },
               {
-                paymentNote: {
+                provider: {
+                  contains: cleanQuery,
+                  mode: "insensitive",
+                },
+              },
+              {
+                providerTradeNo: {
                   contains: cleanQuery,
                   mode: "insensitive",
                 },
@@ -537,10 +465,29 @@ export async function listAdminRechargeOrders({
   return orders.map(serializeOrder);
 }
 
-export async function markRechargeOrderPaidByAdmin(orderId: string, adminNote?: string | null) {
-  const order = await prisma.rechargeOrder.findUnique({
+export async function markRechargeOrderPaidByPayment(input: {
+  orderNo: string;
+  provider: PaymentProviderName;
+  providerTradeNo?: string | null;
+  amountCents: number;
+  currency?: string | null;
+  rawPayload?: unknown;
+  captured?: boolean;
+}) {
+  const order = await prisma.rechargeOrder.findFirst({
     where: {
-      id: orderId,
+      OR: [
+        {
+          orderNo: input.orderNo,
+          provider: input.provider,
+        },
+        input.providerTradeNo
+          ? {
+              provider: input.provider,
+              providerTradeNo: input.providerTradeNo,
+            }
+          : undefined,
+      ].filter(Boolean) as any,
     },
     include: {
       user: {
@@ -560,11 +507,19 @@ export async function markRechargeOrderPaidByAdmin(orderId: string, adminNote?: 
   }
 
   if (order.status !== "PENDING") {
-    throw new Error("只有待支付订单可以确认到账。");
+    throw new Error("订单不是待支付状态。");
+  }
+
+  if (order.amountCents !== input.amountCents) {
+    throw new Error("支付金额与订单金额不一致。");
+  }
+
+  if (input.currency && order.currency !== input.currency) {
+    throw new Error("支付币种与订单币种不一致。");
   }
 
   const totalCredits = order.credits + order.bonusCredits;
-  const cleanAdminNote = normalizeText(adminNote, 500);
+  const digest = createHash("sha256").update(JSON.stringify(input.rawPayload || {})).digest("hex");
   const paidOrder = await prisma.$transaction(async (tx) => {
     const updatedOrder = await tx.rechargeOrder.updateMany({
       where: {
@@ -574,12 +529,27 @@ export async function markRechargeOrderPaidByAdmin(orderId: string, adminNote?: 
       data: {
         status: "PAID",
         paidAt: new Date(),
-        adminNote: cleanAdminNote || order.adminNote,
+        capturedAt: input.captured ? new Date() : order.capturedAt,
+        notifiedAt: new Date(),
+        providerTradeNo: input.providerTradeNo || order.providerTradeNo,
+        notifyPayloadDigest: digest,
       },
     });
 
     if (updatedOrder.count === 0) {
-      throw new Error("订单状态已变化，请刷新后再处理。");
+      const current = await tx.rechargeOrder.findUniqueOrThrow({
+        where: {
+          id: order.id,
+        },
+        include: {
+          user: {
+            select: {
+              email: true,
+            },
+          },
+        },
+      });
+      return current;
     }
 
     await tx.creditAccount.upsert({
@@ -611,7 +581,7 @@ export async function markRechargeOrderPaidByAdmin(orderId: string, adminNote?: 
         amount: totalCredits,
         balance: account.available,
         orderId: order.id,
-        memo: `充值订单 ${order.orderNo} 到账`,
+        memo: `在线支付订单 ${order.orderNo} 到账`,
       },
     });
 

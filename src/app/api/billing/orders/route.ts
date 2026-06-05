@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getUserSession } from "@/lib/auth";
 import { createRechargeOrder, listUserRechargeOrders } from "@/lib/billing";
+import { normalizePaymentProvider } from "@/lib/payments";
 
 function normalizeString(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
@@ -41,12 +42,14 @@ export async function POST(request: Request) {
   try {
     const body = (await request.json()) as Record<string, unknown>;
     const packageId = normalizeString(body.packageId);
+    const provider = normalizePaymentProvider(body.provider);
 
     if (!packageId) {
       return NextResponse.json({ ok: false, error: "请选择积分套餐。" }, { status: 400 });
     }
 
-    const order = await createRechargeOrder(session.userId, packageId);
+    const origin = new URL(request.url).origin;
+    const order = await createRechargeOrder(session.userId, packageId, provider, origin);
     return NextResponse.json(
       {
         ok: true,

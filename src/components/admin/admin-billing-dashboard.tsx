@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CheckCircle2, Edit3, Loader2, Plus, ReceiptText, Save, Search } from "lucide-react";
+import { Edit3, Loader2, Plus, Save, Search } from "lucide-react";
 import type { BillingPaymentSettings, CreditPackageView, RechargeOrderView } from "@/lib/billing";
 
 type BillingPayload = {
@@ -9,14 +9,13 @@ type BillingPayload = {
   packages?: CreditPackageView[];
   package?: CreditPackageView;
   orders?: RechargeOrderView[];
-  order?: RechargeOrderView;
   settings?: BillingPaymentSettings;
   error?: string;
 };
 
 const statusOptions = [
   ["all", "全部"],
-  ["PENDING", "待确认"],
+  ["PENDING", "待支付"],
   ["PAID", "已到账"],
   ["CANCELED", "已取消"],
   ["EXPIRED", "已过期"],
@@ -40,7 +39,7 @@ function statusLabel(status: string) {
   if (status === "EXPIRED") {
     return "已过期";
   }
-  return "待确认";
+  return "待支付";
 }
 
 function statusClass(status: string) {
@@ -79,7 +78,6 @@ export function AdminBillingDashboard({
   const [orders, setOrders] = useState(initialOrders);
   const [form, setForm] = useState(emptyForm());
   const [paymentForm, setPaymentForm] = useState(initialPaymentSettings);
-  const [adminNotes, setAdminNotes] = useState<Record<string, string>>({});
   const [status, setStatus] = useState("all");
   const [query, setQuery] = useState("");
   const [pending, setPending] = useState("");
@@ -90,7 +88,6 @@ export function AdminBillingDashboard({
       packages: packages.length,
       activePackages: packages.filter((pkg) => pkg.isActive).length,
       pendingOrders: orders.filter((order) => order.status === "PENDING").length,
-      submittedOrders: orders.filter((order) => order.submittedAt && order.status === "PENDING").length,
       paidAmount: orders.filter((order) => order.status === "PAID").reduce((sum, order) => sum + order.amountCents, 0),
     }),
     [orders, packages],
@@ -158,9 +155,9 @@ export function AdminBillingDashboard({
       if (payload.settings) {
         setPaymentForm(payload.settings);
       }
-      setMessage("收款配置已保存。");
+      setMessage("支付渠道配置已保存。密钥输入框留空表示不修改原密钥。");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "保存收款配置失败");
+      setMessage(error instanceof Error ? error.message : "保存支付配置失败");
     } finally {
       setPending("");
     }
@@ -212,38 +209,24 @@ export function AdminBillingDashboard({
     }
   }
 
-  async function markPaid(orderId: string) {
-    setPending(`paid:${orderId}`);
-    setMessage("");
-    try {
-      const payload = await requestJson(`/api/admin/billing/orders/${orderId}/mark-paid`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          adminNote: adminNotes[orderId] || "",
-        }),
-      });
-      if (payload.order) {
-        setOrders((current) => current.map((order) => (order.id === orderId ? payload.order! : order)));
-      }
-      setMessage("订单已确认到账，积分已发放。");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "确认到账失败");
-    } finally {
-      setPending("");
-    }
+  function patchPayment(path: string, value: string | boolean) {
+    const [provider, key] = path.split(".");
+    setPaymentForm((current) => ({
+      ...current,
+      [provider]: {
+        ...(current as any)[provider],
+        [key]: value,
+      },
+    }));
   }
 
   return (
     <section className="space-y-5">
-      <div className="grid gap-3 md:grid-cols-5">
+      <div className="grid gap-3 md:grid-cols-4">
         {[
           ["套餐", stats.packages],
           ["上架", stats.activePackages],
-          ["待确认", stats.pendingOrders],
-          ["已交凭证", stats.submittedOrders],
+          ["待支付", stats.pendingOrders],
           ["到账金额", formatCurrency(stats.paidAmount)],
         ].map(([label, value]) => (
           <div key={label as string} className="rounded-[22px] border border-slate-200 bg-white/88 p-4 shadow-card backdrop-blur">
@@ -255,50 +238,85 @@ export function AdminBillingDashboard({
 
       {message ? <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-600">{message}</p> : null}
 
-      <section className="grid gap-5 lg:grid-cols-[.9fr_1.1fr]">
-        <div className="rounded-[28px] border border-slate-200 bg-white/90 p-5 shadow-card backdrop-blur">
-          <div className="mb-4">
-            <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-400">Payment</p>
-            <h2 className="mt-1 text-2xl font-black text-slate-950">收款配置</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-500">用户创建订单后，会看到这里配置的收款说明和二维码。</p>
+      <section className="rounded-[28px] border border-slate-200 bg-white/90 p-5 shadow-card backdrop-blur">
+        <div className="mb-5">
+          <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-400">Payment Providers</p>
+          <h2 className="mt-1 text-2xl font-black text-slate-950">在线支付渠道</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-500">人工审核已关闭。只有启用且配置完整的渠道会展示给用户。</p>
+        </div>
+
+        <div className="grid gap-4 xl:grid-cols-2">
+          <div className="rounded-[24px] border border-slate-200 bg-slate-50/80 p-4">
+            <label className="flex items-center justify-between text-sm font-black text-slate-800">
+              易支付
+              <input type="checkbox" checked={paymentForm.epay.enabled} onChange={(event) => patchPayment("epay.enabled", event.target.checked)} />
+            </label>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <Input label="显示名称" value={paymentForm.epay.displayName} onChange={(value) => patchPayment("epay.displayName", value)} />
+              <Input label="支付类型" value={paymentForm.epay.defaultType} onChange={(value) => patchPayment("epay.defaultType", value)} placeholder="alipay / wxpay / qqpay" />
+              <Input label="网关地址" value={paymentForm.epay.gatewayUrl} onChange={(value) => patchPayment("epay.gatewayUrl", value)} placeholder="https://pay.example.com" />
+              <Input label="商户 PID" value={paymentForm.epay.pid} onChange={(value) => patchPayment("epay.pid", value)} />
+              <Input label={`商户 Key${paymentForm.epay.keyConfigured ? "（已配置）" : ""}`} value={paymentForm.epay.key || ""} onChange={(value) => patchPayment("epay.key", value)} placeholder="留空不修改" />
+            </div>
           </div>
-          <div className="space-y-3">
-            <label className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700">
-              开启充值通道
-              <input type="checkbox" checked={paymentForm.paymentEnabled} onChange={(event) => setPaymentForm((current) => ({ ...current, paymentEnabled: event.target.checked }))} />
+
+          <div className="rounded-[24px] border border-slate-200 bg-slate-50/80 p-4">
+            <label className="flex items-center justify-between text-sm font-black text-slate-800">
+              支付宝当面付
+              <input type="checkbox" checked={paymentForm.alipayF2f.enabled} onChange={(event) => patchPayment("alipayF2f.enabled", event.target.checked)} />
             </label>
-            {[
-              ["paymentTitle", "收款标题", "人工充值"],
-              ["paymentReceiverName", "收款方", "例如：某某工作室"],
-              ["paymentReceiverAccount", "收款账号", "例如：微信号 / 支付宝账号 / 银行卡尾号"],
-              ["paymentQrUrl", "收款二维码 URL", "例如：/uploads/payments/qrcode.png"],
-            ].map(([key, label, placeholder]) => (
-              <label key={key} className="block">
-                <span className="text-sm font-bold text-slate-700">{label}</span>
-                <input
-                  value={paymentForm[key as keyof BillingPaymentSettings] as string}
-                  onChange={(event) => setPaymentForm((current) => ({ ...current, [key]: event.target.value }))}
-                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-ocean-300"
-                  placeholder={placeholder}
-                />
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <Input label="显示名称" value={paymentForm.alipayF2f.displayName} onChange={(value) => patchPayment("alipayF2f.displayName", value)} />
+              <Input label="网关地址" value={paymentForm.alipayF2f.gatewayUrl} onChange={(value) => patchPayment("alipayF2f.gatewayUrl", value)} />
+              <Input label="App ID" value={paymentForm.alipayF2f.appId} onChange={(value) => patchPayment("alipayF2f.appId", value)} />
+              <Input label={`应用私钥${paymentForm.alipayF2f.privateKeyConfigured ? "（已配置）" : ""}`} value={paymentForm.alipayF2f.privateKey || ""} onChange={(value) => patchPayment("alipayF2f.privateKey", value)} placeholder="留空不修改" textarea />
+              <Input label={`支付宝公钥${paymentForm.alipayF2f.alipayPublicKeyConfigured ? "（已配置）" : ""}`} value={paymentForm.alipayF2f.alipayPublicKey || ""} onChange={(value) => patchPayment("alipayF2f.alipayPublicKey", value)} placeholder="留空不修改" textarea />
+            </div>
+          </div>
+
+          <div className="rounded-[24px] border border-slate-200 bg-slate-50/80 p-4">
+            <label className="flex items-center justify-between text-sm font-black text-slate-800">
+              微信支付
+              <input type="checkbox" checked={paymentForm.wechatPay.enabled} onChange={(event) => patchPayment("wechatPay.enabled", event.target.checked)} />
+            </label>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <Input label="显示名称" value={paymentForm.wechatPay.displayName} onChange={(value) => patchPayment("wechatPay.displayName", value)} />
+              <Input label="商户号" value={paymentForm.wechatPay.mchId} onChange={(value) => patchPayment("wechatPay.mchId", value)} />
+              <Input label="App ID" value={paymentForm.wechatPay.appId} onChange={(value) => patchPayment("wechatPay.appId", value)} />
+              <Input label="证书序列号" value={paymentForm.wechatPay.serialNo} onChange={(value) => patchPayment("wechatPay.serialNo", value)} />
+              <Input label={`商户私钥${paymentForm.wechatPay.privateKeyConfigured ? "（已配置）" : ""}`} value={paymentForm.wechatPay.privateKey || ""} onChange={(value) => patchPayment("wechatPay.privateKey", value)} placeholder="留空不修改" textarea />
+              <Input label={`APIv3 Key${paymentForm.wechatPay.apiV3KeyConfigured ? "（已配置）" : ""}`} value={paymentForm.wechatPay.apiV3Key || ""} onChange={(value) => patchPayment("wechatPay.apiV3Key", value)} placeholder="留空不修改" />
+              <Input label={`平台公钥${paymentForm.wechatPay.platformPublicKeyConfigured ? "（已配置）" : ""}`} value={paymentForm.wechatPay.platformPublicKey || ""} onChange={(value) => patchPayment("wechatPay.platformPublicKey", value)} placeholder="留空不修改" textarea />
+            </div>
+          </div>
+
+          <div className="rounded-[24px] border border-slate-200 bg-slate-50/80 p-4">
+            <label className="flex items-center justify-between text-sm font-black text-slate-800">
+              PayPal
+              <input type="checkbox" checked={paymentForm.paypal.enabled} onChange={(event) => patchPayment("paypal.enabled", event.target.checked)} />
+            </label>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <Input label="显示名称" value={paymentForm.paypal.displayName} onChange={(value) => patchPayment("paypal.displayName", value)} />
+              <label className="block">
+                <span className="text-xs font-black text-slate-500">模式</span>
+                <select value={paymentForm.paypal.mode} onChange={(event) => patchPayment("paypal.mode", event.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 outline-none">
+                  <option value="sandbox">Sandbox</option>
+                  <option value="production">Production</option>
+                </select>
               </label>
-            ))}
-            <label className="block">
-              <span className="text-sm font-bold text-slate-700">支付说明</span>
-              <textarea
-                value={paymentForm.paymentInstructions}
-                onChange={(event) => setPaymentForm((current) => ({ ...current, paymentInstructions: event.target.value }))}
-                rows={5}
-                className="mt-2 w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold leading-6 text-slate-700 outline-none focus:border-ocean-300"
-              />
-            </label>
-            <button type="button" onClick={savePaymentSettings} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white">
-              {pending === "save-payment" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              保存收款配置
-            </button>
+              <Input label="Client ID" value={paymentForm.paypal.clientId} onChange={(value) => patchPayment("paypal.clientId", value)} />
+              <Input label={`Secret${paymentForm.paypal.secretConfigured ? "（已配置）" : ""}`} value={paymentForm.paypal.secret || ""} onChange={(value) => patchPayment("paypal.secret", value)} placeholder="留空不修改" />
+            </div>
           </div>
         </div>
 
+        <button type="button" onClick={savePaymentSettings} className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white">
+          {pending === "save-payment" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+          保存支付渠道配置
+        </button>
+      </section>
+
+      <section className="grid gap-5 lg:grid-cols-[.85fr_1.15fr]">
         <div className="rounded-[28px] border border-slate-200 bg-white/90 p-5 shadow-card backdrop-blur">
           <div className="mb-4 flex items-center justify-between">
             <div>
@@ -309,7 +327,7 @@ export function AdminBillingDashboard({
               清空
             </button>
           </div>
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="space-y-3">
             {[
               ["name", "套餐名称", "入门包"],
               ["description", "描述", "适合轻量体验"],
@@ -318,27 +336,25 @@ export function AdminBillingDashboard({
               ["priceYuan", "价格（元）", "9.9"],
               ["sortOrder", "排序", "10"],
             ].map(([key, label, placeholder]) => (
-              <label key={key} className="block">
-                <span className="text-sm font-bold text-slate-700">{label}</span>
-                <input
-                  value={form[key as keyof typeof form] as string}
-                  onChange={(event) => setForm((current) => ({ ...current, [key]: event.target.value }))}
-                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-ocean-300"
-                  placeholder={placeholder}
-                />
-              </label>
+              <Input key={key} label={label} value={form[key as keyof typeof form] as string} onChange={(value) => setForm((current) => ({ ...current, [key]: value }))} placeholder={placeholder} />
             ))}
-            <label className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 md:col-span-2">
+            <label className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700">
               上架套餐
               <input type="checkbox" checked={form.isActive} onChange={(event) => setForm((current) => ({ ...current, isActive: event.target.checked }))} />
             </label>
-            <button type="button" onClick={() => savePackage()} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white md:col-span-2">
+            <button type="button" onClick={() => savePackage()} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white">
               {pending === "save-package" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
               保存套餐
             </button>
           </div>
+        </div>
 
-          <div className="mt-5 grid gap-3">
+        <div className="rounded-[28px] border border-slate-200 bg-white/90 p-5 shadow-card backdrop-blur">
+          <div className="mb-4">
+            <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-400">Packages</p>
+            <h2 className="mt-1 text-2xl font-black text-slate-950">套餐列表</h2>
+          </div>
+          <div className="grid gap-3">
             {packages.map((pkg) => (
               <article key={pkg.id} className="rounded-[22px] border border-slate-200 bg-slate-50/80 p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -403,7 +419,7 @@ export function AdminBillingDashboard({
                   }
                 }}
                 className="w-full bg-transparent text-sm font-bold text-slate-700 outline-none placeholder:text-slate-400"
-                placeholder="订单号、邮箱、套餐、备注"
+                placeholder="订单号、邮箱、套餐、渠道"
               />
             </label>
             <button type="button" onClick={() => loadOrders(status, query)} className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white">
@@ -421,46 +437,18 @@ export function AdminBillingDashboard({
                     <span className={`rounded-full border px-3 py-1 text-xs font-black ${statusClass(order.status)}`}>{statusLabel(order.status)}</span>
                     <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-black text-slate-500">{order.orderNo}</span>
                     <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-black text-slate-500">{order.userEmail || order.userId}</span>
-                    {order.submittedAt ? <span className="rounded-full border border-ocean-100 bg-ocean-50 px-3 py-1 text-xs font-black text-ocean-700">已交凭证</span> : null}
+                    <span className="rounded-full border border-ocean-100 bg-ocean-50 px-3 py-1 text-xs font-black text-ocean-700">{order.provider}</span>
                   </div>
                   <h3 className="mt-3 text-lg font-black text-slate-950">{order.packageNameSnapshot}</h3>
                   <p className="mt-1 text-sm font-bold text-slate-500">
                     {order.totalCredits} 积分 · {formatCurrency(order.amountCents, order.currency)} · {new Date(order.createdAt).toLocaleString("zh-CN")}
                   </p>
-                  <div className="mt-3 grid gap-2 text-sm font-bold text-slate-500">
-                    <p>支付方式：{order.paymentMethod || "manual_transfer"}</p>
-                    {order.paymentNote ? <p>用户备注：{order.paymentNote}</p> : null}
-                    {order.paymentProofUrl ? (
-                      <a href={order.paymentProofUrl} target="_blank" rel="noreferrer" className="inline-flex w-fit items-center gap-2 rounded-full border border-ocean-100 bg-white px-3 py-2 text-xs font-black text-ocean-700">
-                        <ReceiptText className="h-4 w-4" />
-                        查看付款凭证
-                      </a>
-                    ) : (
-                      <p className="text-amber-600">用户尚未提交付款截图</p>
-                    )}
-                    {order.adminNote ? <p>后台备注：{order.adminNote}</p> : null}
+                  <div className="mt-3 grid gap-1 text-sm font-bold text-slate-500">
+                    {order.providerTradeNo ? <p>第三方交易号：{order.providerTradeNo}</p> : null}
+                    {order.notifiedAt ? <p>回调时间：{new Date(order.notifiedAt).toLocaleString("zh-CN")}</p> : null}
+                    {order.notifyPayloadDigest ? <p>回调摘要：{order.notifyPayloadDigest}</p> : null}
                   </div>
                 </div>
-                {order.status === "PENDING" ? (
-                  <div className="grid min-w-64 gap-2">
-                    <textarea
-                      value={adminNotes[order.id] || ""}
-                      onChange={(event) => setAdminNotes((current) => ({ ...current, [order.id]: event.target.value }))}
-                      rows={3}
-                      className="resize-none rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm font-bold text-slate-700 outline-none"
-                      placeholder="后台备注，可选"
-                    />
-                    <button
-                      type="button"
-                      disabled={pending === `paid:${order.id}`}
-                      onClick={() => markPaid(order.id)}
-                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white disabled:opacity-60"
-                    >
-                      {pending === `paid:${order.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                      确认到账
-                    </button>
-                  </div>
-                ) : null}
               </div>
             </article>
           ))}
@@ -468,5 +456,41 @@ export function AdminBillingDashboard({
         {orders.length === 0 ? <p className="rounded-2xl bg-slate-50 px-4 py-6 text-center text-sm font-bold text-slate-500">暂无订单。</p> : null}
       </section>
     </section>
+  );
+}
+
+function Input({
+  label,
+  value,
+  onChange,
+  placeholder,
+  textarea,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  textarea?: boolean;
+}) {
+  return (
+    <label className="block">
+      <span className="text-xs font-black text-slate-500">{label}</span>
+      {textarea ? (
+        <textarea
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          rows={4}
+          className="mt-2 w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-ocean-300"
+          placeholder={placeholder}
+        />
+      ) : (
+        <input
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-ocean-300"
+          placeholder={placeholder}
+        />
+      )}
+    </label>
   );
 }

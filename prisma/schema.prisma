@@ -248,6 +248,13 @@ model RechargeOrder {
   currency            String              @default("CNY")
   status              RechargeOrderStatus @default(PENDING)
   provider            String              @default("manual")
+  paymentUrl          String?
+  qrCodeUrl           String?
+  providerTradeNo     String?
+  providerPayload     String?
+  notifyPayloadDigest String?
+  notifiedAt          DateTime?
+  capturedAt          DateTime?
   paymentMethod       String              @default("manual_transfer")
   paymentNote         String?
   paymentProofUrl     String?
@@ -267,6 +274,8 @@ model RechargeOrder {
   @@index([status, createdAt])
   @@index([packageId])
   @@index([submittedAt])
+  @@index([provider])
+  @@index([providerTradeNo])
 }
 
 model AppSetting {

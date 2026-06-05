@@ -14,8 +14,8 @@ export default async function AdminBillingPage() {
         <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-400">Admin Billing</p>
         <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-3xl font-black text-slate-950">套餐与充值</h1>
-            <p className="mt-2 text-sm leading-6 text-slate-500">管理积分套餐、查看充值订单，并在阶段 9A 用人工确认方式发放积分。</p>
+            <h1 className="text-3xl font-black text-slate-950">套餐与在线支付</h1>
+            <p className="mt-2 text-sm leading-6 text-slate-500">配置易支付、支付宝当面付、微信支付和 PayPal。人工审核充值已关闭。</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Link href="/admin/jobs" className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-600 shadow-card">
