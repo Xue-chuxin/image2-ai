@@ -1,0 +1,47 @@
+import { NextResponse } from "next/server";
+
+import { getUserSession } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+
+type RouteContext = {
+  params: Promise<{
+    id: string;
+  }>;
+};
+
+export async function GET(_request: Request, context: RouteContext) {
+  const session = await getUserSession();
+  if (!session) {
+    return NextResponse.json({ ok: false, error: "请先登录用户账号。" }, { status: 401 });
+  }
+
+  const { id } = await context.params;
+
+  try {
+    const order = await prisma.rechargeOrder.findFirst({
+      where: {
+        id,
+        userId: session.userId,
+      },
+    });
+
+    if (!order) {
+      return NextResponse.json({ ok: false, error: "订单不存在或无权查看。" }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      ok: true,
+      order,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: error instanceof Error ? error.message : "读取充值订单失败。",
+      },
+      {
+        status: 500,
+      },
+    );
+  }
+}

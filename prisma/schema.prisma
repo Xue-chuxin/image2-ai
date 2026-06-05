@@ -278,6 +278,25 @@ model RechargeOrder {
   @@index([providerTradeNo])
 }
 
+model PaymentEvent {
+  id              String   @id @default(cuid())
+  provider        String
+  eventType       String
+  orderNo         String?
+  providerTradeNo String?
+  status          String   @default("RECEIVED")
+  httpMethod      String?
+  requestPath     String?
+  payloadDigest   String?
+  message         String?
+  rawPayload      String?
+  createdAt       DateTime @default(now())
+
+  @@index([provider, createdAt])
+  @@index([orderNo])
+  @@index([status, createdAt])
+}
+
 model AppSetting {
   id          String   @id @default(cuid())
   key         String   @unique
