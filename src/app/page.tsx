@@ -19,27 +19,27 @@ export default async function HomePage() {
       <section className="grid gap-5 lg:grid-cols-[0.88fr_1.12fr] lg:items-stretch">
         <div className="relative overflow-hidden rounded-[30px] border border-slate-200 bg-white/88 px-6 py-7 text-slate-950 shadow-card backdrop-blur animate-float-in md:px-8 md:py-9">
           <div className="absolute -right-24 top-10 h-72 w-72 rounded-full bg-[#e6eef6] blur-3xl" />
-          <div className="relative flex h-full flex-col justify-between gap-10">
-            <div className="space-y-6">
+          <div className="relative flex h-full flex-col gap-5">
+            <div className="space-y-4">
               <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-500">
                 <BookOpen className="h-3.5 w-3.5" />
                 图片工作台 · 作品灵感
               </div>
               <div className="space-y-4">
                 <h1 className="max-w-2xl font-serif text-4xl font-black leading-[1.02] tracking-[-0.06em] text-slate-950 md:text-6xl">把描述整理成一张能用的图</h1>
-                <p className="max-w-xl text-base leading-8 text-slate-500">
+                <p className="max-w-xl text-base leading-7 text-slate-500">
                   一个更像 App 的在线图片工作台：写描述、整理提示词、生成图片、管理历史。页面尽量保持安静，把注意力留给画面本身。
                 </p>
               </div>
             </div>
 
-            <div className="relative mt-4 min-h-[23rem] overflow-hidden rounded-[2rem] border border-white/75 bg-[#eef4f8] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_24px_70px_rgba(55,82,112,0.12)]">
+            <div className="relative min-h-[25rem] flex-1 overflow-hidden rounded-[2rem] border border-white/75 bg-[#eef4f8] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_24px_70px_rgba(55,82,112,0.12)]">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_12%,rgba(255,255,255,0.95),transparent_28%),radial-gradient(circle_at_84%_78%,rgba(193,214,229,0.8),transparent_34%)]" />
-              <div className="absolute left-6 top-7 z-10 rounded-full border border-white/80 bg-white/70 px-3 py-1 text-[0.66rem] font-black uppercase tracking-[0.24em] text-slate-500 shadow-sm">
+              <div className="absolute left-6 top-6 z-10 rounded-full border border-white/80 bg-white/70 px-3 py-1 text-[0.66rem] font-black uppercase tracking-[0.24em] text-slate-500 shadow-sm">
                 Selected works
               </div>
 
-              <figure className="relative z-[1] h-[20rem] overflow-hidden rounded-[1.55rem] border border-white/80 bg-slate-200 shadow-[0_24px_60px_rgba(31,52,76,0.18)]">
+              <figure className="relative z-[1] h-full min-h-[24rem] overflow-hidden rounded-[1.55rem] border border-white/80 bg-slate-200 shadow-[0_24px_60px_rgba(31,52,76,0.18)]">
                 <img
                   src="https://picsum.photos/seed/image-studio-mist/920/1120"
                   alt="蓝灰色调的湖面与山雾作品预览"
@@ -56,7 +56,7 @@ export default async function HomePage() {
                 </figcaption>
               </figure>
 
-              <figure className="absolute right-5 top-20 z-[2] hidden w-36 overflow-hidden rounded-[1.35rem] border border-white/85 bg-white shadow-[0_22px_48px_rgba(31,52,76,0.2)] sm:block">
+              <figure className="absolute right-5 top-16 z-[2] hidden w-36 overflow-hidden rounded-[1.35rem] border border-white/85 bg-white shadow-[0_22px_48px_rgba(31,52,76,0.2)] sm:block">
                 <img
                   src="https://picsum.photos/seed/image-studio-portrait/420/560"
                   alt="柔和自然光人像作品预览"
@@ -67,7 +67,7 @@ export default async function HomePage() {
                 </figcaption>
               </figure>
 
-              <figure className="absolute bottom-7 right-10 z-[2] hidden w-44 -rotate-3 overflow-hidden rounded-[1.45rem] border border-white/85 bg-white shadow-[0_26px_52px_rgba(31,52,76,0.22)] sm:block">
+              <figure className="absolute bottom-5 right-10 z-[2] hidden w-44 -rotate-3 overflow-hidden rounded-[1.45rem] border border-white/85 bg-white shadow-[0_26px_52px_rgba(31,52,76,0.22)] sm:block">
                 <img
                   src="https://picsum.photos/seed/image-studio-still-life/520/390"
                   alt="静物产品布景作品预览"
