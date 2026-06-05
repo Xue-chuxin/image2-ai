@@ -34,59 +34,61 @@ export default async function HomePage() {
             </div>
 
             <div className="relative min-h-[25rem] flex-1 overflow-hidden rounded-[2.2rem] border border-white/75 bg-[#edf3f7] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_26px_76px_rgba(42,65,92,0.14)]">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_12%,rgba(255,255,255,0.98),transparent_24%),radial-gradient(circle_at_86%_78%,rgba(175,202,220,0.72),transparent_38%),linear-gradient(135deg,rgba(255,255,255,0.1),rgba(96,125,153,0.1))]" />
-              <div className="absolute -left-16 top-24 h-52 w-52 rounded-full bg-white/55 blur-3xl" />
-              <div className="absolute right-8 top-7 z-[6] rounded-full border border-white/80 bg-white/62 px-3 py-1 text-[0.64rem] font-black uppercase tracking-[0.28em] text-slate-500 shadow-sm backdrop-blur">
-                Art board
-              </div>
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_12%,rgba(255,255,255,0.98),transparent_26%),radial-gradient(circle_at_86%_78%,rgba(176,201,220,0.65),transparent_40%)]" />
 
-              <figure className="absolute inset-x-4 bottom-4 top-4 z-[1] overflow-hidden rounded-[1.85rem] border border-white/80 bg-slate-200 shadow-[0_26px_70px_rgba(31,52,76,0.2)]">
-                <img
-                  src="https://picsum.photos/seed/image-studio-mist/920/1120"
-                  alt="蓝灰色调的湖面与山雾作品预览"
-                  className="h-full w-full object-cover grayscale-[20%] saturate-[0.76] contrast-[0.96]"
-                />
-                <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(8,18,31,0.12),transparent_34%,rgba(255,255,255,0.2)),linear-gradient(180deg,rgba(255,255,255,0.08),transparent_44%,rgba(5,13,25,0.58))]" />
-                <div className="absolute left-0 top-0 h-full w-20 bg-white/14 backdrop-blur-[1px]" />
-                <figcaption className="absolute bottom-6 left-6 max-w-[15rem] text-white">
-                  <p className="text-[0.64rem] font-black uppercase tracking-[0.32em] text-white/66">
-                    Gallery 01
-                  </p>
-                  <p className="mt-2 text-3xl font-black tracking-[-0.06em]">
-                    雨后山谷
-                  </p>
-                  <p className="mt-2 max-w-[12rem] text-xs font-semibold leading-5 text-white/68">
-                    山雾、湿冷空气和低饱和色调，适合做安静的封面画面。
-                  </p>
-                </figcaption>
-              </figure>
+              <div className="relative z-[1] flex h-full min-h-[24rem] flex-col gap-3">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="rounded-full border border-white/80 bg-white/68 px-3 py-1 text-[0.64rem] font-black uppercase tracking-[0.28em] text-slate-500 shadow-sm backdrop-blur">
+                    Selected works
+                  </span>
+                  <span className="font-mono text-[0.68rem] font-black text-slate-400">
+                    03 / 18
+                  </span>
+                </div>
 
-              <div className="absolute left-8 top-24 z-[4] hidden h-44 w-14 overflow-hidden rounded-full border border-white/70 bg-white/28 shadow-[0_18px_44px_rgba(31,52,76,0.16)] backdrop-blur sm:block">
-                <div className="h-full w-full bg-[repeating-linear-gradient(to_bottom,rgba(255,255,255,0.7)_0_8px,rgba(91,112,134,0.08)_8px_16px)]" />
-              </div>
+                <div className="grid flex-1 gap-3 sm:grid-cols-[1.34fr_0.86fr]">
+                  <figure className="relative min-h-[18rem] overflow-hidden rounded-[1.75rem] border border-white/85 bg-slate-200 shadow-[0_24px_62px_rgba(31,52,76,0.18)]">
+                    <img
+                      src="https://picsum.photos/seed/image-studio-mist/920/1120"
+                      alt="蓝灰色调的湖面与山雾作品预览"
+                      className="h-full w-full object-cover grayscale-[18%] saturate-[0.78] contrast-[0.96]"
+                    />
+                    <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),transparent_42%,rgba(5,13,25,0.58))]" />
+                    <figcaption className="absolute bottom-5 left-5 max-w-[15rem] text-white">
+                      <p className="text-[0.64rem] font-black uppercase tracking-[0.32em] text-white/68">
+                        Gallery 01
+                      </p>
+                      <p className="mt-2 text-3xl font-black tracking-[-0.06em]">
+                        雨后山谷
+                      </p>
+                      <p className="mt-2 max-w-[12rem] text-xs font-semibold leading-5 text-white/70">
+                        山雾、湿冷空气和低饱和色调。
+                      </p>
+                    </figcaption>
+                  </figure>
 
-              <figure className="absolute right-8 top-20 z-[5] hidden w-32 rotate-6 overflow-hidden rounded-[1.6rem] border border-white/90 bg-white/74 p-1 shadow-[0_24px_56px_rgba(31,52,76,0.2)] backdrop-blur sm:block">
-                <img
-                  src="https://picsum.photos/seed/image-studio-portrait/420/560"
-                  alt="柔和自然光人像作品预览"
-                  className="h-40 w-full rounded-[1.25rem] object-cover grayscale-[14%] saturate-[0.72]"
-                />
-              </figure>
+                  <div className="grid gap-3 sm:grid-rows-[1fr_0.92fr]">
+                    <figure className="overflow-hidden rounded-[1.55rem] border border-white/85 bg-white/72 p-1.5 shadow-[0_18px_44px_rgba(31,52,76,0.12)] backdrop-blur">
+                      <img
+                        src="https://picsum.photos/seed/image-studio-portrait/420/560"
+                        alt="柔和自然光人像作品预览"
+                        className="h-40 w-full rounded-[1.25rem] object-cover grayscale-[12%] saturate-[0.74] sm:h-full"
+                      />
+                    </figure>
 
-              <figure className="absolute -right-4 bottom-10 z-[5] hidden w-56 -rotate-6 overflow-hidden rounded-[1.7rem] border border-white/90 bg-white/78 p-1.5 shadow-[0_28px_62px_rgba(31,52,76,0.24)] backdrop-blur sm:block">
-                <img
-                  src="https://picsum.photos/seed/image-studio-still-life/520/390"
-                  alt="静物产品布景作品预览"
-                  className="h-28 w-full rounded-[1.35rem] object-cover grayscale-[12%] saturate-[0.72]"
-                />
-                <figcaption className="flex items-center justify-between px-3 py-2 text-xs font-bold text-slate-600">
-                  <span>静物布景</span>
-                  <span className="font-mono text-slate-400">3:4</span>
-                </figcaption>
-              </figure>
-
-              <div className="absolute left-8 top-7 z-[6] rounded-full border border-white/80 bg-white/64 px-3 py-1 text-[0.64rem] font-black uppercase tracking-[0.28em] text-slate-500 shadow-sm backdrop-blur">
-                Selected works
+                    <figure className="overflow-hidden rounded-[1.55rem] border border-white/85 bg-white/76 p-1.5 shadow-[0_18px_44px_rgba(31,52,76,0.12)] backdrop-blur">
+                      <img
+                        src="https://picsum.photos/seed/image-studio-still-life/520/390"
+                        alt="静物产品布景作品预览"
+                        className="h-28 w-full rounded-[1.25rem] object-cover grayscale-[10%] saturate-[0.74]"
+                      />
+                      <figcaption className="flex items-center justify-between px-3 py-2 text-xs font-bold text-slate-600">
+                        <span>静物布景</span>
+                        <span className="font-mono text-slate-400">3:4</span>
+                      </figcaption>
+                    </figure>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
