@@ -142,7 +142,10 @@ export async function getPaymentDiagnostics(originValue?: string | null): Promis
   const origin = getOrigin(originValue);
 
   return (Object.keys(PROVIDER_LABELS) as PaymentProviderName[]).map((provider) => {
-    const config = settings[provider];
+    const config = settings[provider] || {
+      enabled: false,
+      configured: false,
+    };
     const issues: string[] = [];
 
     if (!config.enabled) {
