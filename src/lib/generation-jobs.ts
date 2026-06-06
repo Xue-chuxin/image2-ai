@@ -481,10 +481,12 @@ function scheduleChatGPTWebQueue() {
 
   chatGPTWebQueuePump = new Promise<void>((resolve) => {
     setTimeout(() => {
-      void runChatGPTWebQueue().finally(() => {
-        chatGPTWebQueuePump = null;
-        resolve();
-      });
+      void runChatGPTWebQueue()
+        .catch(() => null)
+        .finally(() => {
+          chatGPTWebQueuePump = null;
+          resolve();
+        });
     }, 0);
   });
 }

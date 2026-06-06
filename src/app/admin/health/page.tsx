@@ -1,6 +1,7 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { AlertTriangle, CheckCircle2, CircleDot, ShieldCheck } from "lucide-react";
 
+import { AdminPageShell } from "@/components/admin/admin-page-shell";
 import { requireAdmin } from "@/lib/auth";
 import { getAdminHealthReport, type AdminHealthStatus } from "@/lib/admin-health";
 
@@ -37,26 +38,13 @@ export default async function AdminHealthPage() {
   const report = await getAdminHealthReport(process.env.NEXT_PUBLIC_SITE_URL);
 
   return (
-    <main className="space-y-5 pb-28">
-      <section className="rounded-[28px] border border-slate-200 bg-white/88 p-5 shadow-card backdrop-blur">
-        <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-400">Launch Check</p>
-        <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="text-3xl font-black text-slate-950">上线自检</h1>
-            <p className="mt-2 text-sm leading-6 text-slate-500">检查数据库、会话密钥、敏感配置加密、支付回调和本地存储目录，不展示任何密钥明文。</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Link href="/admin/billing" className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-600 shadow-card">
-              支付配置
-            </Link>
-            <Link href="/admin/settings" className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-600 shadow-card">
-              后台配置
-            </Link>
-            <div className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-500 shadow-card">{session.email}</div>
-          </div>
-        </div>
-      </section>
-
+    <AdminPageShell
+      active="health"
+      email={session.email}
+      eyebrow="Launch Check"
+      title="上线自检"
+      description="检查数据库、会话密钥、敏感配置加密、支付回调和本地存储目录，不展示任何密钥明文。"
+    >
       <section className="grid gap-3 md:grid-cols-3">
         {[
           ["正常项", report.summary.ok, "bg-emerald-50 text-emerald-700"],
@@ -146,6 +134,6 @@ export default async function AdminHealthPage() {
           </div>
         </div>
       </section>
-    </main>
+    </AdminPageShell>
   );
 }

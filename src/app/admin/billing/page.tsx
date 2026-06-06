@@ -1,5 +1,6 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 
+import { AdminPageShell } from "@/components/admin/admin-page-shell";
 import { AdminBillingDashboard } from "@/components/admin/admin-billing-dashboard";
 import { requireAdmin } from "@/lib/auth";
 import { getBillingPaymentSettings, listAdminCreditPackages, listAdminRechargeOrders } from "@/lib/billing";
@@ -35,32 +36,13 @@ export default async function AdminBillingPage() {
   ]);
 
   return (
-    <main className="space-y-5 pb-28">
-      <section className="rounded-[28px] border border-slate-200 bg-white/88 p-5 shadow-card backdrop-blur">
-        <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-400">Admin Billing</p>
-        <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="text-3xl font-black text-slate-950">套餐与在线支付</h1>
-            <p className="mt-2 text-sm leading-6 text-slate-500">配置易支付、支付宝当面付、微信支付和 PayPal。人工审核充值已关闭。</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Link href="/admin/jobs" className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-600 shadow-card">
-              任务运维
-            </Link>
-            <Link href="/admin/images" className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-600 shadow-card">
-              作品管理
-            </Link>
-            <Link href="/admin/settings" className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-600 shadow-card">
-              后台配置
-            </Link>
-            <Link href="/admin/health" className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-600 shadow-card">
-              上线自检
-            </Link>
-            <div className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-500 shadow-card">{session.email}</div>
-          </div>
-        </div>
-      </section>
-
+    <AdminPageShell
+      active="billing"
+      email={session.email}
+      eyebrow="Admin Billing"
+      title="套餐与在线支付"
+      description="配置易支付、支付宝当面付、微信支付和 PayPal。人工审核充值已关闭。"
+    >
       <section className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
         <div className="rounded-[30px] border border-slate-200 bg-white/86 p-5 shadow-card backdrop-blur">
           <div className="flex flex-wrap items-end justify-between gap-3">
@@ -158,13 +140,15 @@ export default async function AdminBillingPage() {
                 </div>
               ))
             ) : (
-              <div className="rounded-[22px] border border-dashed border-slate-200 bg-slate-50/70 p-6 text-sm font-bold text-slate-400">暂无支付事件，完成一次支付回调后会出现在这里。</div>
+              <div className="rounded-[22px] border border-dashed border-slate-200 bg-slate-50/70 p-6 text-sm font-bold text-slate-400">
+                暂无支付事件，完成一次支付回调后会出现在这里。
+              </div>
             )}
           </div>
         </div>
       </section>
 
       <AdminBillingDashboard initialPackages={packages} initialOrders={orders} initialPaymentSettings={paymentSettings} />
-    </main>
+    </AdminPageShell>
   );
 }

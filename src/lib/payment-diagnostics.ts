@@ -1,4 +1,4 @@
-import { createHash } from "crypto";
+﻿import { createHash } from "crypto";
 
 import { getBillingPaymentSettings } from "@/lib/billing";
 import { prisma } from "@/lib/db";
@@ -137,15 +137,47 @@ function getOrigin(input?: string | null) {
   return "http://127.0.0.1:3000";
 }
 
+function getProviderDiagnosticConfig(settings: Awaited<ReturnType<typeof getBillingPaymentSettings>>, provider: PaymentProviderName) {
+  if (provider === "epay") {
+    return {
+      enabled: settings.epay.enabled,
+      configured: Boolean(settings.epay.gatewayUrl && settings.epay.pid && settings.epay.keyConfigured),
+    };
+  }
+
+  if (provider === "alipay_f2f") {
+    return {
+      enabled: settings.alipayF2f.enabled,
+      configured: Boolean(settings.alipayF2f.gatewayUrl && settings.alipayF2f.appId && settings.alipayF2f.privateKeyConfigured && settings.alipayF2f.alipayPublicKeyConfigured),
+    };
+  }
+
+  if (provider === "wechat_pay") {
+    return {
+      enabled: settings.wechatPay.enabled,
+      configured: Boolean(
+        settings.wechatPay.mchId &&
+          settings.wechatPay.appId &&
+          settings.wechatPay.serialNo &&
+          settings.wechatPay.privateKeyConfigured &&
+          settings.wechatPay.apiV3KeyConfigured &&
+          settings.wechatPay.platformPublicKeyConfigured,
+      ),
+    };
+  }
+
+  return {
+    enabled: settings.paypal.enabled,
+    configured: Boolean(settings.paypal.clientId && settings.paypal.secretConfigured),
+  };
+}
+
 export async function getPaymentDiagnostics(originValue?: string | null): Promise<PaymentDiagnosticItem[]> {
   const settings = await getBillingPaymentSettings();
   const origin = getOrigin(originValue);
 
   return (Object.keys(PROVIDER_LABELS) as PaymentProviderName[]).map((provider) => {
-    const config = settings[provider] || {
-      enabled: false,
-      configured: false,
-    };
+    const config = getProviderDiagnosticConfig(settings, provider);
     const issues: string[] = [];
 
     if (!config.enabled) {

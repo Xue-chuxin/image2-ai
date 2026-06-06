@@ -1,7 +1,6 @@
 import { existsSync } from "fs";
 import path from "path";
 
-import { getBillingPaymentSettings } from "@/lib/billing";
 import { prisma } from "@/lib/db";
 import { getPaymentDiagnostics } from "@/lib/payment-diagnostics";
 import { getStorageRuntimeConfig } from "@/lib/settings";
@@ -136,8 +135,8 @@ export async function getAdminHealthReport(originValue?: string | null): Promise
     }),
   );
 
-  const paymentSettings = await getBillingPaymentSettings();
-  const enabledProviders = Object.values(paymentSettings).filter((setting) => setting.enabled);
+  const paymentDiagnostics = await getPaymentDiagnostics(publicOrigin || originValue);
+  const enabledProviders = paymentDiagnostics.filter((setting) => setting.enabled);
   const readyProviders = enabledProviders.filter((setting) => setting.configured);
   items.push(
     makeItem({
@@ -148,7 +147,6 @@ export async function getAdminHealthReport(originValue?: string | null): Promise
     }),
   );
 
-  const paymentDiagnostics = await getPaymentDiagnostics(publicOrigin || originValue);
   const callbackIssueCount = paymentDiagnostics.reduce((total, item) => total + item.issues.length, 0);
   items.push(
     makeItem({

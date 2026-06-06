@@ -37,12 +37,10 @@ export async function GET(_request: Request, context: RouteContext) {
         currency: true,
         credits: true,
         bonusCredits: true,
-        totalCredits: true,
         paymentUrl: true,
         qrCodeUrl: true,
         providerTradeNo: true,
         paidAt: true,
-        canceledAt: true,
         expiresAt: true,
         createdAt: true,
         updatedAt: true,
@@ -55,7 +53,10 @@ export async function GET(_request: Request, context: RouteContext) {
 
     return NextResponse.json({
       ok: true,
-      order,
+      order: {
+        ...order,
+        totalCredits: order.credits + order.bonusCredits,
+      },
     });
   } catch (error) {
     return NextResponse.json(
