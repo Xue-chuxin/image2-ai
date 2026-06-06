@@ -307,10 +307,10 @@ export function AdminJobsDashboard({ initialJobs }: { initialJobs: AdminGenerati
         {message ? <p className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{message}</p> : null}
         {error ? <p className="mt-4 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">{error}</p> : null}
 
-        <div className="mt-5 grid gap-3">
+        <div className="mt-5 grid min-w-0 gap-3">
           {jobs.map((job) => (
-            <article key={job.id} className="rounded-[24px] border border-slate-200 bg-white/82 p-4 shadow-card">
-              <div className="flex flex-wrap items-start justify-between gap-3">
+            <article key={job.id} className="min-w-0 overflow-hidden rounded-[24px] border border-slate-200 bg-white/82 p-4 shadow-card">
+              <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className={`rounded-full border px-3 py-1 text-xs font-black ${statusClass(job.status)}`}>{statusText(job.status)}</span>
@@ -326,11 +326,15 @@ export function AdminJobsDashboard({ initialJobs }: { initialJobs: AdminGenerati
                     </span>
                     <span className="text-xs font-bold text-slate-400">{formatDate(job.createdAt)}</span>
                   </div>
-                  <h3 className="mt-3 text-base font-black leading-6 text-slate-950">{summarizePrompt(job.promptZh)}</h3>
-                  <p className="mt-2 text-xs font-bold leading-5 text-slate-500">
+                  <h3 className="mt-3 break-words text-base font-black leading-6 text-slate-950">{summarizePrompt(job.promptZh)}</h3>
+                  <p className="mt-2 break-words text-xs font-bold leading-5 text-slate-500 [overflow-wrap:anywhere]">
                     用户：{job.user.email || job.user.displayName || job.user.id} · 任务：{job.id} · 比例：{job.ratio} · 质量：{job.quality} · 张数：{job.imageCount}
                   </p>
-                  {job.errorMessage ? <p className="mt-3 rounded-2xl border border-red-100 bg-red-50 px-3 py-2 text-xs font-bold leading-5 text-red-600">{job.errorMessage}</p> : null}
+                  {job.errorMessage ? (
+                    <p className="mt-3 max-w-full overflow-hidden break-words rounded-2xl border border-red-100 bg-red-50 px-3 py-2 text-xs font-bold leading-5 text-red-600 [overflow-wrap:anywhere]">
+                      {job.errorMessage}
+                    </p>
+                  ) : null}
                   {job.images.length ? (
                     <div className="mt-3 flex flex-wrap gap-2">
                       {job.images.map((image) => (
@@ -339,12 +343,12 @@ export function AdminJobsDashboard({ initialJobs }: { initialJobs: AdminGenerati
                     </div>
                   ) : null}
                 </div>
-                <div className="flex shrink-0 flex-col gap-2">
+                <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto">
                   <button
                     type="button"
                     onClick={() => refreshSingleJob(job.id)}
                     disabled={busyJobId === job.id}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-600 shadow-card disabled:opacity-60"
+                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-600 shadow-card disabled:opacity-60"
                   >
                     {busyJobId === job.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                     刷新
@@ -354,7 +358,7 @@ export function AdminJobsDashboard({ initialJobs }: { initialJobs: AdminGenerati
                       type="button"
                       onClick={() => retryJob(job.id)}
                       disabled={busyJobId === job.id}
-                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-card disabled:opacity-60"
+                      className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-card disabled:opacity-60"
                     >
                       {busyJobId === job.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
                       重新执行
@@ -365,7 +369,7 @@ export function AdminJobsDashboard({ initialJobs }: { initialJobs: AdminGenerati
                       type="button"
                       onClick={() => failJob(job.id)}
                       disabled={busyJobId === job.id}
-                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-red-100 bg-red-50 px-4 py-2 text-xs font-black text-red-600 shadow-card disabled:opacity-60"
+                      className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-2xl border border-red-100 bg-red-50 px-4 py-2 text-xs font-black text-red-600 shadow-card disabled:opacity-60"
                     >
                       {busyJobId === job.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
                       标记失败
