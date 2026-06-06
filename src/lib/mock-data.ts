@@ -1,3 +1,5 @@
+import { IMAGE_GALLERY_CATEGORIES } from "@/lib/image-categories";
+
 export type PromptCardData = {
   slug: string;
   title: string;
@@ -20,7 +22,7 @@ export type PromptCardData = {
   useCases: string[];
 };
 
-export const categories = ["全部", "写真", "商品", "角色", "界面", "建筑", "插画", "国风"];
+export const categories = [...IMAGE_GALLERY_CATEGORIES];
 
 export const promptCards: PromptCardData[] = [
   {

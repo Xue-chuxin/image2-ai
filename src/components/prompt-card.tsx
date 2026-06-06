@@ -5,22 +5,21 @@ import type { PromptCardData } from "@/lib/mock-data";
 
 export function PromptCard({ prompt }: { prompt: PromptCardData }) {
   return (
-    <article className="liquid-glass group mb-4 inline-block w-full overflow-hidden rounded-[24px] transition duration-300 hover:-translate-y-1">
-      <div className="liquid-mask" />
+    <article className="group mb-4 inline-block w-full overflow-hidden rounded-[24px] border border-slate-200 bg-white/88 text-left shadow-card transition duration-300 hover:-translate-y-1 hover:shadow-app">
       <div className={`relative ${prompt.heightClass} bg-gradient-to-br ${prompt.gradient} p-4`}>
-        <div className="absolute right-4 top-4 rounded-full border border-white/80 bg-white/70 px-3 py-1 text-xs font-black text-slate-600 backdrop-blur">
+        <div className="absolute right-4 top-4 z-10 rounded-full border border-white/80 bg-white/82 px-3 py-1 text-xs font-black text-slate-600 backdrop-blur">
           {prompt.ratio}
         </div>
-        <div className="flex h-full items-end rounded-[20px] border border-white/80 bg-white/38 p-4 text-slate-900 shadow-inner backdrop-blur-sm">
+        <div className="flex h-full items-end rounded-[20px] border border-white/80 bg-white/54 p-4 text-slate-900 shadow-inner backdrop-blur-sm">
           <div>
-            <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-2xl bg-white/80 text-slate-600">
+            <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-2xl bg-white/84 text-slate-600">
               <ImageIcon className="h-4 w-4" />
             </div>
             <p className="text-xl font-black leading-tight">{prompt.visual}</p>
           </div>
         </div>
       </div>
-      <div className="relative space-y-4 p-4">
+      <div className="space-y-4 p-4">
         <div>
           <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">{prompt.category}</p>
           <Link href={`/prompts/${prompt.slug}`} className="mt-1 block text-lg font-black leading-tight text-slate-950 transition group-hover:text-ocean-800">

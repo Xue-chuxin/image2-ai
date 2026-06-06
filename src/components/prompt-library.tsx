@@ -37,9 +37,14 @@ export function PromptLibrary({ categories, prompts }: { categories: string[]; p
 
   return (
     <>
-      <section className="sticky top-[76px] z-30 rounded-[24px] border border-slate-200 bg-white/94 p-4 shadow-card backdrop-blur-xl">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-          <label className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3">
+      <section className="sticky top-[76px] z-30 rounded-[28px] border border-slate-200 bg-white/94 p-4 shadow-card backdrop-blur-xl md:p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Prompt works</p>
+            <h2 className="mt-1 text-3xl font-black tracking-[-0.05em] text-slate-950">灵感展示</h2>
+            <p className="mt-2 text-sm font-bold text-slate-500">和首页作品展示保持同一套分类、卡片比例和瀑布流浏览方式。</p>
+          </div>
+          <label className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 lg:max-w-md">
             <Search className="h-4 w-4 shrink-0 text-slate-500" />
             <input
               value={query}
@@ -48,8 +53,8 @@ export function PromptLibrary({ categories, prompts }: { categories: string[]; p
               placeholder="搜索风格、场景或用途"
             />
           </label>
-          <div className="flex gap-2">
-            <button className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-600">
+          <div className="flex gap-2 lg:justify-end">
+            <button className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-600 shadow-sm">
               <SlidersHorizontal className="h-4 w-4" />
               <select value={sort} onChange={(event) => setSort(event.target.value)} className="bg-transparent outline-none">
                 {sortOptions.map((option) => (
@@ -57,7 +62,7 @@ export function PromptLibrary({ categories, prompts }: { categories: string[]; p
                 ))}
               </select>
             </button>
-            <button className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-600">
+            <button className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-600 shadow-sm">
               <Filter className="h-4 w-4" /> {visiblePrompts.length} 条
             </button>
           </div>
@@ -67,7 +72,7 @@ export function PromptLibrary({ categories, prompts }: { categories: string[]; p
             <button
               key={item}
               onClick={() => setCategory(item)}
-              className={`shrink-0 rounded-full border px-4 py-2 text-sm font-black ${category === item ? "border-slate-950 bg-slate-950 text-white shadow-card" : "border-slate-200 bg-white text-slate-600"}`}
+              className={`shrink-0 rounded-full border px-4 py-2 text-sm font-black transition ${category === item ? "border-slate-950 bg-slate-950 text-white shadow-card" : "border-slate-200 bg-white text-slate-600 hover:-translate-y-0.5 hover:text-slate-950"}`}
             >
               {item}
             </button>
@@ -76,7 +81,7 @@ export function PromptLibrary({ categories, prompts }: { categories: string[]; p
       </section>
 
       {visiblePrompts.length > 0 ? (
-        <div className="columns-1 gap-4 md:columns-2 xl:columns-3">
+        <div className="columns-1 gap-4 sm:columns-2 xl:columns-3 2xl:columns-4">
           {visiblePrompts.map((prompt) => (
             <div key={prompt.slug} className="break-inside-avoid">
               <PromptCard prompt={prompt} />

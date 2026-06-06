@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
+import { IMAGE_GALLERY_CATEGORIES } from "@/lib/image-categories";
 
-export const GALLERY_CATEGORIES = ["全部", "写真", "商品", "角色", "界面", "建筑", "插画", "国风", "其他"];
+export const GALLERY_CATEGORIES = [...IMAGE_GALLERY_CATEGORIES];
 
 export type GalleryImageView = {
   id: string;

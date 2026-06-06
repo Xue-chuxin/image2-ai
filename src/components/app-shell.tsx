@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Clock3, Home, ImagePlus, Library, Palette, Settings, UserRound } from "lucide-react";
+import { Clock3, Home, ImagePlus, Library, Palette, UserRound } from "lucide-react";
 import { clsx } from "clsx";
 import type { PublicAppSettings } from "@/lib/settings";
 
@@ -61,13 +61,6 @@ export function AppShell({ children, settings }: { children: React.ReactNode; se
             </nav>
 
             <div className="flex shrink-0 items-center gap-2">
-              <Link
-                href="/admin/users"
-                className="hidden items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-500 shadow-card transition hover:-translate-y-0.5 hover:text-slate-950 sm:flex"
-              >
-                <Settings className="h-3.5 w-3.5" />
-                后台
-              </Link>
               <Link href="/signin" className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-700 shadow-card transition hover:-translate-y-0.5 hover:text-slate-950">
                 登录
               </Link>

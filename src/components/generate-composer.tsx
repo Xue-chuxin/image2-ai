@@ -3,6 +3,7 @@
 import { type ChangeEvent, type DragEvent, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import { Loader2, RotateCcw, Send, UploadCloud, Wand2, X } from "lucide-react";
+import { IMAGE_STYLE_CATEGORIES, type ImageStyleCategory } from "@/lib/image-categories";
 
 type ReferenceImageResult = {
   id: string;
@@ -75,7 +76,6 @@ type GenerateComposerProps = {
   compact?: boolean;
 };
 
-const styles = ["写真", "商品", "角色", "界面", "插画", "建筑"] as const;
 const ratios = ["1:1", "3:4", "16:9", "9:16"] as const;
 const qualities = [
   { value: "standard", label: "标准" },
@@ -122,7 +122,7 @@ function formatSize(bytes: number) {
 export function GenerateComposer({ initialPrompt = "", initialReferenceImages = [], onJobChange, compact = false }: GenerateComposerProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [prompt, setPrompt] = useState(initialPrompt);
-  const [selectedStyle, setSelectedStyle] = useState<(typeof styles)[number]>("写真");
+  const [selectedStyle, setSelectedStyle] = useState<ImageStyleCategory>("写真");
   const [ratio, setRatio] = useState<(typeof ratios)[number]>("1:1");
   const [quality, setQuality] = useState<(typeof qualities)[number]["value"]>("standard");
   const [imageCount, setImageCount] = useState<(typeof imageCounts)[number]>(1);
@@ -427,7 +427,7 @@ export function GenerateComposer({ initialPrompt = "", initialReferenceImages = 
       <div className="option-group">
         <span>风格方向</span>
         <div className="chip-row">
-          {styles.map((style) => (
+          {IMAGE_STYLE_CATEGORIES.map((style) => (
             <button key={style} className={clsx("chip", selectedStyle === style && "active")} type="button" onClick={() => setSelectedStyle(style)}>
               {style}
             </button>

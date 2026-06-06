@@ -227,7 +227,7 @@ export function HomeWorksShowcase({
       </section>
 
       {visibleItems.length > 0 ? (
-        <section className="columns-1 gap-4 md:columns-2 xl:columns-3">
+        <section className="columns-1 gap-4 sm:columns-2 xl:columns-3 2xl:columns-4">
           {visibleItems.map((item) => (
             <div key={item.id} className="break-inside-avoid">
               <button
