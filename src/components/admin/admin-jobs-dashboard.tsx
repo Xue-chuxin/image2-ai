@@ -63,6 +63,22 @@ function summarizePrompt(value: string) {
   return value.length > 96 ? `${value.slice(0, 96)}...` : value;
 }
 
+function queueText(job: AdminGenerationJobView) {
+  if (job.provider !== "chatgpt_web") {
+    return "";
+  }
+
+  if (job.status === "GENERATING") {
+    return "ChatGPT Web 正在执行";
+  }
+
+  if (job.status === "QUEUED") {
+    return job.queueWaitingCount > 0 ? `队列 #${job.queuePosition}，前面 ${job.queueWaitingCount} 个` : "队列 #1，即将开始";
+  }
+
+  return "";
+}
+
 async function readJobsResponse(response: Response): Promise<JobsResponse> {
   const contentType = response.headers.get("content-type") || "";
   if (contentType.includes("application/json")) {
@@ -300,6 +316,11 @@ export function AdminJobsDashboard({ initialJobs }: { initialJobs: AdminGenerati
                     <span className={`rounded-full border px-3 py-1 text-xs font-black ${statusClass(job.status)}`}>{statusText(job.status)}</span>
                     {job.isStale ? <span className="rounded-full border border-amber-100 bg-amber-50 px-3 py-1 text-xs font-black text-amber-700">疑似卡住</span> : null}
                     <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-black text-slate-500">{job.provider}</span>
+                    {queueText(job) ? (
+                      <span className="rounded-full border border-amber-100 bg-amber-50 px-3 py-1 text-xs font-black text-amber-700">
+                        {queueText(job)}
+                      </span>
+                    ) : null}
                     <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-black text-slate-500">
                       {job.creditCost} 积分
                     </span>

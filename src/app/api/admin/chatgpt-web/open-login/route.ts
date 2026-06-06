@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getAdminSession } from "@/lib/auth";
 import { openChatGPTWebLoginBrowser } from "@/lib/chatgpt-web";
+import { getChatGPTWebQueueRuntimeState } from "@/lib/generation-jobs";
 
 export const runtime = "nodejs";
 
@@ -12,6 +13,17 @@ export async function POST() {
   }
 
   try {
+    const queueState = getChatGPTWebQueueRuntimeState();
+    if (queueState.busy) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: `ChatGPT Web 正在执行任务 ${queueState.activeJobId}，请任务完成后再打开登录浏览器。`,
+        },
+        { status: 409 },
+      );
+    }
+
     const status = await openChatGPTWebLoginBrowser();
     return NextResponse.json({ ok: true, status });
   } catch (error) {

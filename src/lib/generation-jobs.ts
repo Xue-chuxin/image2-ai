@@ -67,6 +67,8 @@ export type GenerationJobView = {
   id: string;
   status: string;
   provider: GenerationProviderName;
+  queuePosition: number | null;
+  queueWaitingCount: number;
   model: string | null;
   promptZh: string;
   promptEn: string | null;
@@ -111,7 +113,19 @@ export type CreateGenerationJobInput = {
 };
 
 const runningJobIds = new Set<string>();
+let chatGPTWebQueuePump: Promise<void> | null = null;
+let chatGPTWebActiveJobId: string | null = null;
 const STALE_JOB_MS = 20 * 60 * 1000;
+
+type QueueMeta = {
+  queuePosition: number | null;
+  queueWaitingCount: number;
+};
+
+const emptyQueueMeta: QueueMeta = {
+  queuePosition: null,
+  queueWaitingCount: 0,
+};
 
 const text = {
   promptRequired: "\u8bf7\u8f93\u5165\u4e2d\u6587\u63d0\u793a\u8bcd",
@@ -127,6 +141,10 @@ function isActiveStatus(status: string) {
   return status === "QUEUED" || status === "GENERATING";
 }
 
+function isChatGPTWebProvider(provider?: string | null) {
+  return provider === "chatgpt_web";
+}
+
 function isStaleJob(job: { status: string; updatedAt: Date | string }) {
   if (!isActiveStatus(job.status)) {
     return false;
@@ -135,11 +153,42 @@ function isStaleJob(job: { status: string; updatedAt: Date | string }) {
   return Date.now() - new Date(job.updatedAt).getTime() > STALE_JOB_MS;
 }
 
-function serializeJob(job: GenerationJobRecord): GenerationJobView {
+async function getChatGPTWebQueueMetaMap() {
+  const jobs = await prisma.generationJob.findMany({
+    where: {
+      provider: "chatgpt_web",
+      status: {
+        in: ["QUEUED", "GENERATING"],
+      },
+    },
+    orderBy: {
+      createdAt: "asc",
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  return new Map<string, QueueMeta>(
+    jobs.map((job, index) => [
+      job.id,
+      {
+        queuePosition: index + 1,
+        queueWaitingCount: index,
+      },
+    ]),
+  );
+}
+
+function serializeJob(job: GenerationJobRecord, queueMetaMap?: Map<string, QueueMeta>): GenerationJobView {
+  const queueMeta = isChatGPTWebProvider(job.provider) ? queueMetaMap?.get(job.id) || emptyQueueMeta : emptyQueueMeta;
+
   return {
     id: job.id,
     status: job.status,
     provider: job.provider as GenerationProviderName,
+    queuePosition: queueMeta.queuePosition,
+    queueWaitingCount: queueMeta.queueWaitingCount,
     model: job.providerRequestId,
     promptZh: job.polishedPromptZh || job.originalInput,
     promptEn: job.polishedPromptEn,
@@ -189,11 +238,29 @@ function serializeJob(job: GenerationJobRecord): GenerationJobView {
   };
 }
 
-function serializeAdminJob(job: AdminGenerationJobRecord): AdminGenerationJobView {
+function serializeAdminJob(job: AdminGenerationJobRecord, queueMetaMap?: Map<string, QueueMeta>): AdminGenerationJobView {
   return {
-    ...serializeJob(job),
+    ...serializeJob(job, queueMetaMap),
     user: job.user,
   };
+}
+
+async function serializeJobWithQueueMeta(job: GenerationJobRecord) {
+  return serializeJob(job, await getChatGPTWebQueueMetaMap());
+}
+
+async function serializeAdminJobWithQueueMeta(job: AdminGenerationJobRecord) {
+  return serializeAdminJob(job, await getChatGPTWebQueueMetaMap());
+}
+
+async function serializeJobsWithQueueMeta(jobs: GenerationJobRecord[]) {
+  const queueMetaMap = await getChatGPTWebQueueMetaMap();
+  return jobs.map((job) => serializeJob(job, queueMetaMap));
+}
+
+async function serializeAdminJobsWithQueueMeta(jobs: AdminGenerationJobRecord[]) {
+  const queueMetaMap = await getChatGPTWebQueueMetaMap();
+  return jobs.map((job) => serializeAdminJob(job, queueMetaMap));
 }
 
 function normalizePrompt(value: string) {
@@ -258,7 +325,7 @@ async function findAdminGenerationJob(jobId: string) {
     include: adminGenerationJobInclude,
   });
 
-  return job ? serializeAdminJob(job) : null;
+  return job ? serializeAdminJobWithQueueMeta(job) : null;
 }
 
 async function failGenerationJob(jobId: string, userId: string, creditCost: number, error: unknown) {
@@ -371,7 +438,63 @@ export async function executeGenerationJob(jobId: string, userId: string) {
   }
 }
 
-function scheduleGenerationJob(jobId: string, userId: string) {
+async function findNextQueuedChatGPTWebJob() {
+  return prisma.generationJob.findFirst({
+    where: {
+      provider: "chatgpt_web",
+      status: "QUEUED",
+    },
+    orderBy: {
+      createdAt: "asc",
+    },
+    include: generationJobInclude,
+  });
+}
+
+async function runChatGPTWebQueue() {
+  while (true) {
+    const job = await findNextQueuedChatGPTWebJob();
+    if (!job) {
+      return;
+    }
+
+    if (runningJobIds.has(job.id)) {
+      return;
+    }
+
+    runningJobIds.add(job.id);
+    chatGPTWebActiveJobId = job.id;
+
+    try {
+      await executeGenerationJob(job.id, job.userId);
+    } finally {
+      runningJobIds.delete(job.id);
+      chatGPTWebActiveJobId = null;
+    }
+  }
+}
+
+function scheduleChatGPTWebQueue() {
+  if (chatGPTWebQueuePump) {
+    return;
+  }
+
+  chatGPTWebQueuePump = new Promise<void>((resolve) => {
+    setTimeout(() => {
+      void runChatGPTWebQueue().finally(() => {
+        chatGPTWebQueuePump = null;
+        resolve();
+      });
+    }, 0);
+  });
+}
+
+function scheduleGenerationJob(jobId: string, userId: string, provider?: GenerationProviderName | string | null) {
+  if (isChatGPTWebProvider(provider)) {
+    scheduleChatGPTWebQueue();
+    return;
+  }
+
   if (runningJobIds.has(jobId)) {
     return;
   }
@@ -408,7 +531,16 @@ async function resetGenerationJobForRetry(job: { id: string; userId: string; cre
 }
 
 async function rescheduleGenerationJobForAdmin(jobId: string, userId: string) {
-  scheduleGenerationJob(jobId, userId);
+  const job = await prisma.generationJob.findUnique({
+    where: {
+      id: jobId,
+    },
+    select: {
+      provider: true,
+    },
+  });
+
+  scheduleGenerationJob(jobId, userId, job?.provider);
   return findAdminGenerationJob(jobId);
 }
 
@@ -467,12 +599,17 @@ export async function createAndQueueGenerationJob(userId: string, input: CreateG
     throw error;
   }
 
-  scheduleGenerationJob(job.id, userId);
-  return serializeJob(job);
+  scheduleGenerationJob(job.id, userId, providerName);
+  return serializeJobWithQueueMeta(job);
 }
 
 export async function createAndRunGenerationJob(userId: string, input: CreateGenerationJobInput) {
   const queuedJob = await createAndQueueGenerationJob(userId, input);
+
+  if (queuedJob.provider === "chatgpt_web") {
+    return findGenerationJob(userId, queuedJob.id);
+  }
+
   return executeGenerationJob(queuedJob.id, userId);
 }
 
@@ -493,23 +630,24 @@ export async function retryGenerationJobForUser(userId: string, jobId: string) {
 
   if (job.status !== "FAILED" && job.status !== "CANCELED") {
     if (isActiveStatus(job.status)) {
-      scheduleGenerationJob(job.id, job.userId);
+      scheduleGenerationJob(job.id, job.userId, job.provider);
       const currentJob = await getJobForExecution(job.id, job.userId);
-      return currentJob ? serializeJob(currentJob) : null;
+      return currentJob ? serializeJobWithQueueMeta(currentJob) : null;
     }
 
     throw new Error("\u53ea\u80fd\u91cd\u8bd5\u5931\u8d25\u6216\u5df2\u53d6\u6d88\u7684\u4efb\u52a1");
   }
 
   await resetGenerationJobForRetry(job);
-  scheduleGenerationJob(job.id, job.userId);
+  scheduleGenerationJob(job.id, job.userId, job.provider);
 
   const currentJob = await getJobForExecution(job.id, job.userId);
-  return currentJob ? serializeJob(currentJob) : null;
+  return currentJob ? serializeJobWithQueueMeta(currentJob) : null;
 }
 
 export async function listRecentGenerationJobs(userId: string, limit = 20) {
   await recoverStaleGenerationJobs(userId);
+  scheduleChatGPTWebQueue();
 
   const jobs = await prisma.generationJob.findMany({
     where: {
@@ -522,11 +660,12 @@ export async function listRecentGenerationJobs(userId: string, limit = 20) {
     include: generationJobInclude,
   });
 
-  return jobs.map(serializeJob);
+  return serializeJobsWithQueueMeta(jobs);
 }
 
 export async function findGenerationJob(userId: string, id: string) {
   await recoverStaleGenerationJobs(userId);
+  scheduleChatGPTWebQueue();
 
   const job = await prisma.generationJob.findFirst({
     where: {
@@ -536,7 +675,7 @@ export async function findGenerationJob(userId: string, id: string) {
     include: generationJobInclude,
   });
 
-  return job ? serializeJob(job) : null;
+  return job ? serializeJobWithQueueMeta(job) : null;
 }
 
 export async function listAdminGenerationJobs(limit = 50): Promise<AdminGenerationJobView[]> {
@@ -553,6 +692,7 @@ export async function listAdminGenerationJobsFiltered({
   q?: string;
 } = {}): Promise<AdminGenerationJobView[]> {
   await recoverStaleGenerationJobs();
+  scheduleChatGPTWebQueue();
 
   const cleanStatus = status && ["QUEUED", "GENERATING", "COMPLETED", "FAILED", "CANCELED"].includes(status) ? status : undefined;
   const cleanQuery = q?.trim();
@@ -594,11 +734,12 @@ export async function listAdminGenerationJobsFiltered({
     include: adminGenerationJobInclude,
   });
 
-  return jobs.map(serializeAdminJob);
+  return serializeAdminJobsWithQueueMeta(jobs);
 }
 
 export async function findAdminGenerationJobById(jobId: string) {
   await recoverStaleGenerationJobs();
+  scheduleChatGPTWebQueue();
   return findAdminGenerationJob(jobId);
 }
 
@@ -655,6 +796,17 @@ export async function markGenerationJobFailedByAdmin(jobId: string) {
   }
 
   await failGenerationJob(job.id, job.userId, job.creditCost, new Error("\u7ba1\u7406\u5458\u624b\u52a8\u6807\u8bb0\u5931\u8d25\uff0c\u5df2\u9000\u56de\u51bb\u7ed3\u79ef\u5206\u3002"));
+  if (isChatGPTWebProvider(job.provider)) {
+    scheduleChatGPTWebQueue();
+  }
   return findAdminGenerationJob(job.id);
+}
+
+export function getChatGPTWebQueueRuntimeState() {
+  return {
+    busy: Boolean(chatGPTWebActiveJobId),
+    activeJobId: chatGPTWebActiveJobId,
+    pumpRunning: Boolean(chatGPTWebQueuePump),
+  };
 }
 

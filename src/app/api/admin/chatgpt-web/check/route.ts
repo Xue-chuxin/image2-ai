@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getAdminSession } from "@/lib/auth";
 import { checkChatGPTWebStatus } from "@/lib/chatgpt-web";
+import { getChatGPTWebQueueRuntimeState } from "@/lib/generation-jobs";
 
 export const runtime = "nodejs";
 
@@ -12,6 +13,21 @@ export async function POST() {
   }
 
   try {
+    const queueState = getChatGPTWebQueueRuntimeState();
+    if (queueState.busy) {
+      return NextResponse.json({
+        ok: true,
+        status: {
+          enabled: true,
+          ready: false,
+          userDataDir: "",
+          headless: false,
+          timeoutSeconds: 0,
+          message: `ChatGPT Web 正在执行任务 ${queueState.activeJobId}，请任务完成后再检测登录状态。`,
+        },
+      });
+    }
+
     const status = await checkChatGPTWebStatus();
     return NextResponse.json({ ok: true, status });
   } catch (error) {

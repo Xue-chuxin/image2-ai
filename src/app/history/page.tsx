@@ -43,6 +43,26 @@ function getQualityLabel(quality: string) {
   return "标准";
 }
 
+function getQueueStatusLabel(job: GenerationJobView) {
+  if (job.provider !== "chatgpt_web") {
+    return getStatusLabel(job.status);
+  }
+
+  if (job.status === "GENERATING") {
+    return "正在生成";
+  }
+
+  if (job.status === "QUEUED") {
+    return job.queueWaitingCount > 0 ? `排队中，前面还有 ${job.queueWaitingCount} 个任务` : "即将开始";
+  }
+
+  return getStatusLabel(job.status);
+}
+
+function shouldShowQueueHint(job: GenerationJobView) {
+  return job.provider === "chatgpt_web" && (job.status === "QUEUED" || job.status === "GENERATING");
+}
+
 function formatTime(value: string) {
   return new Intl.DateTimeFormat("zh-CN", {
     year: "numeric",
@@ -63,7 +83,7 @@ function HistoryItem({ job }: { job: GenerationJobView }) {
           <Image src={firstImage.url} alt={job.promptZh} width={640} height={640} />
         ) : (
           <div className="history-placeholder">
-            <span>{getStatusLabel(job.status)}</span>
+            <span>{getQueueStatusLabel(job)}</span>
           </div>
         )}
       </div>
@@ -74,10 +94,11 @@ function HistoryItem({ job }: { job: GenerationJobView }) {
             <span className="eyebrow">{job.provider}</span>
             <h2>{job.promptZh}</h2>
           </div>
-          <span className={`status-pill ${job.status.toLowerCase()}`}>{getStatusLabel(job.status)}</span>
+          <span className={`status-pill ${job.status.toLowerCase()}`}>{getQueueStatusLabel(job)}</span>
         </div>
 
         {job.promptEn ? <p className="history-prompt">{job.promptEn}</p> : null}
+        {shouldShowQueueHint(job) ? <p className="history-prompt">{getQueueStatusLabel(job)}</p> : null}
         {job.errorMessage ? <p className="history-error">{job.errorMessage}</p> : null}
 
         <dl className="history-meta">
