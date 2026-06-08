@@ -756,6 +756,13 @@ export async function checkChatGPTWebStatus(): Promise<ChatGPTWebStatus> {
   };
 }
 
+export async function closeChatGPTWebBrowser() {
+  const context = sharedContext;
+  sharedContext = null;
+  sharedPage = null;
+  await context?.close().catch(() => null);
+}
+
 export async function generateWithChatGPTWeb(request: ImageGenerationRequest): Promise<GeneratedImagePayload[]> {
   const config = await getChatGPTWebRuntimeConfig();
   assertEnabled(config);

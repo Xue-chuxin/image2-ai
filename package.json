@@ -13,7 +13,9 @@
                     "postinstall":  "prisma generate",
                     "prisma:generate":  "prisma generate",
                     "prisma:seed":  "tsx prisma/seed.ts",
-                    "chatgpt:login":  "tsx scripts/chatgpt-login.ts"
+                    "chatgpt:login":  "tsx scripts/chatgpt-login.ts",
+                    "chatgpt:check":  "tsx scripts/chatgpt-check.ts",
+                    "chatgpt:generate":  "tsx scripts/chatgpt-generate.ts"
                 },
     "dependencies":  {
                          "@prisma/client":  "^5.22.0",
