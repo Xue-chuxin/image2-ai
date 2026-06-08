@@ -144,6 +144,7 @@ export function HomeWorksShowcase({
   initialWorks,
   fallbackPrompts,
   galleryError,
+  fallbackOnGalleryError = false,
   eyebrow = "Works",
   title = "作品展示",
   realDescription = "来自用户发布的公开作品。",
@@ -158,6 +159,7 @@ export function HomeWorksShowcase({
   initialWorks: GalleryImageView[];
   fallbackPrompts: PromptCardData[];
   galleryError?: string | null;
+  fallbackOnGalleryError?: boolean;
   eyebrow?: string;
   title?: string;
   realDescription?: string;
@@ -181,7 +183,7 @@ export function HomeWorksShowcase({
   const fallbackItems = useMemo(() => fallbackPrompts.map(promptToItem), [fallbackPrompts]);
   const realItems = useMemo(() => works.map(workToItem), [works]);
   const hasGalleryError = Boolean(galleryError);
-  const usingFallback = !hasGalleryError && initialWorks.length === 0 && works.length === 0;
+  const usingFallback = (hasGalleryError && fallbackOnGalleryError) || (!hasGalleryError && initialWorks.length === 0 && works.length === 0);
   const visibleItems = usingFallback ? filterItems(fallbackItems, query, category) : filterItems(realItems, query, category);
 
   useEffect(() => {
@@ -230,7 +232,7 @@ export function HomeWorksShowcase({
           <div>
             <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">{eyebrow}</p>
             <h2 className="mt-1 text-3xl font-black tracking-[-0.05em] text-slate-950">{title}</h2>
-            <p className="mt-2 text-sm font-bold text-slate-500">{galleryError || (usingFallback ? fallbackDescription : realDescription)}</p>
+            <p className="mt-2 text-sm font-bold text-slate-500">{galleryError && !fallbackOnGalleryError ? galleryError : usingFallback ? fallbackDescription : realDescription}</p>
           </div>
           <label className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 lg:max-w-md">
             <Search className="h-4 w-4 shrink-0 text-slate-500" />

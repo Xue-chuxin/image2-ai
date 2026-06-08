@@ -104,7 +104,17 @@ export default async function HomePage() {
         <GenerateComposer compact />
       </section>
 
-      <HomeWorksShowcase categories={GALLERY_CATEGORIES} initialWorks={publicWorks} fallbackPrompts={promptCards} galleryError={galleryError} />
+      <HomeWorksShowcase
+        categories={GALLERY_CATEGORIES}
+        initialWorks={publicWorks}
+        fallbackPrompts={promptCards}
+        galleryError={galleryError}
+        fallbackOnGalleryError
+        fallbackDescription="当前未连接数据库，先展示和灵感库一致的可复用方向。"
+        fallbackBadgeLabel="灵感"
+        fallbackSourceLabel="灵感库"
+        fallbackTypeLabel="提示词灵感"
+      />
 
       <section className="rounded-[30px] border border-slate-200 bg-white/88 p-5 shadow-card backdrop-blur md:p-6">
         <div className="mb-5 flex items-center justify-between gap-4">
