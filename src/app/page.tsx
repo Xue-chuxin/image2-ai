@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight, BookOpen, CheckCircle2 } from "lucide-react";
 import { GenerateComposer } from "@/components/generate-composer";
 import { HomeWorksShowcase } from "@/components/home-works-showcase";
-import { GALLERY_CATEGORIES, listPublicGalleryImages } from "@/lib/gallery";
+import { GALLERY_CATEGORIES, listPublicGalleryImages, type GalleryImageView } from "@/lib/gallery";
 import { promptCards } from "@/lib/mock-data";
 
 const steps = [
@@ -12,7 +12,14 @@ const steps = [
 ];
 
 export default async function HomePage() {
-  const publicWorks = await listPublicGalleryImages({ limit: 48 }).catch(() => []);
+  let publicWorks: GalleryImageView[] = [];
+  let galleryError: string | null = null;
+
+  try {
+    publicWorks = await listPublicGalleryImages({ limit: 48 });
+  } catch {
+    galleryError = "作品库暂时不可用，请检查数据库服务。";
+  }
 
   return (
     <main className="space-y-8 pb-28">
@@ -97,7 +104,7 @@ export default async function HomePage() {
         <GenerateComposer compact />
       </section>
 
-      <HomeWorksShowcase categories={GALLERY_CATEGORIES} initialWorks={publicWorks} fallbackPrompts={promptCards} />
+      <HomeWorksShowcase categories={GALLERY_CATEGORIES} initialWorks={publicWorks} fallbackPrompts={promptCards} galleryError={galleryError} />
 
       <section className="rounded-[30px] border border-slate-200 bg-white/88 p-5 shadow-card backdrop-blur md:p-6">
         <div className="mb-5 flex items-center justify-between gap-4">

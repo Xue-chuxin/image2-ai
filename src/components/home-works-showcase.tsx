@@ -143,10 +143,12 @@ export function HomeWorksShowcase({
   categories,
   initialWorks,
   fallbackPrompts,
+  galleryError,
 }: {
   categories: string[];
   initialWorks: GalleryImageView[];
   fallbackPrompts: PromptCardData[];
+  galleryError?: string | null;
 }) {
   const normalizedCategories = useMemo(
     () => Array.from(new Set(["全部", ...categories.map(normalizeCategory)])),
@@ -160,11 +162,12 @@ export function HomeWorksShowcase({
 
   const fallbackItems = useMemo(() => fallbackPrompts.map(promptToItem), [fallbackPrompts]);
   const realItems = useMemo(() => works.map(workToItem), [works]);
-  const usingFallback = initialWorks.length === 0 && works.length === 0;
+  const hasGalleryError = Boolean(galleryError);
+  const usingFallback = !hasGalleryError && initialWorks.length === 0 && works.length === 0;
   const visibleItems = usingFallback ? filterItems(fallbackItems, query, category) : filterItems(realItems, query, category);
 
   useEffect(() => {
-    if (usingFallback) {
+    if (usingFallback || hasGalleryError) {
       return;
     }
 
@@ -195,7 +198,7 @@ export function HomeWorksShowcase({
       });
 
     return () => controller.abort();
-  }, [category, initialWorks, query, usingFallback]);
+  }, [category, hasGalleryError, initialWorks, query, usingFallback]);
 
   function openItem(event: React.MouseEvent<HTMLButtonElement>, item: ShowcaseItem) {
     event.currentTarget.blur();
@@ -209,7 +212,7 @@ export function HomeWorksShowcase({
           <div>
             <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Works</p>
             <h2 className="mt-1 text-3xl font-black tracking-[-0.05em] text-slate-950">作品展示</h2>
-            <p className="mt-2 text-sm font-bold text-slate-500">{usingFallback ? "暂无公开作品，先展示一些可复用的方向。" : "来自真实生成任务的公开作品。"}</p>
+            <p className="mt-2 text-sm font-bold text-slate-500">{galleryError || (usingFallback ? "暂无公开作品，先展示一些可复用的方向。" : "来自用户发布的公开作品。")}</p>
           </div>
           <label className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 lg:max-w-md">
             <Search className="h-4 w-4 shrink-0 text-slate-500" />
@@ -292,8 +295,8 @@ export function HomeWorksShowcase({
         </section>
       ) : (
         <section className="rounded-[24px] border border-slate-200 bg-white/88 p-8 text-center shadow-card backdrop-blur">
-          <p className="text-lg font-black text-slate-950">没有找到匹配作品</p>
-          <p className="mt-2 text-sm text-slate-500">换一个关键词，或切回“全部”分类。</p>
+          <p className="text-lg font-black text-slate-950">{galleryError ? "作品库暂时不可用" : "没有找到匹配作品"}</p>
+          <p className="mt-2 text-sm text-slate-500">{galleryError ? "这里原本展示用户发布到首页广场的作品，数据库恢复后会自动显示。" : "换一个关键词，或切回“全部”分类。"}</p>
         </section>
       )}
 
