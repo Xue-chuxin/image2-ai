@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { Download, ImageIcon, Search, X } from "lucide-react";
+import { Download, Eye, ImageIcon, Search, X } from "lucide-react";
 import { CopyPromptButton } from "@/components/copy-prompt-button";
 import type { GalleryImageView } from "@/lib/gallery";
 import type { PromptCardData } from "@/lib/mock-data";
@@ -129,6 +129,16 @@ function filterItems(items: ShowcaseItem[], query: string, category: string) {
   });
 }
 
+function formatDate(value?: string) {
+  if (!value) {
+    return "未发布";
+  }
+
+  const match = value.match(/\d{4}-(\d{2})-(\d{2})/);
+
+  return match ? `${match[1]}/${match[2]}` : "未发布";
+}
+
 export function HomeWorksShowcase({
   categories,
   initialWorks,
@@ -252,10 +262,29 @@ export function HomeWorksShowcase({
                     </div>
                   )}
                 </div>
-                <div className="space-y-2 p-4">
-                  <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">{item.category}</p>
+                <div className="space-y-3 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">{item.category}</p>
+                    <span className="rounded-full bg-slate-50 px-2.5 py-1 text-[0.68rem] font-black text-slate-400">
+                      {item.isFallback ? "样例" : formatDate(item.createdAt)}
+                    </span>
+                  </div>
                   <h3 className="text-lg font-black leading-tight text-slate-950">{item.title}</h3>
                   <p className="line-clamp-2 text-sm leading-6 text-slate-500">{item.summary}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {item.tags.slice(0, 3).map((tag) => (
+                      <span key={tag} className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[0.68rem] font-black text-slate-500">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-between border-t border-slate-100 pt-3 text-xs font-black">
+                    <span className="truncate text-slate-400">{item.authorName}</span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-950 px-3 py-1.5 text-white transition group-hover:bg-[#254c73]">
+                      <Eye className="h-3.5 w-3.5" />
+                      查看详情
+                    </span>
+                  </div>
                 </div>
               </button>
             </div>
@@ -305,6 +334,19 @@ export function HomeWorksShowcase({
                     </div>
                   </div>
 
+                  <div className="rounded-[20px] border border-slate-200 bg-white p-4">
+                    <p className="text-sm font-black text-slate-950">作品详情</p>
+                    <h3 className="mt-2 text-2xl font-black leading-tight text-slate-950">{selectedItem.title}</h3>
+                    <p className="mt-3 text-sm leading-7 text-slate-500">{selectedItem.summary}</p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {selectedItem.tags.map((tag) => (
+                        <span key={tag} className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-black text-slate-500">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-3">
                     <Link href={`/generate?prompt=${encodeURIComponent(selectedItem.promptZh)}`} className="rounded-2xl bg-slate-950 px-4 py-3 text-center text-sm font-black text-white">
                       复用描述
@@ -329,6 +371,16 @@ export function HomeWorksShowcase({
                     <p className="text-sm leading-7 text-slate-600">{selectedItem.promptZh}</p>
                   </div>
 
+                  {selectedItem.promptEn ? (
+                    <div className="rounded-[20px] border border-slate-200 bg-slate-50 p-4">
+                      <div className="mb-3 flex items-center justify-between">
+                        <p className="text-sm font-black text-slate-950">英文提示词</p>
+                        <CopyPromptButton text={selectedItem.promptEn} label="复制" className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-black text-slate-600" />
+                      </div>
+                      <p className="text-sm leading-7 text-slate-500">{selectedItem.promptEn}</p>
+                    </div>
+                  ) : null}
+
                   {selectedItem.negativePrompt ? (
                     <div className="rounded-[20px] border border-slate-200 bg-slate-50 p-4">
                       <p className="text-sm font-black text-slate-950">过滤指令</p>
@@ -342,6 +394,7 @@ export function HomeWorksShowcase({
                       ["画幅比例", selectedItem.ratio],
                       ["Provider", selectedItem.provider],
                       ["来源", selectedItem.isFallback ? "样例库" : "真实生成"],
+                      ["时间", selectedItem.isFallback ? "示例数据" : formatDate(selectedItem.createdAt)],
                     ].map(([label, value]) => (
                       <div key={label} className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold">
                         <span className="text-slate-400">{label}</span>
