@@ -9,12 +9,19 @@
 - Next.js 15 Web 应用
 - Prisma + PostgreSQL
 - 管理员登录和后台配置
+- 用户公开作品 + 运营精选作品流
 - 用户登录、积分、充值订单
 - OpenAI 官方图像 Provider
 - ChatGPT Web 本机浏览器 Provider
 - DeepSeek 提示词润色
 - 易支付、支付宝当面付、微信支付、PayPal
 - 后台支付诊断和上线自检
+
+当前首版上线边界：
+
+- 前台充值只开放易支付。支付宝当面付、微信支付、PayPal 配置仍保留在后台，后续再逐个联调开放。
+- 首页和灵感页会优先展示用户公开作品，再补充运营精选作品。
+- 运营精选作品在后台 `/admin/images` 维护，也可以通过 `npm run prisma:seed` 使用内置示例初始化。
 
 当前仍未正式完成：
 
@@ -177,6 +184,7 @@ https://your-domain.com/api/payments/return/paypal
 推荐顺序：
 
 1. 先在后台 `/admin/billing` 配置一个支付渠道。
+   首版先启用易支付，前台不会展示其他渠道。
 2. 到 `/admin/health` 确认公网回调地址正确。
 3. 到用户账户页创建一个小额充值订单。
 4. 支付成功后查看 `/admin/billing` 最近支付事件。
@@ -237,4 +245,10 @@ docker compose ps
 
 ```text
 /admin/health
+```
+
+初始化运营精选示例：
+
+```bash
+npm run prisma:seed
 ```

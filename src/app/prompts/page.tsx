@@ -1,12 +1,13 @@
 import { HomeWorksShowcase } from "@/components/home-works-showcase";
-import { listPublicGalleryImages } from "@/lib/gallery";
+import { listPublicGalleryImages, type GalleryImageView } from "@/lib/gallery";
 import { categories, promptCards } from "@/lib/mock-data";
 
 export default async function PromptsPage() {
+  let publicWorks: GalleryImageView[] = [];
   let galleryError: string | null = null;
 
   try {
-    await listPublicGalleryImages({ limit: 1 });
+    publicWorks = await listPublicGalleryImages({ limit: 48 });
   } catch {
     galleryError = "作品库暂时不可用，请检查数据库服务。";
   }
@@ -15,7 +16,7 @@ export default async function PromptsPage() {
     <main className="space-y-6 pb-28">
       <HomeWorksShowcase
         categories={categories}
-        initialWorks={[]}
+        initialWorks={publicWorks}
         fallbackPrompts={promptCards}
         galleryError={galleryError}
         eyebrow="Prompt works"

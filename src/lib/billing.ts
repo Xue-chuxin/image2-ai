@@ -6,7 +6,7 @@ import { getUserCreditBalance } from "@/lib/credits";
 import {
   createPaymentForOrder,
   getPaymentProviderSettings,
-  listEnabledPaymentChannels,
+  listPublicPaymentChannels,
   type PaymentChannelView,
   type PaymentProviderName,
   type PaymentProviderSettings,
@@ -282,7 +282,11 @@ export async function upsertCreditPackage(input: {
 export async function createRechargeOrder(userId: string, packageId: string, provider: PaymentProviderName, origin: string) {
   await ensureDefaultCreditPackages();
 
-  const channels = await listEnabledPaymentChannels();
+  if (provider !== "epay") {
+    throw new Error("首版充值暂只开放易支付渠道。");
+  }
+
+  const channels = await listPublicPaymentChannels();
   if (!channels.some((channel) => channel.provider === provider && channel.enabled && channel.configured)) {
     throw new Error("该支付渠道未启用或尚未配置完整。");
   }
@@ -382,7 +386,7 @@ export async function getUserBillingOverview(userId: string): Promise<BillingOve
     getUserCreditBalance(userId),
     listActiveCreditPackages(),
     listUserRechargeOrders(userId, 20),
-    listEnabledPaymentChannels(),
+    listPublicPaymentChannels(),
   ]);
 
   return {

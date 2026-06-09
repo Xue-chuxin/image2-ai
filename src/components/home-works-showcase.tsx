@@ -10,6 +10,7 @@ import type { PromptCardData } from "@/lib/mock-data";
 
 type ShowcaseItem = {
   id: string;
+  sourceType: "generated" | "curated" | "sample";
   title: string;
   summary: string;
   category: string;
@@ -78,10 +79,11 @@ function workToItem(work: GalleryImageView): ShowcaseItem {
   const category = normalizeCategory(work.category);
   return {
     id: work.id,
-    title: shortTitle(work.promptZh),
-    summary: work.promptZh,
+    sourceType: work.sourceType,
+    title: work.title || shortTitle(work.promptZh),
+    summary: work.summary || work.promptZh,
     category,
-    tags: [category, work.ratio, work.provider],
+    tags: work.tags?.length ? work.tags.map(normalizeCategory) : [category, work.ratio, work.provider],
     ratio: work.ratio,
     provider: work.provider,
     imageUrl: work.url,
@@ -101,6 +103,7 @@ function promptToItem(prompt: PromptCardData): ShowcaseItem {
   const category = normalizeCategory(prompt.category);
   return {
     id: prompt.slug,
+    sourceType: "sample",
     title: prompt.title,
     summary: prompt.summary,
     category,
@@ -151,6 +154,7 @@ export function HomeWorksShowcase({
   fallbackBadgeLabel = "样例",
   fallbackSourceLabel = "样例库",
   fallbackTypeLabel = "精选样例",
+  allowFallbackSamples = false,
   emptyTitle = "没有找到匹配作品",
   emptyDescription = "换一个关键词，或切回“全部”分类。",
 }: {
@@ -165,6 +169,7 @@ export function HomeWorksShowcase({
   fallbackBadgeLabel?: string;
   fallbackSourceLabel?: string;
   fallbackTypeLabel?: string;
+  allowFallbackSamples?: boolean;
   emptyTitle?: string;
   emptyDescription?: string;
 }) {
@@ -181,8 +186,9 @@ export function HomeWorksShowcase({
   const fallbackItems = useMemo(() => fallbackPrompts.map(promptToItem), [fallbackPrompts]);
   const realItems = useMemo(() => works.map(workToItem), [works]);
   const hasGalleryError = Boolean(galleryError);
-  const usingFallback = !hasGalleryError && initialWorks.length === 0 && works.length === 0;
+  const usingFallback = allowFallbackSamples && !hasGalleryError && initialWorks.length === 0 && works.length === 0 && fallbackPrompts.length > 0;
   const visibleItems = usingFallback ? filterItems(fallbackItems, query, category) : filterItems(realItems, query, category);
+  const isLibraryEmpty = !hasGalleryError && !usingFallback && realItems.length === 0 && !query.trim() && category === "全部";
 
   useEffect(() => {
     if (usingFallback || hasGalleryError) {
@@ -313,8 +319,10 @@ export function HomeWorksShowcase({
         </section>
       ) : (
         <section className="rounded-[24px] border border-slate-200 bg-white/88 p-8 text-center shadow-card backdrop-blur">
-          <p className="text-lg font-black text-slate-950">{galleryError ? "作品库暂时不可用" : emptyTitle}</p>
-          <p className="mt-2 text-sm text-slate-500">{galleryError ? "这里原本展示用户发布到首页广场的作品，数据库恢复后会自动显示。" : emptyDescription}</p>
+          <p className="text-lg font-black text-slate-950">{galleryError ? "作品库暂时不可用" : isLibraryEmpty ? "暂无公开作品" : emptyTitle}</p>
+          <p className="mt-2 text-sm text-slate-500">
+            {galleryError ? "这里原本展示用户发布到首页广场的作品，数据库恢复后会自动显示。" : isLibraryEmpty ? "用户发布作品或后台添加运营精选后，这里会自动显示。" : emptyDescription}
+          </p>
         </section>
       )}
 
@@ -351,7 +359,9 @@ export function HomeWorksShowcase({
                     </div>
                     <div>
                       <p className="font-black text-slate-950">{selectedItem.authorName}</p>
-                      <p className="text-xs font-bold text-slate-400">{selectedItem.isFallback ? fallbackTypeLabel : "公开作品"}</p>
+                      <p className="text-xs font-bold text-slate-400">
+                        {selectedItem.isFallback ? fallbackTypeLabel : selectedItem.sourceType === "curated" ? "运营精选" : "公开作品"}
+                      </p>
                     </div>
                   </div>
 
@@ -414,7 +424,7 @@ export function HomeWorksShowcase({
                       ["类别", selectedItem.category],
                       ["画幅比例", selectedItem.ratio],
                       ["Provider", selectedItem.provider],
-                      ["来源", selectedItem.isFallback ? fallbackSourceLabel : "真实生成"],
+                      ["来源", selectedItem.isFallback ? fallbackSourceLabel : selectedItem.sourceType === "curated" ? "运营精选" : "真实生成"],
                       ["时间", selectedItem.isFallback ? "示例数据" : formatDate(selectedItem.createdAt)],
                     ].map(([label, value]) => (
                       <div key={label} className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold">

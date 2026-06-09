@@ -72,6 +72,50 @@ async function main() {
     await prisma.promptTag.createMany({
       data: prompt.tags.map((name) => ({ promptId: promptRecord.id, name }))
     });
+
+    await prisma.curatedGalleryImage.upsert({
+      where: { id: `curated_${prompt.slug}` },
+      update: {
+        title: prompt.title,
+        summary: prompt.summary,
+        imageUrl: `https://picsum.photos/seed/${encodeURIComponent(prompt.slug)}/960/1280`,
+        thumbnailUrl: `https://picsum.photos/seed/${encodeURIComponent(prompt.slug)}/640/860`,
+        ratio: prompt.ratio,
+        category: prompt.category,
+        tags: prompt.tags.join(","),
+        promptZh: prompt.promptZh,
+        promptEn: prompt.promptEn,
+        negativePrompt: prompt.negativePrompt,
+        authorName: prompt.authorName,
+        sourceName: prompt.sourceName,
+        sourceUrl: prompt.sourceUrl || null,
+        sortOrder: promptCards.indexOf(prompt) * 10,
+        isActive: true,
+        isDeleted: false,
+        takenDownAt: null,
+        takenDownReason: null,
+        publishedAt: new Date()
+      },
+      create: {
+        id: `curated_${prompt.slug}`,
+        title: prompt.title,
+        summary: prompt.summary,
+        imageUrl: `https://picsum.photos/seed/${encodeURIComponent(prompt.slug)}/960/1280`,
+        thumbnailUrl: `https://picsum.photos/seed/${encodeURIComponent(prompt.slug)}/640/860`,
+        ratio: prompt.ratio,
+        category: prompt.category,
+        tags: prompt.tags.join(","),
+        promptZh: prompt.promptZh,
+        promptEn: prompt.promptEn,
+        negativePrompt: prompt.negativePrompt,
+        authorName: prompt.authorName,
+        sourceName: prompt.sourceName,
+        sourceUrl: prompt.sourceUrl || null,
+        sortOrder: promptCards.indexOf(prompt) * 10,
+        isActive: true,
+        publishedAt: new Date()
+      }
+    });
   }
 }
 
