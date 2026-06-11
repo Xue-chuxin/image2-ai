@@ -39,6 +39,9 @@ export type AdminDiagnosticItem = {
 
 export type AdminAppSettings = PublicAppSettings & {
   deepseekPolishPrompt: string;
+  moderationEnabled: boolean;
+  moderationForbiddenWords: string;
+  moderationBlockMessage: string;
   deepseekApiKeyConfigured: boolean;
   openaiApiKeyConfigured: boolean;
   encryptionReady: boolean;
@@ -47,6 +50,9 @@ export type AdminAppSettings = PublicAppSettings & {
 
 export type SaveAdminSettingsInput = Partial<PublicAppSettings> & {
   deepseekPolishPrompt?: string;
+  moderationEnabled?: boolean | string;
+  moderationForbiddenWords?: string;
+  moderationBlockMessage?: string;
   deepseekApiKey?: string;
   openaiApiKey?: string;
 };
@@ -67,6 +73,12 @@ export type StorageRuntimeConfig = {
   endpoint: string;
   bucket: string;
   region: string;
+};
+
+export type ModerationRuntimeConfig = {
+  enabled: boolean;
+  forbiddenWords: string;
+  blockMessage: string;
 };
 
 type SettingRow = {
@@ -111,6 +123,12 @@ const defaultSettings: PublicAppSettings = {
   storageRegion: "",
 };
 
+const defaultModerationSettings: ModerationRuntimeConfig = {
+  enabled: true,
+  forbiddenWords: "",
+  blockMessage: "内容包含不适合生成的词语，请调整后再试。",
+};
+
 function createId() {
   return `set_${randomBytes(12).toString("hex")}`;
 }
@@ -132,6 +150,30 @@ function normalizeText(value: unknown, fallback: string, maxLength = 120) {
   }
   const clean = value.trim();
   return clean ? clean.slice(0, maxLength) : fallback;
+}
+
+function normalizeForbiddenWords(value: unknown) {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  const seen = new Set<string>();
+  return value
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((word) => word.trim())
+    .filter(Boolean)
+    .filter((word) => {
+      const key = word.toLocaleLowerCase();
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 1000)
+    .join("\n")
+    .slice(0, 12000);
 }
 
 function normalizeStoragePrefix(value: unknown, fallback: string) {
@@ -172,6 +214,18 @@ function normalizeTimeoutSeconds(value: unknown, fallback: number) {
 
 function getStoredSetting(map: Map<string, SettingRow>, key: keyof PublicAppSettings | "deepseekPolishPrompt") {
   return map.get(key)?.value;
+}
+
+function getModerationSettings(map: Map<string, SettingRow>): ModerationRuntimeConfig {
+  return {
+    enabled: normalizeBoolean(map.get("moderationEnabled")?.value, defaultModerationSettings.enabled),
+    forbiddenWords: normalizeForbiddenWords(map.get("moderationForbiddenWords")?.value || defaultModerationSettings.forbiddenWords),
+    blockMessage: normalizeText(
+      map.get("moderationBlockMessage")?.value,
+      defaultModerationSettings.blockMessage,
+      200,
+    ),
+  };
 }
 
 function getStoredBoolean(map: Map<string, SettingRow>, key: keyof PublicAppSettings, envValue: string | undefined, fallback: boolean) {
@@ -268,10 +322,14 @@ async function buildDiagnostics(
   settings: PublicAppSettings,
   deepseekApiKeyConfigured: boolean,
   openaiApiKeyConfigured: boolean,
+  moderation: ModerationRuntimeConfig,
 ): Promise<AdminDiagnosticItem[]> {
   const encryptionReady = hasSettingsEncryptionKey();
   const providerIsOpenAI = settings.defaultGenerationProvider === "openai";
   const providerIsChatGPTWeb = settings.defaultGenerationProvider === "chatgpt_web";
+  const forbiddenWordCount = normalizeForbiddenWords(moderation.forbiddenWords)
+    .split("\n")
+    .filter(Boolean).length;
 
   return [
     await checkDatabase(),
@@ -315,6 +373,16 @@ async function buildDiagnostics(
         settings.storageProvider === "local"
           ? `当前使用本地存储，根目录：${settings.storageLocalBaseDir}。`
           : `${settings.storageProvider} 已预留配置，当前版本尚未接入对应对象存储 SDK。`,
+    },
+    {
+      key: "moderation",
+      label: "内容安全",
+      status: moderation.enabled && forbiddenWordCount > 0 ? "ok" : "warning",
+      message: moderation.enabled
+        ? forbiddenWordCount > 0
+          ? `已启用违禁词拦截，共 ${forbiddenWordCount} 条。`
+          : "已启用违禁词拦截，但词库为空。"
+        : "违禁词拦截未启用，正式上线前建议开启。",
     },
   ];
 }
@@ -360,16 +428,20 @@ export async function getPublicAppSettings(): Promise<PublicAppSettings> {
 export async function getAdminAppSettings(): Promise<AdminAppSettings> {
   const map = toMap(await readSettingRows());
   const publicSettings = await getPublicAppSettings();
+  const moderationSettings = getModerationSettings(map);
   const deepseekApiKeyConfigured = Boolean(map.get("deepseekApiKey")?.value || process.env.DEEPSEEK_API_KEY);
   const openaiApiKeyConfigured = Boolean(map.get("openaiApiKey")?.value || process.env.OPENAI_API_KEY);
 
   return {
     ...publicSettings,
     deepseekPolishPrompt: getStoredSetting(map, "deepseekPolishPrompt") || defaultDeepSeekPolishPrompt,
+    moderationEnabled: moderationSettings.enabled,
+    moderationForbiddenWords: moderationSettings.forbiddenWords,
+    moderationBlockMessage: moderationSettings.blockMessage,
     deepseekApiKeyConfigured,
     openaiApiKeyConfigured,
     encryptionReady: hasSettingsEncryptionKey(),
-    diagnostics: await buildDiagnostics(publicSettings, deepseekApiKeyConfigured, openaiApiKeyConfigured),
+    diagnostics: await buildDiagnostics(publicSettings, deepseekApiKeyConfigured, openaiApiKeyConfigured, moderationSettings),
   };
 }
 
@@ -381,6 +453,13 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
   const deepseekModel = normalizeText(input.deepseekModel, defaultSettings.deepseekModel);
   const openaiImageModel = normalizeText(input.openaiImageModel, defaultSettings.openaiImageModel);
   const deepseekPolishPrompt = normalizeText(input.deepseekPolishPrompt, defaultDeepSeekPolishPrompt, 6000);
+  const moderationEnabled = normalizeBoolean(input.moderationEnabled, defaultModerationSettings.enabled);
+  const moderationForbiddenWords = normalizeForbiddenWords(input.moderationForbiddenWords);
+  const moderationBlockMessage = normalizeText(
+    input.moderationBlockMessage,
+    defaultModerationSettings.blockMessage,
+    200,
+  );
   const defaultGenerationProvider = normalizeProvider(input.defaultGenerationProvider);
   const chatgptWebEnabled = normalizeBoolean(input.chatgptWebEnabled, defaultSettings.chatgptWebEnabled);
   const chatgptWebUserDataDir = normalizeText(input.chatgptWebUserDataDir, defaultSettings.chatgptWebUserDataDir, 300);
@@ -402,6 +481,9 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
   await upsertSetting("deepseekModel", deepseekModel);
   await upsertSetting("openaiImageModel", openaiImageModel);
   await upsertSetting("deepseekPolishPrompt", deepseekPolishPrompt);
+  await upsertSetting("moderationEnabled", String(moderationEnabled));
+  await upsertSetting("moderationForbiddenWords", moderationForbiddenWords);
+  await upsertSetting("moderationBlockMessage", moderationBlockMessage);
   await upsertSetting("defaultGenerationProvider", defaultGenerationProvider);
   await upsertSetting("chatgptWebEnabled", String(chatgptWebEnabled));
   await upsertSetting("chatgptWebUserDataDir", chatgptWebUserDataDir);
@@ -481,4 +563,8 @@ export async function getStorageRuntimeConfig(): Promise<StorageRuntimeConfig> {
     bucket: settings.storageBucket,
     region: settings.storageRegion,
   };
+}
+
+export async function getModerationRuntimeConfig(): Promise<ModerationRuntimeConfig> {
+  return getModerationSettings(toMap(await readSettingRows()));
 }

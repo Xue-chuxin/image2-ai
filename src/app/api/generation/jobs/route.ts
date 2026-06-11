@@ -6,6 +6,7 @@ import {
   type CreateGenerationJobInput,
 } from "@/lib/generation-jobs";
 import { getUserSession } from "@/lib/auth";
+import { checkModerationText } from "@/lib/moderation";
 import type { GenerationProviderName } from "@/lib/settings";
 
 function normalizeProvider(value: unknown): GenerationProviderName | undefined {
@@ -83,10 +84,30 @@ export async function POST(request: Request) {
       );
     }
 
+    const promptEn = normalizeString(body.promptEn);
+    const negativePrompt = normalizeString(body.negativePrompt);
+    const moderation = await checkModerationText([
+      { value: promptZh, label: "中文提示词" },
+      { value: promptEn, label: "英文提示词" },
+      { value: negativePrompt, label: "反向提示词" },
+    ]);
+
+    if (!moderation.ok) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: moderation.message,
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
     const input: CreateGenerationJobInput = {
       promptZh,
-      promptEn: normalizeString(body.promptEn) || undefined,
-      negativePrompt: normalizeString(body.negativePrompt) || undefined,
+      promptEn: promptEn || undefined,
+      negativePrompt: negativePrompt || undefined,
       ratio: normalizeString(body.ratio) || "1:1",
       quality: normalizeString(body.quality) || "standard",
       imageCount: normalizeNumber(body.imageCount),

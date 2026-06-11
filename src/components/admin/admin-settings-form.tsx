@@ -110,6 +110,9 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
           deepseekBaseUrl: settings.deepseekBaseUrl,
           deepseekModel: settings.deepseekModel,
           deepseekPolishPrompt: settings.deepseekPolishPrompt,
+          moderationEnabled: settings.moderationEnabled,
+          moderationForbiddenWords: settings.moderationForbiddenWords,
+          moderationBlockMessage: settings.moderationBlockMessage,
           openaiImageModel: settings.openaiImageModel,
           chatgptWebEnabled: settings.chatgptWebEnabled,
           chatgptWebUserDataDir: settings.chatgptWebUserDataDir,
@@ -254,6 +257,48 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
                 placeholder={settings.openaiApiKeyConfigured ? "已配置，留空表示不修改" : "未配置"}
                 type="password"
               />
+            </label>
+          </div>
+        </div>
+
+        <div className="rounded-[28px] border border-slate-200 bg-white/88 p-5 shadow-card backdrop-blur">
+          <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-400">Safety</p>
+          <h2 className="mt-2 text-2xl font-black text-slate-950">内容安全</h2>
+          <p className="mt-2 text-sm font-bold leading-6 text-slate-500">
+            用户润色和生图提交前会先检查违禁词。命中后不会调用模型，也不会创建任务或扣积分。
+          </p>
+          <div className="mt-5 grid gap-4">
+            <label className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+              <span>
+                <span className="block text-sm font-black text-slate-800">启用违禁词拦截</span>
+                <span className="mt-1 block text-xs font-bold text-slate-400">正式上线建议保持开启。</span>
+              </span>
+              <input
+                checked={settings.moderationEnabled}
+                onChange={(event) => update("moderationEnabled", event.target.checked)}
+                type="checkbox"
+                className="h-5 w-5 rounded border-slate-300 text-slate-950"
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm font-bold text-slate-700">违禁词词库</span>
+              <textarea
+                value={settings.moderationForbiddenWords}
+                onChange={(event) => update("moderationForbiddenWords", event.target.value)}
+                rows={9}
+                className="mt-2 w-full resize-y rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 outline-none focus:border-ocean-400"
+                placeholder="每行一个词"
+              />
+              <span className="mt-2 block text-xs font-bold leading-5 text-slate-400">每行一个词，保存时会自动去掉空行和重复项。英文匹配不区分大小写。</span>
+            </label>
+            <label className="block">
+              <span className="text-sm font-bold text-slate-700">拦截提示文案</span>
+              <input
+                value={settings.moderationBlockMessage}
+                onChange={(event) => update("moderationBlockMessage", event.target.value)}
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
+              />
+              <span className="mt-2 block text-xs font-bold leading-5 text-slate-400">前台只展示这段文案，不展示命中的具体词。</span>
             </label>
           </div>
         </div>

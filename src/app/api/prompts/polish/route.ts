@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { checkModerationText } from "@/lib/moderation";
 import { polishPrompt } from "@/lib/prompt-polish";
 
 export const runtime = "nodejs";
@@ -29,6 +30,11 @@ export async function POST(request: Request) {
 
   if (input.length > 2000) {
     return NextResponse.json({ ok: false, error: "画面描述过长，请控制在 2000 字以内。" }, { status: 400 });
+  }
+
+  const moderation = await checkModerationText([{ value: input, label: "画面描述" }]);
+  if (!moderation.ok) {
+    return NextResponse.json({ ok: false, error: moderation.message }, { status: 400 });
   }
 
   const output = await polishPrompt({
