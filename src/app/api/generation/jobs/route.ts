@@ -7,6 +7,7 @@ import {
 } from "@/lib/generation-jobs";
 import { getUserSession } from "@/lib/auth";
 import { checkModerationText } from "@/lib/moderation";
+import { checkRateLimit } from "@/lib/rate-limit";
 import type { GenerationProviderName } from "@/lib/settings";
 
 function normalizeProvider(value: unknown): GenerationProviderName | undefined {
@@ -68,6 +69,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "请先登录普通用户账号再生成图片。" }, { status: 401 });
   }
 
+  const rateLimit = checkRateLimit(request, `generation:create:${session.userId}`, {
+    limit: 10,
+    windowMs: 10 * 60 * 1000,
+  });
+  if (!rateLimit.ok) {
+    return NextResponse.json(
+      { ok: false, error: rateLimit.message },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+    );
+  }
+
   try {
     const body = (await request.json()) as Record<string, unknown>;
     const promptZh = normalizeString(body.promptZh);
@@ -86,6 +98,19 @@ export async function POST(request: Request) {
 
     const promptEn = normalizeString(body.promptEn);
     const negativePrompt = normalizeString(body.negativePrompt);
+    const referenceImageIds = normalizeStringArray(body.referenceImageIds);
+    if (referenceImageIds.length) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "当前正式版暂未开放参考图参与生图，请先移除参考图后再生成。",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
     const moderation = await checkModerationText([
       { value: promptZh, label: "中文提示词" },
       { value: promptEn, label: "英文提示词" },
@@ -112,7 +137,7 @@ export async function POST(request: Request) {
       quality: normalizeString(body.quality) || "standard",
       imageCount: normalizeNumber(body.imageCount),
       provider: normalizeProvider(body.provider),
-      referenceImageIds: normalizeStringArray(body.referenceImageIds),
+      referenceImageIds,
     };
 
     const job = await createAndQueueGenerationJob(session.userId, input);

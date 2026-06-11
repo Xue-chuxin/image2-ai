@@ -43,22 +43,26 @@ cp .env.example .env.production
 
 ```env
 DATABASE_URL="postgresql://image2_app:strong-password@postgres:5432/image2_app"
+POSTGRES_DB="image2_app"
+POSTGRES_USER="image2_app"
+POSTGRES_PASSWORD="strong-password"
 NEXT_PUBLIC_SITE_URL="https://your-domain.com"
 AUTH_SECRET="replace-with-at-least-32-random-characters"
 SETTINGS_ENCRYPTION_KEY="replace-with-at-least-32-random-characters"
 ADMIN_EMAIL="admin@example.com"
 ADMIN_PASSWORD="replace-with-a-strong-password"
-NEW_USER_INITIAL_CREDITS="100"
+NEW_USER_INITIAL_CREDITS="0"
 ```
 
 说明：
 
 - `DATABASE_URL`：生产数据库连接。
+- `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD`：Docker Compose 内置 PostgreSQL 使用的数据库名、用户名和密码。`DATABASE_URL` 必须与这三项一致。
 - `NEXT_PUBLIC_SITE_URL`：公网访问地址，支付回调和后台上线自检依赖它。
 - `AUTH_SECRET`：登录 Cookie 签名密钥，生产环境必须更换。
 - `SETTINGS_ENCRYPTION_KEY`：后台保存 API Key 和支付密钥时使用，生产环境必须更换。
 - `ADMIN_EMAIL` / `ADMIN_PASSWORD`：首个管理员初始化使用。
-- `NEW_USER_INITIAL_CREDITS`：新用户注册送积分。
+- `NEW_USER_INITIAL_CREDITS`：新用户注册送积分。正式付费上线建议先设为 `0` 或很低，避免被刷成本。
 
 第三方 API Key 建议在后台配置页保存，系统会加密入库，不建议直接写入仓库文件。
 
@@ -94,6 +98,8 @@ docker compose up -d --build
 
 - `image2-postgres`：PostgreSQL 16
 - `image2-web`：Next.js 应用
+
+`docker-compose.yml` 会让 PostgreSQL 和 Web 容器共同读取 `.env.production`。不要继续使用示例密码，也不要在 Compose 文件里硬编码生产数据库密码。
 
 Web 容器启动时会执行：
 

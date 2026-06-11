@@ -1,12 +1,32 @@
 import { NextResponse } from "next/server";
 
 import { getUserSession } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { createUploadedReferenceImage, MAX_REFERENCE_IMAGE_BYTES } from "@/lib/uploads";
+
+function isReferenceImageUploadEnabled() {
+  return false;
+}
 
 export async function POST(request: Request) {
   const session = await getUserSession();
   if (!session) {
     return NextResponse.json({ ok: false, error: "请先登录后再上传参考图。" }, { status: 401 });
+  }
+
+  if (!isReferenceImageUploadEnabled()) {
+    return NextResponse.json({ ok: false, error: "当前正式版暂未开放参考图上传。" }, { status: 403 });
+  }
+
+  const rateLimit = checkRateLimit(request, `upload:reference:${session.userId}`, {
+    limit: 20,
+    windowMs: 10 * 60 * 1000,
+  });
+  if (!rateLimit.ok) {
+    return NextResponse.json(
+      { ok: false, error: rateLimit.message },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+    );
   }
 
   try {

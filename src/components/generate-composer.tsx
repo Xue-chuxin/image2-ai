@@ -74,6 +74,7 @@ type GenerateComposerProps = {
   initialReferenceImages?: ReferenceImageResult[];
   onJobChange?: (job: GenerationJobResult | null) => void;
   compact?: boolean;
+  referenceImagesEnabled?: boolean;
 };
 
 const ratios = ["1:1", "3:4", "16:9", "9:16"] as const;
@@ -119,7 +120,7 @@ function formatSize(bytes: number) {
   return `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
 
-export function GenerateComposer({ initialPrompt = "", initialReferenceImages = [], onJobChange, compact = false }: GenerateComposerProps) {
+export function GenerateComposer({ initialPrompt = "", initialReferenceImages = [], onJobChange, compact = false, referenceImagesEnabled = false }: GenerateComposerProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [prompt, setPrompt] = useState(initialPrompt);
   const [selectedStyle, setSelectedStyle] = useState<ImageStyleCategory>("写真");
@@ -129,7 +130,7 @@ export function GenerateComposer({ initialPrompt = "", initialReferenceImages = 
   const [polishedPromptEn, setPolishedPromptEn] = useState("");
   const [negativePrompt, setNegativePrompt] = useState("");
   const [polishProvider, setPolishProvider] = useState("DeepSeek");
-  const [referenceImages, setReferenceImages] = useState<ReferenceImageResult[]>(initialReferenceImages.slice(0, MAX_REFERENCE_IMAGES));
+  const [referenceImages, setReferenceImages] = useState<ReferenceImageResult[]>(referenceImagesEnabled ? initialReferenceImages.slice(0, MAX_REFERENCE_IMAGES) : []);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploadingReference, setIsUploadingReference] = useState(false);
   const [currentJob, setCurrentJob] = useState<GenerationJobResult | null>(null);
@@ -205,6 +206,11 @@ export function GenerateComposer({ initialPrompt = "", initialReferenceImages = 
   }
 
   async function uploadReferenceFiles(files: FileList | File[]) {
+    if (!referenceImagesEnabled) {
+      setError("当前正式版暂未开放参考图参与生图。");
+      return;
+    }
+
     const pendingFiles = Array.from(files).slice(0, MAX_REFERENCE_IMAGES - referenceImages.length);
     if (!pendingFiles.length) {
       return;
@@ -313,7 +319,7 @@ export function GenerateComposer({ initialPrompt = "", initialReferenceImages = 
           ratio,
           quality,
           imageCount,
-          referenceImageIds: referenceImages.map((image) => image.id),
+          referenceImageIds: referenceImagesEnabled ? referenceImages.map((image) => image.id) : [],
         }),
       });
       const result = await readApiJson<GenerationResult>(response);
@@ -371,22 +377,28 @@ export function GenerateComposer({ initialPrompt = "", initialReferenceImages = 
         </button>
       </div>
 
-      <div
-        className={clsx("upload-card", isDragging && "ring-2 ring-slate-300")}
-        onDragOver={(event) => {
-          event.preventDefault();
-          setIsDragging(true);
-        }}
-        onDragLeave={() => setIsDragging(false)}
-        onDrop={onReferenceDrop}
-      >
-        <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" multiple className="hidden" onChange={onReferenceInputChange} />
-        <button type="button" onClick={() => fileInputRef.current?.click()} className="flex w-full flex-col items-center gap-2 text-center">
-          {isUploadingReference ? <Loader2 className="animate-spin" size={24} /> : <UploadCloud size={24} />}
-          <span>{isUploadingReference ? "参考图上传中" : "拖入参考图，或点击上传"}</span>
-          <small>PNG / JPG / WEBP，单张不超过 8MB，最多 4 张</small>
-        </button>
-      </div>
+      {referenceImagesEnabled ? (
+        <div
+          className={clsx("upload-card", isDragging && "ring-2 ring-slate-300")}
+          onDragOver={(event) => {
+            event.preventDefault();
+            setIsDragging(true);
+          }}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={onReferenceDrop}
+        >
+          <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" multiple className="hidden" onChange={onReferenceInputChange} />
+          <button type="button" onClick={() => fileInputRef.current?.click()} className="flex w-full flex-col items-center gap-2 text-center">
+            {isUploadingReference ? <Loader2 className="animate-spin" size={24} /> : <UploadCloud size={24} />}
+            <span>{isUploadingReference ? "参考图上传中" : "拖入参考图，或点击上传"}</span>
+            <small>PNG / JPG / WEBP，单张不超过 8MB，最多 4 张</small>
+          </button>
+        </div>
+      ) : !compact ? (
+        <div className="rounded-[24px] border border-amber-100 bg-amber-50/80 px-4 py-3 text-sm font-bold leading-6 text-amber-700">
+          当前正式版先开放文字生图，参考图生图暂未开放。
+        </div>
+      ) : null}
 
       {referenceImages.length > 0 ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -503,7 +515,7 @@ export function GenerateComposer({ initialPrompt = "", initialReferenceImages = 
         </button>
       </div>
 
-      {referenceImages.length > 0 ? <p className="text-xs font-bold leading-6 text-slate-400">参考图会保存到任务记录中。当前版本不会把参考图自动上传到 ChatGPT Web。</p> : null}
+      {referenceImagesEnabled && referenceImages.length > 0 ? <p className="text-xs font-bold leading-6 text-slate-400">参考图会保存到任务记录中。</p> : null}
     </section>
   );
 }

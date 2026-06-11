@@ -108,7 +108,7 @@ export function createLocalPolishResult({ input, mode, ratio }: PromptPolishInpu
     negativePrompt: negativeDefaults,
     styleTags: hint.tags,
     recommendedRatio,
-    qualityHint: "建议先用标准质量生成 1-2 张候选图，再选择一张作为参考图进行高清重绘。",
+    qualityHint: "建议先用标准质量生成 1-2 张候选图，确认方向后再提高质量生成最终图。",
   };
 }
 

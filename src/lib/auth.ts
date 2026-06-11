@@ -3,13 +3,17 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { redirect } from "next/navigation";
 
-import { safeEqual } from "@/lib/app-crypto";
+import { isUsableSecret, safeEqual } from "@/lib/app-crypto";
 
 export const ADMIN_SESSION_COOKIE = "image2_admin_session";
 export const USER_SESSION_COOKIE = "image2_user_session";
 
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
-const DEFAULT_NEW_USER_CREDITS = Number(process.env.NEW_USER_INITIAL_CREDITS || 100);
+const configuredNewUserCredits = Number(process.env.NEW_USER_INITIAL_CREDITS || 0);
+const DEFAULT_NEW_USER_CREDITS =
+  Number.isFinite(configuredNewUserCredits) && configuredNewUserCredits > 0
+    ? Math.floor(configuredNewUserCredits)
+    : 0;
 
 type SessionRole = "ADMIN" | "USER";
 
@@ -33,7 +37,12 @@ function createId(prefix: string) {
 }
 
 function getAuthSecret() {
-  return process.env.AUTH_SECRET || "change-me";
+  const secret = process.env.AUTH_SECRET || "";
+  if (process.env.NODE_ENV === "production" && !isUsableSecret(secret)) {
+    throw new Error("AUTH_SECRET 缺失或仍为示例值，生产环境必须配置至少 32 位随机密钥。");
+  }
+
+  return secret || "change-me";
 }
 
 function assertDatabaseConfigured() {
@@ -88,6 +97,14 @@ function assertPasswordUsable(password: string) {
   if (password.length < 6) {
     throw new Error("密码至少需要 6 位。");
   }
+}
+
+function isUsableAdminPassword(password?: string | null) {
+  return isUsableSecret(password, 12);
+}
+
+function isUsableAdminEmail(email?: string | null) {
+  return Boolean(email && email !== "admin@example.com");
 }
 
 export function hashPassword(password: string) {
@@ -192,7 +209,10 @@ export async function ensureInitialAdmin() {
   const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
   const password = process.env.ADMIN_PASSWORD;
 
-  if (!email || !password || password === "change-this-password") {
+  if (!isUsableAdminEmail(email) || !isUsableAdminPassword(password)) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("ADMIN_EMAIL 或 ADMIN_PASSWORD 缺失或仍为示例值，生产环境不能初始化默认管理员。");
+    }
     return;
   }
 

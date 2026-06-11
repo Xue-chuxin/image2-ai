@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { checkModerationText } from "@/lib/moderation";
 import { polishPrompt } from "@/lib/prompt-polish";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -12,6 +13,17 @@ type PolishPayload = {
 };
 
 export async function POST(request: Request) {
+  const rateLimit = checkRateLimit(request, "prompt:polish", {
+    limit: 20,
+    windowMs: 10 * 60 * 1000,
+  });
+  if (!rateLimit.ok) {
+    return NextResponse.json(
+      { ok: false, error: rateLimit.message },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+    );
+  }
+
   let payload: PolishPayload;
 
   try {

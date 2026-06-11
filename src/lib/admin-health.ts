@@ -1,6 +1,7 @@
 import { existsSync } from "fs";
 import path from "path";
 
+import { isUsableSecret } from "@/lib/app-crypto";
 import { prisma } from "@/lib/db";
 import { getPaymentDiagnostics } from "@/lib/payment-diagnostics";
 import { getStorageRuntimeConfig } from "@/lib/settings";
@@ -44,6 +45,10 @@ function isLocalOrigin(origin: string) {
   return origin.includes("127.0.0.1") || origin.includes("localhost");
 }
 
+function isUsableAdminBootstrap(email?: string, password?: string) {
+  return Boolean(email && email !== "admin@example.com" && isUsableSecret(password, 12));
+}
+
 export async function getAdminHealthReport(originValue?: string | null): Promise<AdminHealthReport> {
   const items: AdminHealthItem[] = [];
   const publicOrigin = originValue || process.env.NEXT_PUBLIC_SITE_URL || "";
@@ -81,31 +86,34 @@ export async function getAdminHealthReport(originValue?: string | null): Promise
   }
 
   const authSecret = process.env.AUTH_SECRET || "";
+  const authSecretReady = isUsableSecret(authSecret);
   items.push(
     makeItem({
       id: "auth-secret",
       label: "登录会话密钥",
-      status: authSecret && authSecret !== "change-me" ? "ok" : "error",
-      description: authSecret && authSecret !== "change-me" ? "AUTH_SECRET 已配置，登录 Cookie 可正常签名。" : "AUTH_SECRET 缺失或仍为默认值，生产环境必须更换。",
+      status: authSecretReady ? "ok" : "error",
+      description: authSecretReady ? "AUTH_SECRET 已配置，登录 Cookie 可正常签名。" : "AUTH_SECRET 缺失、长度不足或仍为示例值，生产环境必须更换。",
     }),
   );
 
   const encryptionKey = process.env.SETTINGS_ENCRYPTION_KEY || "";
+  const encryptionKeyReady = isUsableSecret(encryptionKey);
   items.push(
     makeItem({
       id: "settings-encryption",
       label: "后台密钥加密",
-      status: encryptionKey ? "ok" : "error",
-      description: encryptionKey ? "SETTINGS_ENCRYPTION_KEY 已配置，可保存 API Key 和支付密钥。" : "缺少 SETTINGS_ENCRYPTION_KEY，后台不能安全保存敏感配置。",
+      status: encryptionKeyReady ? "ok" : "error",
+      description: encryptionKeyReady ? "SETTINGS_ENCRYPTION_KEY 已配置，可保存 API Key 和支付密钥。" : "SETTINGS_ENCRYPTION_KEY 缺失、长度不足或仍为示例值，后台不能安全保存敏感配置。",
     }),
   );
 
+  const adminReady = isUsableAdminBootstrap(process.env.ADMIN_EMAIL, process.env.ADMIN_PASSWORD);
   items.push(
     makeItem({
       id: "admin-bootstrap",
       label: "初始管理员",
-      status: process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD ? "ok" : "warning",
-      description: process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD ? "ADMIN_EMAIL 和 ADMIN_PASSWORD 已配置。" : "未检测到初始管理员环境变量，新环境初始化管理员会受影响。",
+      status: adminReady ? "ok" : "warning",
+      description: adminReady ? "ADMIN_EMAIL 和 ADMIN_PASSWORD 已配置。" : "初始管理员邮箱或密码缺失、过短或仍为示例值，新环境初始化管理员会受影响。",
     }),
   );
 

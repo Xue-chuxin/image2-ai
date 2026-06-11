@@ -11,7 +11,7 @@ export async function GET(request: Request) {
 
   try {
     const origin = new URL(request.url).origin;
-    const diagnostics = await getPaymentDiagnostics(origin);
+    const diagnostics = await getPaymentDiagnostics(process.env.NEXT_PUBLIC_SITE_URL || origin);
     return NextResponse.json({
       ok: true,
       diagnostics,

@@ -37,10 +37,10 @@ export default async function GeneratePage({
         <p className="text-xs font-bold uppercase tracking-[0.24em] text-slate-400">Create</p>
         <h1 className="mt-2 text-3xl font-black text-slate-950">创作工作台</h1>
         <p className="mt-2 text-sm leading-6 text-slate-500">
-          先用 DeepSeek 整理画面描述，再提交图片生成任务。阶段 8B 已支持参考图上传、任务关联和历史回带。
+          先用 DeepSeek 整理画面描述，再提交图片生成任务。正式版首发先开放文字生图。
         </p>
       </section>
-      <GenerateWorkbench initialPrompt={initialPrompt} initialReferenceImages={initialReferenceImages.filter((image) => image.id)} />
+      <GenerateWorkbench initialPrompt={initialPrompt} initialReferenceImages={initialReferenceImages.filter((image) => image.id)} referenceImagesEnabled={false} />
     </main>
   );
 }

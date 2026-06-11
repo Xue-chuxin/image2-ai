@@ -2,10 +2,22 @@ import { NextResponse } from "next/server";
 
 import { loginOrCreateUser, setUserSessionCookie } from "@/lib/auth";
 import { getUserCreditBalance } from "@/lib/credits";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const rateLimit = checkRateLimit(request, "auth:user-login", {
+    limit: 10,
+    windowMs: 10 * 60 * 1000,
+  });
+  if (!rateLimit.ok) {
+    return NextResponse.json(
+      { ok: false, error: rateLimit.message },
+      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+    );
+  }
+
   const payload = (await request.json().catch(() => null)) as { email?: string; password?: string } | null;
   const email = payload?.email?.trim().toLowerCase();
   const password = payload?.password || "";

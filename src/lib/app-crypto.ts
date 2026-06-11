@@ -1,19 +1,36 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes, timingSafeEqual } from "crypto";
 
 const ENCRYPTION_PREFIX = "enc:v1";
+const PLACEHOLDER_SECRETS = new Set([
+  "change-me",
+  "change-this-password",
+  "replace-with-at-least-32-random-characters",
+  "replace-with-a-strong-password",
+  "replace-with-a-strong-database-password",
+]);
 
 function getKeyMaterial(secret: string) {
   return createHash("sha256").update(secret).digest();
 }
 
+export function isUsableSecret(value?: string | null, minLength = 32) {
+  const secret = value?.trim() || "";
+  if (!secret || secret.length < minLength) {
+    return false;
+  }
+
+  const normalized = secret.toLowerCase();
+  return !PLACEHOLDER_SECRETS.has(normalized) && !normalized.startsWith("replace-with-");
+}
+
 export function hasSettingsEncryptionKey() {
-  return Boolean(process.env.SETTINGS_ENCRYPTION_KEY && process.env.SETTINGS_ENCRYPTION_KEY.length >= 16);
+  return isUsableSecret(process.env.SETTINGS_ENCRYPTION_KEY);
 }
 
 export function encryptSecret(value: string) {
   const secret = process.env.SETTINGS_ENCRYPTION_KEY;
 
-  if (!secret || secret.length < 16) {
+  if (!isUsableSecret(secret)) {
     throw new Error("缺少 SETTINGS_ENCRYPTION_KEY，无法保存敏感配置。");
   }
 

@@ -131,10 +131,17 @@ const text = {
   promptRequired: "\u8bf7\u8f93\u5165\u4e2d\u6587\u63d0\u793a\u8bcd",
   generationFailed: "\u751f\u6210\u4efb\u52a1\u6267\u884c\u5931\u8d25",
   staleFailed: "\u4efb\u52a1\u957f\u65f6\u95f4\u672a\u5b8c\u6210\uff0c\u5df2\u81ea\u52a8\u6807\u8bb0\u5931\u8d25\u5e76\u9000\u56de\u51bb\u7ed3\u79ef\u5206\u3002",
+  referenceImagesDisabled: "\u5f53\u524d\u6b63\u5f0f\u7248\u6682\u672a\u5f00\u653e\u53c2\u8003\u56fe\u53c2\u4e0e\u751f\u56fe\uff0c\u8bf7\u5148\u79fb\u9664\u53c2\u8003\u56fe\u540e\u518d\u751f\u6210\u3002",
 };
 
 function serializeDate(value: Date | string) {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+}
+
+function assertReferenceImagesNotUsed(referenceImageCount?: number) {
+  if (referenceImageCount) {
+    throw new Error(text.referenceImagesDisabled);
+  }
 }
 
 function isActiveStatus(status: string) {
@@ -555,6 +562,7 @@ export async function createAndQueueGenerationJob(userId: string, input: CreateG
 
   const publicSettings = await getPublicAppSettings();
   const providerName = input.provider || publicSettings.defaultGenerationProvider;
+  assertReferenceImagesNotUsed(input.referenceImageIds?.length);
   const imageCount = normalizeImageCount(input.imageCount);
   const quality = normalizeQuality(input.quality);
   const ratio = input.ratio || "1:1";
@@ -629,6 +637,8 @@ export async function retryGenerationJobForUser(userId: string, jobId: string) {
   if (!job) {
     throw new Error("\u4efb\u52a1\u4e0d\u5b58\u5728");
   }
+
+  assertReferenceImagesNotUsed(job.referenceImages.length);
 
   if (job.status !== "FAILED" && job.status !== "CANCELED") {
     if (isActiveStatus(job.status)) {
@@ -759,6 +769,8 @@ export async function retryFailedGenerationJobByAdmin(jobId: string) {
     throw new Error("\u4efb\u52a1\u4e0d\u5b58\u5728");
   }
 
+  assertReferenceImagesNotUsed(job.referenceImages.length);
+
   if (job.status !== "FAILED" && job.status !== "CANCELED") {
     if (job.status === "QUEUED" || job.status === "GENERATING") {
       return rescheduleGenerationJobForAdmin(job.id, job.userId);
@@ -811,4 +823,3 @@ export function getChatGPTWebQueueRuntimeState() {
     pumpRunning: Boolean(chatGPTWebQueuePump),
   };
 }
-

@@ -42,6 +42,7 @@ type GenerationJobResult = {
 type GenerateWorkbenchProps = {
   initialPrompt?: string;
   initialReferenceImages?: ReferenceImageResult[];
+  referenceImagesEnabled?: boolean;
 };
 
 function getStatusLabel(status?: string) {
@@ -72,14 +73,14 @@ function getQualityLabel(quality?: string) {
   return "标准";
 }
 
-export function GenerateWorkbench({ initialPrompt = "", initialReferenceImages = [] }: GenerateWorkbenchProps) {
+export function GenerateWorkbench({ initialPrompt = "", initialReferenceImages = [], referenceImagesEnabled = false }: GenerateWorkbenchProps) {
   const [job, setJob] = useState<GenerationJobResult | null>(null);
   const firstImage = job?.images[0];
-  const references = job?.referenceImages?.length ? job.referenceImages : initialReferenceImages;
+  const references = referenceImagesEnabled ? (job?.referenceImages?.length ? job.referenceImages : initialReferenceImages) : [];
 
   return (
     <section className="generate-workbench">
-      <GenerateComposer initialPrompt={initialPrompt} initialReferenceImages={initialReferenceImages} onJobChange={setJob} />
+      <GenerateComposer initialPrompt={initialPrompt} initialReferenceImages={initialReferenceImages} onJobChange={setJob} referenceImagesEnabled={referenceImagesEnabled} />
 
       <aside className="preview-panel">
         <div className="preview-card">
