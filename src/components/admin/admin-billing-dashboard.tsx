@@ -59,7 +59,7 @@ function emptyForm() {
     description: "",
     credits: "100",
     bonusCredits: "0",
-    priceYuan: "9.9",
+    priceYuan: "12.9",
     sortOrder: "0",
     isActive: true,
   };
@@ -333,7 +333,7 @@ export function AdminBillingDashboard({
               ["description", "描述", "适合轻量体验"],
               ["credits", "基础积分", "100"],
               ["bonusCredits", "赠送积分", "0"],
-              ["priceYuan", "价格（元）", "9.9"],
+              ["priceYuan", "价格（元）", "12.9"],
               ["sortOrder", "排序", "10"],
             ].map(([key, label, placeholder]) => (
               <Input key={key} label={label} value={form[key as keyof typeof form] as string} onChange={(value) => setForm((current) => ({ ...current, [key]: value }))} placeholder={placeholder} />

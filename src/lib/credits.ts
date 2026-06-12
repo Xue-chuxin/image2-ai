@@ -1,7 +1,7 @@
 import { prisma } from "./db";
 
 export function estimateGenerationCreditCost(quality: string, imageCount: number) {
-  const singleCost = quality === "high" ? 12 : quality === "low" ? 3 : 5;
+  const singleCost = quality === "high" ? 35 : quality === "low" ? 3 : 10;
   return singleCost * imageCount;
 }
 

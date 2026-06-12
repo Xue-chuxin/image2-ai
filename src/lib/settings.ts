@@ -108,7 +108,7 @@ const defaultSettings: PublicAppSettings = {
   defaultGenerationProvider: "openai",
   deepseekBaseUrl: "https://api.deepseek.com",
   deepseekModel: "deepseek-chat",
-  openaiImageModel: "gpt-image-1",
+  openaiImageModel: "gpt-image-2",
   chatgptWebEnabled: false,
   chatgptWebUserDataDir: "chatgpt-web-profile",
   chatgptWebHeadless: false,

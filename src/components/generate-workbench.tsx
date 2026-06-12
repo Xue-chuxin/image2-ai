@@ -161,7 +161,7 @@ export function GenerateWorkbench({ initialPrompt = "", initialReferenceImages =
         <div className="job-card compact">
           <div className="rule-row">
             <Coins size={18} />
-            <span>标准 5 积分 / 张，高清 12 积分 / 张，省积分 3 积分 / 张。</span>
+            <span>标准 10 积分 / 张，高清 35 积分 / 张，省积分 3 积分 / 张。</span>
           </div>
           <div className="rule-row">
             <Clock size={18} />
