@@ -73,7 +73,7 @@ export function AppShell({ children, settings }: { children: ReactNode; settings
                   href={item.href}
                   className={clsx(
                     "flex min-h-12 flex-col items-center justify-center gap-1 rounded-[16px] px-1 py-2 text-[11px] font-bold transition duration-200 active:scale-[0.98]",
-                    active ? "bg-slate-950 text-white shadow-card" : "text-slate-500 hover:bg-slate-50 hover:text-slate-950",
+                    active ? "border border-sky-100 bg-[#e9f4fc] text-[#254c73] shadow-card" : "text-slate-500 hover:bg-slate-50 hover:text-slate-950",
                     item.primary && !active && "bg-[#edf4fa] text-[#254c73] hover:bg-[#e4edf6]",
                   )}
                 >

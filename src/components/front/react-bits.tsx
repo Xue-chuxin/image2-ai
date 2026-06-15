@@ -342,17 +342,10 @@ export function Particles({
 }
 
 export function GooeyNav({ items, className }: { items: GooeyNavItem[]; className?: string }) {
-  const activeIndex = Math.max(0, items.findIndex((item) => item.active));
-
   return (
     <nav className={clsx("rb-gooey-nav", className)} aria-label="主导航">
-      <motion.span
-        className="rb-gooey-nav__indicator"
-        layoutId="front-nav-indicator"
-        transition={{ type: "spring", stiffness: 420, damping: 34 }}
-      />
-      {items.map((item, index) => (
-        <Link key={item.href} href={item.href} className={clsx("rb-gooey-nav__item", index === activeIndex && "is-active")}>
+      {items.map((item) => (
+        <Link key={item.href} href={item.href} className={clsx("rb-gooey-nav__item", item.active && "is-active")} aria-current={item.active ? "page" : undefined}>
           {item.label}
         </Link>
       ))}
