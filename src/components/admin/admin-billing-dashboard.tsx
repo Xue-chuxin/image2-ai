@@ -293,7 +293,7 @@ export function AdminBillingDashboard({
         <Card className="admin-td-card"><Statistic title="套餐" value={stats.packages} /></Card>
         <Card className="admin-td-card"><Statistic title="上架" value={stats.activePackages} /></Card>
         <Card className="admin-td-card"><Statistic title="待支付" value={stats.pendingOrders} /></Card>
-        <Card className="admin-td-card"><Statistic title="到账金额" value={formatCurrency(stats.paidAmount)} /></Card>
+        <Card className="admin-td-card"><Statistic title="到账金额" value={Number((stats.paidAmount / 100).toFixed(2))} unit="元" /></Card>
       </div>
 
       {message ? <Alert theme="info" message={message} /> : null}

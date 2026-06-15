@@ -24,6 +24,10 @@ export function AdminUploadsDashboard({ initialImages }: { initialImages: AdminU
   const [message, setMessage] = useState("");
 
   const totalSize = useMemo(() => images.reduce((sum, image) => sum + image.fileSize, 0), [images]);
+  const totalSizeStat =
+    totalSize >= 1024 * 1024
+      ? { value: Number((totalSize / 1024 / 1024).toFixed(1)), unit: "MB" }
+      : { value: Math.max(1, Math.round(totalSize / 1024)), unit: "KB" };
 
   async function loadImages() {
     setPending(true);
@@ -105,8 +109,8 @@ export function AdminUploadsDashboard({ initialImages }: { initialImages: AdminU
     <section className="admin-td-grid">
       <div className="admin-td-stat-grid">
         <Card className="admin-td-card"><Statistic title="上传图" value={images.length} /></Card>
-        <Card className="admin-td-card"><Statistic title="总大小" value={formatSize(totalSize)} /></Card>
-        <Card className="admin-td-card"><Statistic title="用途" value="参考图" /></Card>
+        <Card className="admin-td-card"><Statistic title="总大小" value={totalSizeStat.value} unit={totalSizeStat.unit} /></Card>
+        <Card className="admin-td-card"><Statistic title="参考图" value={images.length} unit="张" /></Card>
       </div>
 
       <Card className="admin-td-card" title="上传资源">

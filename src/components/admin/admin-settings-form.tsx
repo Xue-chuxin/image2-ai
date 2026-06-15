@@ -88,6 +88,12 @@ function diagnosticTheme(status: AdminDiagnosticStatus): "success" | "warning" |
   return "danger";
 }
 
+function diagnosticAlertTheme(status: AdminDiagnosticStatus): "success" | "warning" | "error" {
+  if (status === "ok") return "success";
+  if (status === "warning") return "warning";
+  return "error";
+}
+
 export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminAppSettings }) {
   const [settings, setSettings] = useState(initialSettings);
   const [openaiChannels, setOpenaiChannels] = useState<EditableOpenAIChannel[]>(createEditableOpenAIChannels(initialSettings.openaiCompatibleChannels));
@@ -420,7 +426,7 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
               {settings.diagnostics.map((item) => (
                 <Alert
                   key={item.key}
-                  theme={diagnosticTheme(item.status)}
+                  theme={diagnosticAlertTheme(item.status)}
                   message={
                     <div>
                       <div className="mb-1 flex items-center gap-2">
@@ -473,7 +479,7 @@ function SettingInput({
   onChange: (value: string) => void;
   placeholder?: string;
   textarea?: boolean;
-  type?: string;
+  type?: "number" | "search" | "url" | "text" | "tel" | "hidden" | "submit" | "password";
   minRows?: number;
 }) {
   return (
