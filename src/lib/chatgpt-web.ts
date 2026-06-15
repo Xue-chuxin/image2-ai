@@ -45,6 +45,8 @@ type ImageCandidate = {
 
 let sharedContext: BrowserContext | null = null;
 let sharedPage: Page | null = null;
+let generationPage: Page | null = null;
+let generationPageReady = false;
 
 const CHATGPT_URL = "https://chatgpt.com/";
 const execFileAsync = promisify(execFile);
@@ -143,6 +145,10 @@ async function findChromeExecutablePath() {
     process.platform === "darwin" ? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" : "",
     process.platform === "linux" ? "/usr/bin/google-chrome" : "",
     process.platform === "linux" ? "/usr/bin/google-chrome-stable" : "",
+    process.platform === "linux" ? "/usr/bin/chromium" : "",
+    process.platform === "linux" ? "/usr/bin/chromium-browser" : "",
+    "/usr/bin/chromium",
+    "/usr/bin/google-chrome",
   ].filter((value): value is string => Boolean(value));
 
   for (const candidate of candidates) {
@@ -187,24 +193,67 @@ async function launchPersistentContext(config: ChatGPTWebRuntimeConfig, forceHea
   await mkdir(config.userDataDir, { recursive: true });
   await closeExistingProfileBrowsers(config.userDataDir);
 
+  // 清理残留锁文件
+  const lockFiles = ["SingletonLock", "SingletonCookie", "SingletonSocket"];
+  for (const lock of lockFiles) {
+    const lockPath = `${config.userDataDir}/${lock}`;
+    try { await import("fs/promises").then(fs => fs.unlink(lockPath)); } catch {}
+  }
+
   const { chromium } = await import("playwright");
   const headless = forceHeaded ? false : config.headless;
   const args = [
     "--disable-blink-features=AutomationControlled",
     "--disable-session-crashed-bubble",
     "--disable-restore-session-state",
+    "--disable-features=IsolateOrigins,site-per-process",
+    "--no-sandbox",
+    "--disable-infobars",
+    "--disable-dev-shm-usage",
+    "--disable-breakpad",
+    "--disable-component-extensions-with-background-pages",
+    "--disable-default-apps",
+    "--disable-extensions",
+    "--disable-hang-monitor",
+    "--disable-prompt-on-repost",
+    "--disable-sync",
+    "--disable-translate",
+    "--metrics-recording-only",
+    "--no-first-run",
+    "--safebrowsing-disable-auto-update",
+    "--password-store=basic",
+    "--use-mock-keychain",
   ];
+
+  const proxyServer = process.env.CHROME_PROXY_SERVER;
+  if (proxyServer) {
+    args.push(`--proxy-server=${proxyServer}`);
+  }
+
+  const width = 1440 + Math.floor(Math.random() * 80);
+  const height = 900 + Math.floor(Math.random() * 100);
   const chromeExecutablePath = await findChromeExecutablePath();
   const launchErrors: string[] = [];
 
+  const launchOptions = {
+    headless,
+    args,
+    viewport: { width, height },
+    deviceScaleFactor: 1,
+    isMobile: false,
+    hasTouch: false,
+    locale: "zh-CN",
+    timezoneId: "Asia/Shanghai",
+  };
+
   if (chromeExecutablePath) {
     try {
-      return await chromium.launchPersistentContext(config.userDataDir, {
+      const context = await chromium.launchPersistentContext(config.userDataDir, {
+        ...launchOptions,
         executablePath: chromeExecutablePath,
-        headless,
-        args,
-        viewport: { width: 1440, height: 1000 },
       });
+      await injectStealthScript(context);
+      return context;
     } catch (error) {
       launchErrors.push(`Chrome executable ${chromeExecutablePath} failed: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -213,23 +262,23 @@ async function launchPersistentContext(config: ChatGPTWebRuntimeConfig, forceHea
   }
 
   try {
-    return await chromium.launchPersistentContext(config.userDataDir, {
+    const context = await chromium.launchPersistentContext(config.userDataDir, {
+      ...launchOptions,
       channel: "chrome",
-      headless,
-      args,
-      viewport: { width: 1440, height: 1000 },
     });
+    await injectStealthScript(context);
+    return context;
   } catch (error) {
     launchErrors.push(`Playwright chrome channel failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 
   try {
-    return await chromium.launchPersistentContext(config.userDataDir, {
+    const context = await chromium.launchPersistentContext(config.userDataDir, {
+      ...launchOptions,
       channel: "msedge",
-      headless,
-      args,
-      viewport: { width: 1440, height: 1000 },
     });
+    await injectStealthScript(context);
+    return context;
   } catch (error) {
     launchErrors.push(`Playwright msedge channel failed: ${error instanceof Error ? error.message : String(error)}`);
   }
@@ -258,6 +307,119 @@ async function getSharedContext(config: ChatGPTWebRuntimeConfig, forceHeaded = f
     }
 
     throw new ChatGPTWebError("CHATGPT_WEB_BROWSER_FAILED", error instanceof Error ? error.message : zh.browserStartFailed);
+  }
+}
+
+async function injectStealthScript(context: BrowserContext) {
+  const pages = context.pages();
+  for (const page of pages) {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, "webdriver", {
+        get: () => false,
+      });
+      Object.defineProperty(navigator, "plugins", {
+        get: () => [1, 2, 3, 4, 5],
+      });
+      Object.defineProperty(navigator, "languages", {
+        get: () => ["zh-CN", "zh", "en"],
+      });
+      const originalQuery = window.navigator.permissions.query;
+      window.navigator.permissions.query = ((parameters: PermissionDescriptor) =>
+        parameters.name === "notifications"
+          ? Promise.resolve({ state: Notification.permission } as PermissionStatus)
+          : originalQuery(parameters)) as typeof originalQuery;
+      (window as any).chrome = { runtime: {}, loadTimes: function() {}, csi: function() {} };
+    }).catch(() => null);
+  }
+
+  context.on("page", async (page) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, "webdriver", {
+        get: () => false,
+      });
+      Object.defineProperty(navigator, "plugins", {
+        get: () => [1, 2, 3, 4, 5],
+      });
+      Object.defineProperty(navigator, "languages", {
+        get: () => ["zh-CN", "zh", "en"],
+      });
+      (window as any).chrome = { runtime: {}, loadTimes: function() {}, csi: function() {} };
+    }).catch(() => null);
+  });
+}
+
+async function waitForCloudflare(page: Page, timeoutMs: number): Promise<boolean> {
+  const deadline = Date.now() + Math.min(timeoutMs, 30000);
+  let attempt = 0;
+
+  while (Date.now() < deadline) {
+    attempt += 1;
+    const title = await page.title().catch(() => "");
+
+    if (!title.includes("Just a moment")) {
+      // 已通过 CF
+      if (attempt > 1) {
+        console.log(`CF 挑战已通过 (等待 ${Math.round((Date.now() - (deadline - timeoutMs)) / 1000)}s)`);
+      }
+      return true;
+    }
+
+    // 还在 CF 验证中，模拟鼠标微动
+    try {
+      await page.mouse.move(
+        300 + Math.random() * 600,
+        400 + Math.random() * 300,
+      );
+    } catch {}
+
+    await page.waitForTimeout(2000 + Math.random() * 1000);
+  }
+
+  return false;
+}
+
+async function recoverContextOnCrash(config: ChatGPTWebRuntimeConfig) {
+  if (!sharedContext) {
+    return;
+  }
+
+  try {
+    const pages = sharedContext.pages();
+    if (pages.length > 0) {
+      await pages[0].evaluate(() => 1).catch(() => null);
+    }
+  } catch {
+    await closeChatGPTWebBrowser();
+    sharedContext = null;
+    sharedPage = null;
+  }
+}
+
+let lastHealthCheck = 0;
+const HEALTH_CHECK_INTERVAL_MS = 5 * 60 * 1000;
+
+async function ensureSessionHealthy(config: ChatGPTWebRuntimeConfig) {
+  const now = Date.now();
+  if (now - lastHealthCheck < HEALTH_CHECK_INTERVAL_MS && sharedContext) {
+    return;
+  }
+
+  lastHealthCheck = now;
+  await recoverContextOnCrash(config);
+
+  if (!sharedContext) {
+    return;
+  }
+
+  try {
+    const page = await getSharedPage(config);
+    if (page.url().includes("auth.openai.com") || page.url().includes("/auth/login")) {
+      sharedContext = null;
+      sharedPage = null;
+    }
+  } catch {
+    sharedContext = null;
+    sharedPage = null;
   }
 }
 
@@ -396,9 +558,14 @@ async function focusComposer(page: Page) {
     page.locator('div[contenteditable="true"]'),
     page.locator('textarea[name="prompt-textarea"]'),
     page.locator('textarea[aria-label*="ChatGPT"]'),
+    page.locator('form textarea'),
+    page.locator('form div[contenteditable]'),
+    page.locator('[role="textbox"]'),
     page.locator('main form'),
+    page.locator('#prompt-textarea'),
     page.getByText(/\u6709\u95ee\u9898/),
     page.getByText(/Message ChatGPT/i),
+    page.getByPlaceholder(/Message ChatGPT/i),
   ];
 
   for (const locator of candidates) {
@@ -413,7 +580,12 @@ async function focusComposer(page: Page) {
         '[data-testid="composer-root"]',
         'form:has(textarea[name="prompt-textarea"])',
         'textarea[name="prompt-textarea"]',
+        '#prompt-textarea',
+        'form textarea',
+        'form [contenteditable="true"]',
+        'form [contenteditable="plaintext-only"]',
         'main form',
+        '[role="textbox"]',
       ];
 
       for (const selector of selectors) {
@@ -496,6 +668,19 @@ async function composerHasPrompt(page: Page, prompt: string) {
 }
 
 async function typePrompt(page: Page, prompt: string) {
+  let attempt = 0;
+  while (attempt < 3) {
+    attempt += 1;
+
+    if (await focusComposer(page)) {
+      break;
+    }
+
+    if (attempt < 3) {
+      await page.waitForTimeout(800);
+    }
+  }
+
   if (!(await focusComposer(page))) {
     throw new ChatGPTWebError("CHATGPT_WEB_BROWSER_FAILED", zh.noComposer);
   }
@@ -567,7 +752,8 @@ async function clickSendButton(page: Page) {
             label.includes("submit") ||
             label.includes("composer-submit") ||
             label.includes("\u53d1\u9001") ||
-            label.includes("\u63d0\u4ea4")
+            label.includes("\u63d0\u4ea4") ||
+            label.includes("generate")
           );
         });
 
@@ -579,8 +765,10 @@ async function clickSendButton(page: Page) {
       const composer =
         document.querySelector('[data-testid="composer-root"]')?.closest("form") ||
         document.querySelector('textarea[name="prompt-textarea"]')?.closest("form") ||
+        document.querySelector('#prompt-textarea')?.closest("form") ||
         document.querySelector('[contenteditable="true"]')?.closest("form") ||
-        document.querySelector("main form");
+        document.querySelector("main form") ||
+        document.querySelector("form");
 
       if (!composer) {
         return false;
@@ -628,9 +816,18 @@ async function clickSendButton(page: Page) {
 async function submitPrompt(page: Page, prompt: string) {
   await clickGenerateImageTool(page).catch(() => null);
   await typePrompt(page, prompt);
-  if (!(await clickSendButton(page))) {
-    throw new ChatGPTWebError("CHATGPT_WEB_BROWSER_FAILED", zh.sendFailed);
+
+  let sendAttempts = 0;
+  while (sendAttempts < 3) {
+    sendAttempts += 1;
+    if (await clickSendButton(page)) {
+      return;
+    }
+    await page.waitForTimeout(500);
+    await focusComposer(page).catch(() => null);
   }
+
+  throw new ChatGPTWebError("CHATGPT_WEB_BROWSER_FAILED", zh.sendFailed);
 }
 
 async function waitForGeneratedImages(page: Page, previous: ImageCandidate[], imageCount: number, timeoutMs: number) {
@@ -757,48 +954,107 @@ export async function checkChatGPTWebStatus(): Promise<ChatGPTWebStatus> {
 }
 
 export async function closeChatGPTWebBrowser() {
+  generationPageReady = false;
+  if (generationPage) {
+    await generationPage.close().catch(() => null);
+    generationPage = null;
+  }
+  sharedPage = null;
   const context = sharedContext;
   sharedContext = null;
-  sharedPage = null;
   await context?.close().catch(() => null);
+}
+
+async function prepareGenerationPage(config: ChatGPTWebRuntimeConfig): Promise<Page> {
+  if (generationPage && generationPageReady && !generationPage.isClosed()) {
+    // 检查是否被踢到 CF
+    const title = await generationPage.title().catch(() => "");
+    if (title.includes("Just a moment")) {
+      generationPageReady = false;
+      await waitForCloudflare(generationPage, 30000);
+      generationPageReady = true;
+    }
+    return generationPage;
+  }
+
+  // 创建或重建持久化生图页面
+  if (generationPage && !generationPage.isClosed()) {
+    await generationPage.close().catch(() => null);
+  }
+
+  const context = await getSharedContext(config);
+  generationPage = await context.newPage();
+  generationPageReady = false;
+
+  await gotoChatGPT(generationPage, config.timeoutMs);
+
+  const passedCF = await waitForCloudflare(generationPage, 30000);
+  if (!passedCF) {
+    throw new ChatGPTWebError("CHATGPT_WEB_TIMEOUT", "Cloudflare 验证超时，请稍后重试。");
+  }
+
+  if (!(await isLoggedIn(generationPage))) {
+    throw new ChatGPTWebError("CHATGPT_WEB_LOGIN_REQUIRED", zh.loginRequired);
+  }
+
+  generationPageReady = true;
+  return generationPage;
 }
 
 export async function generateWithChatGPTWeb(request: ImageGenerationRequest): Promise<GeneratedImagePayload[]> {
   const config = await getChatGPTWebRuntimeConfig();
   assertEnabled(config);
 
-  const page = await getSharedPage(config);
-  let stage = "open_chatgpt";
+  await ensureSessionHealthy(config);
 
-  try {
-    await gotoChatGPT(page, config.timeoutMs);
+  let retries = 0;
+  const maxRetries = 3;
+  let stage = "prepare_page";
 
-    stage = "check_login";
-    if (!(await isLoggedIn(page))) {
-      throw new ChatGPTWebError("CHATGPT_WEB_LOGIN_REQUIRED", zh.loginRequired);
+  while (retries < maxRetries) {
+    try {
+      // 使用持久化页面，不会每次重新导航
+      const page = await prepareGenerationPage(config);
+
+      stage = "snapshot_existing_images";
+      const imageCount = normalizeCount(request.imageCount);
+      const previousImages = await getImageCandidates(page);
+
+      stage = "submit_prompt";
+      await submitPrompt(page, buildPrompt(request));
+
+      stage = "wait_for_images";
+      await waitForGeneratedImages(page, previousImages, imageCount, config.timeoutMs);
+
+      stage = "extract_images";
+      const extracted = await extractGeneratedImages(page, previousImages, imageCount);
+      if (!extracted.length) {
+        throw new ChatGPTWebError("CHATGPT_WEB_NO_IMAGE_FOUND", zh.noImage);
+      }
+
+      return extracted.map((image) => ({
+        buffer: Buffer.from(image.base64, "base64"),
+        mimeType: normalizeMimeType(image.mimeType),
+      }));
+    } catch (error) {
+      generationPageReady = false;
+
+      if (
+        error instanceof ChatGPTWebError &&
+        (error.code === "CHATGPT_WEB_TIMEOUT" || error.code === "CHATGPT_WEB_NO_IMAGE_FOUND" || error.code === "CHATGPT_WEB_BROWSER_FAILED")
+      ) {
+        retries += 1;
+        if (retries < maxRetries) {
+          await recoverContextOnCrash(config);
+          const delay = Math.min(2000 * Math.pow(2, retries), 15000);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
+      }
+
+      throw appendPageDiagnostic(error, generationPage!, stage);
     }
-
-    stage = "snapshot_existing_images";
-    const imageCount = normalizeCount(request.imageCount);
-    const previousImages = await getImageCandidates(page);
-
-    stage = "submit_prompt";
-    await submitPrompt(page, buildPrompt(request));
-
-    stage = "wait_for_images";
-    await waitForGeneratedImages(page, previousImages, imageCount, config.timeoutMs);
-
-    stage = "extract_images";
-    const extracted = await extractGeneratedImages(page, previousImages, imageCount);
-    if (!extracted.length) {
-      throw new ChatGPTWebError("CHATGPT_WEB_NO_IMAGE_FOUND", zh.noImage);
-    }
-
-    return extracted.map((image) => ({
-      buffer: Buffer.from(image.base64, "base64"),
-      mimeType: normalizeMimeType(image.mimeType),
-    }));
-  } catch (error) {
-    throw appendPageDiagnostic(error, page, stage);
   }
+
+  throw new ChatGPTWebError("CHATGPT_WEB_BROWSER_FAILED", zh.browserStartFailed);
 }

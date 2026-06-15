@@ -34,8 +34,9 @@ export function encryptSecret(value: string) {
     throw new Error("缺少 SETTINGS_ENCRYPTION_KEY，无法保存敏感配置。");
   }
 
+  const keyMaterial = getKeyMaterial(secret!);
   const iv = randomBytes(12);
-  const cipher = createCipheriv("aes-256-gcm", getKeyMaterial(secret), iv);
+  const cipher = createCipheriv("aes-256-gcm", keyMaterial, iv);
   const encrypted = Buffer.concat([cipher.update(value, "utf8"), cipher.final()]);
   const tag = cipher.getAuthTag();
 

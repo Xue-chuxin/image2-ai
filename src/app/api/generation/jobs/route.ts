@@ -12,7 +12,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import type { GenerationProviderName } from "@/lib/settings";
 
 function normalizeProvider(value: unknown): GenerationProviderName | undefined {
-  if (value === "openai" || value === "chatgpt_web") {
+  if (value === "openai" || value === "chatgpt_web" || value === "stability_ai") {
     return value;
   }
 

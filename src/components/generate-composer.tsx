@@ -18,7 +18,7 @@ type ReferenceImageResult = {
 type GenerationJobResult = {
   id: string;
   status: string;
-  provider: "openai" | "chatgpt_web";
+  provider: "openai" | "chatgpt_web" | "stability_ai";
   model: string | null;
   promptZh: string;
   promptEn: string | null;

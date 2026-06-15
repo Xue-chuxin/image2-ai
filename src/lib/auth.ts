@@ -218,7 +218,7 @@ export async function ensureInitialAdmin() {
   }
 
   const { prisma } = await import("@/lib/db");
-  const passwordHash = hashPassword(password);
+  const passwordHash = hashPassword(password!);
   const existingUser = await prisma.user.findUnique({
     where: {
       email,

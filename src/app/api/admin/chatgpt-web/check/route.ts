@@ -23,7 +23,7 @@ export async function POST() {
           userDataDir: "",
           headless: false,
           timeoutSeconds: 0,
-          message: `ChatGPT Web 正在执行任务 ${queueState.activeJobId}，请任务完成后再检测登录状态。`,
+          message: `ChatGPT Web 正在执行 ${queueState.activeJobCount} 个任务 (${queueState.activeJobIds.join(", ")}），请任务完成后再检测登录状态。`,
         },
       });
     }

@@ -18,7 +18,7 @@ export async function POST() {
       return NextResponse.json(
         {
           ok: false,
-          error: `ChatGPT Web 正在执行任务 ${queueState.activeJobId}，请任务完成后再打开登录浏览器。`,
+          error: `ChatGPT Web 正在执行 ${queueState.activeJobCount} 个任务 (${queueState.activeJobIds.join(", ")}），请任务完成后再打开登录浏览器。`,
         },
         { status: 409 },
       );

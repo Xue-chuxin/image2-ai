@@ -115,7 +115,8 @@ export type CreateGenerationJobInput = {
 
 const runningJobIds = new Set<string>();
 let chatGPTWebQueuePump: Promise<void> | null = null;
-let chatGPTWebActiveJobId: string | null = null;
+const chatGPTWebActiveJobIds = new Set<string>();
+const MAX_CONCURRENT_CHATGPT_WEB_JOBS = 2;
 const STALE_JOB_MS = 20 * 60 * 1000;
 const ACTIVE_GENERATION_STATUSES = ["QUEUED", "POLISHING", "GENERATING", "UPLOADING"] as const;
 const ADMIN_FILTERABLE_STATUSES = [...ACTIVE_GENERATION_STATUSES, "COMPLETED", "FAILED", "CANCELED"] as const;
@@ -471,25 +472,26 @@ async function findNextQueuedChatGPTWebJob() {
 }
 
 async function runChatGPTWebQueue() {
-  while (true) {
+  while (chatGPTWebActiveJobIds.size < MAX_CONCURRENT_CHATGPT_WEB_JOBS) {
     const job = await findNextQueuedChatGPTWebJob();
     if (!job) {
       return;
     }
 
-    if (runningJobIds.has(job.id)) {
+    if (runningJobIds.has(job.id) || chatGPTWebActiveJobIds.has(job.id)) {
       return;
     }
 
     runningJobIds.add(job.id);
-    chatGPTWebActiveJobId = job.id;
+    chatGPTWebActiveJobIds.add(job.id);
 
-    try {
-      await executeGenerationJob(job.id, job.userId);
-    } finally {
-      runningJobIds.delete(job.id);
-      chatGPTWebActiveJobId = null;
-    }
+    void executeGenerationJob(job.id, job.userId)
+      .catch(() => null)
+      .finally(() => {
+        runningJobIds.delete(job.id);
+        chatGPTWebActiveJobIds.delete(job.id);
+        scheduleChatGPTWebQueue();
+      });
   }
 }
 
@@ -505,6 +507,9 @@ function scheduleChatGPTWebQueue() {
         .finally(() => {
           chatGPTWebQueuePump = null;
           resolve();
+          if (chatGPTWebActiveJobIds.size < MAX_CONCURRENT_CHATGPT_WEB_JOBS) {
+            scheduleChatGPTWebQueue();
+          }
         });
     }, 0);
   });
@@ -574,7 +579,6 @@ export async function createAndQueueGenerationJob(userId: string, input: CreateG
 
   const publicSettings = await getPublicAppSettings();
   const providerName = input.provider || publicSettings.defaultGenerationProvider;
-  assertReferenceImagesNotUsed(input.referenceImageIds?.length);
   const imageCount = normalizeImageCount(input.imageCount);
   const quality = normalizeQuality(input.quality);
   const ratio = input.ratio || "1:1";
@@ -649,8 +653,6 @@ export async function retryGenerationJobForUser(userId: string, jobId: string) {
   if (!job) {
     throw new AppError("NOT_FOUND", "\u4efb\u52a1\u4e0d\u5b58\u5728", 404);
   }
-
-  assertReferenceImagesNotUsed(job.referenceImages.length);
 
   if (job.status !== "FAILED" && job.status !== "CANCELED") {
     if (isActiveStatus(job.status)) {
@@ -781,8 +783,6 @@ export async function retryFailedGenerationJobByAdmin(jobId: string) {
     throw new AppError("NOT_FOUND", "\u4efb\u52a1\u4e0d\u5b58\u5728", 404);
   }
 
-  assertReferenceImagesNotUsed(job.referenceImages.length);
-
   if (job.status !== "FAILED" && job.status !== "CANCELED") {
     if (isActiveStatus(job.status)) {
       return rescheduleGenerationJobForAdmin(job.id, job.userId);
@@ -830,8 +830,10 @@ export async function markGenerationJobFailedByAdmin(jobId: string) {
 
 export function getChatGPTWebQueueRuntimeState() {
   return {
-    busy: Boolean(chatGPTWebActiveJobId),
-    activeJobId: chatGPTWebActiveJobId,
+    busy: chatGPTWebActiveJobIds.size > 0,
+    activeJobIds: Array.from(chatGPTWebActiveJobIds),
+    activeJobCount: chatGPTWebActiveJobIds.size,
+    maxConcurrentJobs: MAX_CONCURRENT_CHATGPT_WEB_JOBS,
     pumpRunning: Boolean(chatGPTWebQueuePump),
   };
 }
