@@ -87,64 +87,66 @@ function HistoryItem({ job }: { job: GenerationJobView }) {
 
   return (
     <SpotlightCard className="history-card">
-      <div className="history-image">
-        {firstImage ? (
-          <Image src={firstImage.url} alt={job.promptZh} width={640} height={640} />
-        ) : (
-          <div className="history-placeholder">
-            <span>{getQueueStatusLabel(job)}</span>
-          </div>
-        )}
-      </div>
-
-      <div className="history-body">
-        <div className="history-title-row">
-          <div>
-            <span className="eyebrow">{job.provider}</span>
-            <h2>{job.promptZh}</h2>
-          </div>
-          <span className={`status-pill ${job.status.toLowerCase()}`}>{getQueueStatusLabel(job)}</span>
+      <div className="history-card-layout">
+        <div className="history-image">
+          {firstImage ? (
+            <Image src={firstImage.thumbnailUrl || firstImage.url} alt={job.promptZh} width={640} height={640} loading="lazy" />
+          ) : (
+            <div className="history-placeholder">
+              <span>{getQueueStatusLabel(job)}</span>
+            </div>
+          )}
         </div>
 
-        {job.promptEn ? <p className="history-prompt">{job.promptEn}</p> : null}
-        {shouldShowQueueHint(job) ? <p className="history-prompt">{getQueueStatusLabel(job)}</p> : null}
-        {job.errorMessage ? <p className="history-error">{job.errorMessage}</p> : null}
+        <div className="history-body">
+          <div className="history-title-row">
+            <div>
+              <span className="eyebrow">{job.provider}</span>
+              <h2>{job.promptZh}</h2>
+            </div>
+            <span className={`status-pill ${job.status.toLowerCase()}`}>{getQueueStatusLabel(job)}</span>
+          </div>
 
-        <dl className="history-meta">
-          <div>
-            <dt>比例</dt>
-            <dd>{job.ratio}</dd>
-          </div>
-          <div>
-            <dt>质量</dt>
-            <dd>{getQualityLabel(job.quality)}</dd>
-          </div>
-          <div>
-            <dt>张数</dt>
-            <dd>{job.imageCount}</dd>
-          </div>
-          <div>
-            <dt>积分</dt>
-            <dd>{job.creditCost}</dd>
-          </div>
-          <div>
-            <dt>时间</dt>
-            <dd>{formatTime(job.createdAt)}</dd>
-          </div>
-        </dl>
+          {job.promptEn ? <p className="history-prompt">{job.promptEn}</p> : null}
+          {shouldShowQueueHint(job) ? <p className="history-prompt">{getQueueStatusLabel(job)}</p> : null}
+          {job.errorMessage ? <p className="history-error">{job.errorMessage}</p> : null}
 
-        <HistoryJobActions
-          jobId={job.id}
-          status={job.status}
-          promptZh={job.promptZh}
-          promptEn={job.promptEn}
-          negativePrompt={job.negativePrompt}
-          ratio={job.ratio}
-          quality={job.quality}
-          imageCount={job.imageCount}
-          images={job.images}
-          referenceImages={job.referenceImages}
-        />
+          <dl className="history-meta">
+            <div>
+              <dt>比例</dt>
+              <dd>{job.ratio}</dd>
+            </div>
+            <div>
+              <dt>质量</dt>
+              <dd>{getQualityLabel(job.quality)}</dd>
+            </div>
+            <div>
+              <dt>张数</dt>
+              <dd>{job.imageCount}</dd>
+            </div>
+            <div>
+              <dt>积分</dt>
+              <dd>{job.creditCost}</dd>
+            </div>
+            <div>
+              <dt>时间</dt>
+              <dd>{formatTime(job.createdAt)}</dd>
+            </div>
+          </dl>
+
+          <HistoryJobActions
+            jobId={job.id}
+            status={job.status}
+            promptZh={job.promptZh}
+            promptEn={job.promptEn}
+            negativePrompt={job.negativePrompt}
+            ratio={job.ratio}
+            quality={job.quality}
+            imageCount={job.imageCount}
+            images={job.images}
+            referenceImages={job.referenceImages}
+          />
+        </div>
       </div>
     </SpotlightCard>
   );
@@ -180,6 +182,11 @@ export default async function HistoryPage() {
     jobs = [];
   }
 
+  const completedCount = jobs.filter((job) => job.status === "COMPLETED").length;
+  const failedCount = jobs.filter((job) => job.status === "FAILED").length;
+  const runningCount = jobs.filter((job) => ["QUEUED", "POLISHING", "GENERATING", "UPLOADING"].includes(job.status)).length;
+  const creditTotal = jobs.reduce((sum, job) => sum + job.creditCost, 0);
+
   return (
     <main className="history-page">
       <GlassSurface className="section-heading">
@@ -189,11 +196,36 @@ export default async function HistoryPage() {
       </GlassSurface>
 
       {jobs.length ? (
-        <section className="history-list">
-          {jobs.map((job) => (
-            <HistoryItem key={job.id} job={job} />
-          ))}
-        </section>
+        <>
+          <section className="history-summary-grid" aria-label="历史概览">
+            <div>
+              <span>全部任务</span>
+              <strong>{jobs.length}</strong>
+            </div>
+            <div>
+              <span>已完成</span>
+              <strong>{completedCount}</strong>
+            </div>
+            <div>
+              <span>进行中</span>
+              <strong>{runningCount}</strong>
+            </div>
+            <div>
+              <span>失败</span>
+              <strong>{failedCount}</strong>
+            </div>
+            <div>
+              <span>积分记录</span>
+              <strong>{creditTotal}</strong>
+            </div>
+          </section>
+
+          <section className="history-list">
+            {jobs.map((job) => (
+              <HistoryItem key={job.id} job={job} />
+            ))}
+          </section>
+        </>
       ) : (
         <SpotlightCard className="empty-state">
           <span>暂无生成记录</span>

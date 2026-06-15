@@ -1135,22 +1135,60 @@ textarea {
   border-radius: 30px;
 }
 
+.history-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.history-summary-grid div {
+  min-width: 0;
+  border: 1px solid rgba(203, 213, 225, 0.62);
+  border-radius: 22px;
+  padding: 16px 18px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.86), rgba(248, 250, 252, 0.62)),
+    radial-gradient(circle at 88% 0%, rgba(219, 234, 254, 0.34), transparent 12rem);
+  box-shadow: 0 16px 42px rgba(31, 49, 70, 0.06);
+}
+
+.history-summary-grid span {
+  display: block;
+  color: #7b8da3;
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.history-summary-grid strong {
+  display: block;
+  margin-top: 8px;
+  color: #111827;
+  font-size: clamp(1.35rem, 2.4vw, 2rem);
+  font-weight: 950;
+  line-height: 1;
+}
+
 .history-list {
   display: grid;
   gap: 16px;
 }
 
 .history-card {
-  display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  gap: 18px;
   padding: 14px;
   border-radius: 28px;
 }
 
+.history-card-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.34fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: stretch;
+  min-width: 0;
+}
+
 .history-image {
   overflow: hidden;
-  min-height: 190px;
+  min-height: 260px;
   border: 1px solid rgba(203, 213, 225, 0.62);
   border-radius: 22px;
   background: rgba(241, 245, 249, 0.66);
@@ -1159,6 +1197,7 @@ textarea {
 .history-image img {
   width: 100%;
   height: 100%;
+  min-height: 260px;
   object-fit: cover;
 }
 
@@ -1166,7 +1205,7 @@ textarea {
   display: grid;
   width: 100%;
   height: 100%;
-  min-height: 190px;
+  min-height: 260px;
   place-items: center;
   color: #64748b;
   font-weight: 900;
@@ -1174,9 +1213,10 @@ textarea {
 
 .history-body {
   display: grid;
-  gap: 12px;
+  align-content: start;
+  gap: 14px;
   min-width: 0;
-  padding: 6px 4px;
+  padding: 8px 6px 6px;
 }
 
 .history-title-row {
@@ -1189,9 +1229,22 @@ textarea {
 .history-title-row h2 {
   margin: 8px 0 0;
   color: #111827;
-  font-size: 1.35rem;
+  max-width: 50rem;
+  font-size: clamp(1.35rem, 2vw, 2rem);
   font-weight: 900;
   letter-spacing: -0.05em;
+  line-height: 1.22;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.history-body > .history-prompt {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .status-pill {
@@ -1227,12 +1280,16 @@ textarea {
 }
 
 .history-meta {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(72px, 1fr));
 }
 
 .history-meta div {
   display: grid;
   justify-content: stretch;
+  min-height: 72px;
+  align-content: center;
+  border: 1px solid rgba(226, 232, 240, 0.72);
+  background: rgba(248, 250, 252, 0.82);
 }
 
 .empty-state {
@@ -1269,11 +1326,15 @@ textarea {
     grid-template-columns: 1fr;
   }
 
-  .history-card {
+  .history-card-layout {
     grid-template-columns: 1fr;
   }
 
   .history-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .history-summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -1312,5 +1373,15 @@ textarea {
 
   .history-meta {
     grid-template-columns: 1fr;
+  }
+
+  .history-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .history-image,
+  .history-image img,
+  .history-placeholder {
+    min-height: 220px;
   }
 }
