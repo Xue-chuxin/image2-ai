@@ -6,7 +6,7 @@ import { Clock3, Home, ImagePlus, Library, Palette, UserRound } from "lucide-rea
 import { clsx } from "clsx";
 import type { ReactNode } from "react";
 import type { PublicAppSettings } from "@/lib/settings";
-import { GlassSurface, GooeyNav, Particles } from "@/components/front/react-bits";
+import { GlassSurface, GooeyNav, ShapeGrid } from "@/components/front/react-bits";
 
 const navItems = [
   { href: "/", label: "首页", icon: Home },
@@ -38,7 +38,7 @@ export function AppShell({ children, settings }: { children: ReactNode; settings
 
   return (
     <div className="front-shell min-h-screen">
-      <Particles className="front-shell__particles" />
+      <ShapeGrid className="front-shell__shape-grid" />
       <header className="front-header sticky inset-x-0 top-0 z-40 w-full px-4 py-3 md:px-8">
         <div className="mx-auto max-w-[1440px]">
           <div className="flex items-center justify-between gap-4">

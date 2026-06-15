@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import Link from "next/link";
 import { motion, useReducedMotion, type Variants } from "motion/react";
 import { Camera, Geometry, Mesh, Program, Renderer } from "ogl";
@@ -56,6 +56,14 @@ type StepItem = {
   complete?: boolean;
 };
 
+type ShapeGridCell = {
+  kind: "square" | "circle" | "diamond" | "pill";
+  tone: "mist" | "sky" | "line" | "blank";
+  delay: string;
+  rotate: string;
+  scale: number;
+};
+
 function useMounted() {
   const [mounted, setMounted] = useState(false);
 
@@ -71,6 +79,66 @@ export function GlassSurface({ children, className }: GlassSurfaceProps) {
     <div className={clsx("rb-glass-surface", className)}>
       <span className="rb-glass-surface__shine" aria-hidden="true" />
       <div className="relative z-10">{children}</div>
+    </div>
+  );
+}
+
+export function ShapeGrid({ className, cellCount = 112 }: { className?: string; cellCount?: number }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const reduced = useReducedMotion();
+  const cells = useMemo<ShapeGridCell[]>(
+    () =>
+      Array.from({ length: cellCount }, (_, index) => {
+        const shapeSeed = (index * 7 + Math.floor(index / 5)) % 11;
+        const toneSeed = (index * 5 + Math.floor(index / 3)) % 10;
+        const kind = shapeSeed < 3 ? "square" : shapeSeed < 6 ? "circle" : shapeSeed < 9 ? "diamond" : "pill";
+        const baseRotate = ((index % 9) - 4) * 7 + (kind === "diamond" ? 45 : 0);
+        return {
+          kind,
+          tone: toneSeed < 3 ? "mist" : toneSeed < 6 ? "sky" : toneSeed < 8 ? "line" : "blank",
+          delay: `${(index % 19) * 0.11}s`,
+          rotate: `${baseRotate}deg`,
+          scale: 0.62 + ((index * 13) % 26) / 100,
+        };
+      }),
+    [cellCount],
+  );
+
+  return (
+    <div
+      ref={ref}
+      className={clsx("rb-shape-grid", className)}
+      aria-hidden="true"
+      onPointerMove={
+        reduced
+          ? undefined
+          : (event) => {
+              const rect = ref.current?.getBoundingClientRect();
+              if (!rect) return;
+              const x = ((event.clientX - rect.left) / rect.width - 0.5) * 22;
+              const y = ((event.clientY - rect.top) / rect.height - 0.5) * 18;
+              ref.current?.style.setProperty("--shape-grid-x", `${x.toFixed(2)}px`);
+              ref.current?.style.setProperty("--shape-grid-y", `${y.toFixed(2)}px`);
+            }
+      }
+      onPointerLeave={() => {
+        ref.current?.style.setProperty("--shape-grid-x", "0px");
+        ref.current?.style.setProperty("--shape-grid-y", "0px");
+      }}
+    >
+      {cells.map((cell, index) => (
+        <span
+          key={index}
+          className={clsx("rb-shape-grid__cell", `is-${cell.kind}`, `tone-${cell.tone}`)}
+          style={
+            {
+              "--shape-delay": cell.delay,
+              "--shape-rotate": cell.rotate,
+              "--shape-scale": cell.scale,
+            } as CSSProperties
+          }
+        />
+      ))}
     </div>
   );
 }
