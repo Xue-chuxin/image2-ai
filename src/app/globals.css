@@ -454,12 +454,6 @@ textarea {
   }
 }
 
-@media (min-width: 1440px) {
-  .rb-masonry {
-    column-count: 4;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .rb-action-beam__ring {
     animation: none;
