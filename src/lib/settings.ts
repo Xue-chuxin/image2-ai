@@ -3,7 +3,7 @@ import { randomBytes } from "crypto";
 
 import { decryptSecret, encryptSecret, hasSettingsEncryptionKey } from "@/lib/app-crypto";
 
-export type GenerationProviderName = "openai" | "chatgpt_web";
+export type GenerationProviderName = "openai" | "chatgpt_web" | "stability_ai";
 export type StorageProviderName = "local" | "oss" | "cos" | "s3";
 
 export type PublicAppSettings = {
@@ -14,6 +14,7 @@ export type PublicAppSettings = {
   deepseekBaseUrl: string;
   deepseekModel: string;
   openaiImageModel: string;
+  stabilityAiModel: string;
   chatgptWebEnabled: boolean;
   chatgptWebUserDataDir: string;
   chatgptWebHeadless: boolean;
@@ -28,6 +29,21 @@ export type PublicAppSettings = {
   storageRegion: string;
 };
 
+export type OpenAICompatibleChannelSetting = {
+  id: string;
+  name: string;
+  enabled: boolean;
+  baseUrl: string;
+  model: string;
+  timeoutSeconds: number;
+  priority: number;
+  apiKeyConfigured: boolean;
+};
+
+export type OpenAICompatibleRuntimeChannel = Omit<OpenAICompatibleChannelSetting, "apiKeyConfigured"> & {
+  apiKey: string;
+};
+
 export type AdminDiagnosticStatus = "ok" | "warning" | "error";
 
 export type AdminDiagnosticItem = {
@@ -38,12 +54,15 @@ export type AdminDiagnosticItem = {
 };
 
 export type AdminAppSettings = PublicAppSettings & {
+  openaiCompatibleChannels: OpenAICompatibleChannelSetting[];
   deepseekPolishPrompt: string;
   moderationEnabled: boolean;
   moderationForbiddenWords: string;
   moderationBlockMessage: string;
   deepseekApiKeyConfigured: boolean;
   openaiApiKeyConfigured: boolean;
+  legacyOpenaiApiKeyConfigured: boolean;
+  stabilityAiApiKeyConfigured: boolean;
   encryptionReady: boolean;
   diagnostics: AdminDiagnosticItem[];
 };
@@ -55,6 +74,8 @@ export type SaveAdminSettingsInput = Partial<PublicAppSettings> & {
   moderationBlockMessage?: string;
   deepseekApiKey?: string;
   openaiApiKey?: string;
+  openaiCompatibleChannels?: Array<Partial<OpenAICompatibleChannelSetting> & { apiKey?: string }>;
+  stabilityAiApiKey?: string;
 };
 
 export type ChatGPTWebRuntimeConfig = {
@@ -109,6 +130,7 @@ const defaultSettings: PublicAppSettings = {
   deepseekBaseUrl: "https://api.deepseek.com",
   deepseekModel: "deepseek-chat",
   openaiImageModel: "gpt-image-2",
+  stabilityAiModel: "stable-diffusion-xl-1024-v1-0",
   chatgptWebEnabled: false,
   chatgptWebUserDataDir: "chatgpt-web-profile",
   chatgptWebHeadless: false,
@@ -129,12 +151,29 @@ const defaultModerationSettings: ModerationRuntimeConfig = {
   blockMessage: "内容包含不适合生成的词语，请调整后再试。",
 };
 
+type StoredOpenAICompatibleChannel = {
+  id: string;
+  name: string;
+  enabled: boolean;
+  baseUrl: string;
+  model: string;
+  timeoutSeconds: number;
+  priority: number;
+  apiKey: string;
+};
+
+const OPENAI_COMPATIBLE_CHANNEL_LIMIT = 8;
+const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
+const DEFAULT_OPENAI_CHANNEL_ID = "official-openai";
+
 function createId() {
   return `set_${randomBytes(12).toString("hex")}`;
 }
 
 function normalizeProvider(value?: string): GenerationProviderName {
-  return value === "chatgpt_web" ? "chatgpt_web" : "openai";
+  if (value === "chatgpt_web") return "chatgpt_web";
+  if (value === "stability_ai") return "stability_ai";
+  return "openai";
 }
 
 function normalizeStorageProvider(value?: string): StorageProviderName {
@@ -210,6 +249,176 @@ function normalizeTimeoutSeconds(value: unknown, fallback: number) {
   }
 
   return Math.min(Math.max(Math.floor(numeric), 30), 900);
+}
+
+function normalizePriority(value: unknown, fallback: number) {
+  const numeric = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(numeric)) {
+    return fallback;
+  }
+
+  return Math.min(Math.max(Math.floor(numeric), 0), 999);
+}
+
+function normalizeChannelId(value: unknown, fallback: string) {
+  const clean = typeof value === "string" ? value.trim().replace(/[^a-zA-Z0-9_-]/g, "") : "";
+  return clean ? clean.slice(0, 80) : fallback;
+}
+
+function normalizeBaseUrl(value: unknown, fallback = DEFAULT_OPENAI_BASE_URL) {
+  const clean = normalizeText(value, fallback, 300).replace(/\/+$/, "");
+
+  try {
+    const url = new URL(clean);
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      throw new Error("invalid protocol");
+    }
+    return url.toString().replace(/\/+$/, "");
+  } catch {
+    throw new Error("OpenAI 兼容通道 Base URL 必须是合法的 http 或 https 地址。");
+  }
+}
+
+function getEncryptedSettingValue(row?: SettingRow) {
+  if (!row?.value) {
+    return "";
+  }
+
+  if (!row.isEncrypted) {
+    return row.value;
+  }
+
+  try {
+    return decryptSecret(row.value);
+  } catch {
+    return "";
+  }
+}
+
+function parseStoredOpenAICompatibleChannels(map: Map<string, SettingRow>): StoredOpenAICompatibleChannel[] {
+  const rawValue = getEncryptedSettingValue(map.get("openaiCompatibleChannels"));
+  if (!rawValue) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(rawValue) as Array<Partial<StoredOpenAICompatibleChannel>>;
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed.slice(0, OPENAI_COMPATIBLE_CHANNEL_LIMIT).map((channel, index) => ({
+      id: normalizeChannelId(channel.id, `openai-compatible-${index + 1}`),
+      name: normalizeText(channel.name, `中转站 ${index + 1}`, 80),
+      enabled: normalizeBoolean(channel.enabled, true),
+      baseUrl: normalizeBaseUrl(channel.baseUrl, DEFAULT_OPENAI_BASE_URL),
+      model: normalizeText(channel.model, defaultSettings.openaiImageModel, 120),
+      timeoutSeconds: normalizeTimeoutSeconds(channel.timeoutSeconds, 120),
+      priority: normalizePriority(channel.priority, index),
+      apiKey: typeof channel.apiKey === "string" ? channel.apiKey : "",
+    })).sort((left, right) => left.priority - right.priority);
+  } catch {
+    return [];
+  }
+}
+
+function getLegacyOpenAIChannel(map: Map<string, SettingRow>, settings?: Pick<PublicAppSettings, "openaiImageModel">): OpenAICompatibleChannelSetting {
+  return {
+    id: DEFAULT_OPENAI_CHANNEL_ID,
+    name: "OpenAI 官方 API",
+    enabled: true,
+    baseUrl: DEFAULT_OPENAI_BASE_URL,
+    model: settings?.openaiImageModel || getStoredSetting(map, "openaiImageModel") || process.env.OPENAI_IMAGE_MODEL || defaultSettings.openaiImageModel,
+    timeoutSeconds: 120,
+    priority: 0,
+    apiKeyConfigured: Boolean(map.get("openaiApiKey")?.value || process.env.OPENAI_API_KEY),
+  };
+}
+
+function toPublicOpenAICompatibleChannels(
+  map: Map<string, SettingRow>,
+  settings?: Pick<PublicAppSettings, "openaiImageModel">,
+): OpenAICompatibleChannelSetting[] {
+  const storedChannels = parseStoredOpenAICompatibleChannels(map);
+
+  if (!storedChannels.length) {
+    return [getLegacyOpenAIChannel(map, settings)];
+  }
+
+  return storedChannels.map(({ apiKey, ...channel }) => ({
+    ...channel,
+    apiKeyConfigured: Boolean(apiKey),
+  }));
+}
+
+function normalizeSubmittedOpenAIChannels(
+  inputChannels: SaveAdminSettingsInput["openaiCompatibleChannels"],
+  existingChannels: StoredOpenAICompatibleChannel[],
+  legacyOpenAIKey: string,
+): StoredOpenAICompatibleChannel[] | null {
+  if (!Array.isArray(inputChannels)) {
+    return null;
+  }
+
+  const existingById = new Map(existingChannels.map((channel) => [channel.id, channel]));
+  const normalized: StoredOpenAICompatibleChannel[] = [];
+  const usedIds = new Set<string>();
+
+  for (const [index, input] of inputChannels.slice(0, OPENAI_COMPATIBLE_CHANNEL_LIMIT).entries()) {
+    const fallbackId = `openai-compatible-${index + 1}`;
+    let id = normalizeChannelId(input.id, fallbackId);
+    if (usedIds.has(id)) {
+      id = `${id}-${index + 1}`;
+    }
+    usedIds.add(id);
+
+    const existing = existingById.get(id);
+    const submittedApiKey = typeof input.apiKey === "string" ? input.apiKey.trim() : "";
+    const fallbackApiKey = id === DEFAULT_OPENAI_CHANNEL_ID ? legacyOpenAIKey : "";
+
+    normalized.push({
+      id,
+      name: normalizeText(input.name, `中转站 ${index + 1}`, 80),
+      enabled: normalizeBoolean(input.enabled, true),
+      baseUrl: normalizeBaseUrl(input.baseUrl, DEFAULT_OPENAI_BASE_URL),
+      model: normalizeText(input.model, defaultSettings.openaiImageModel, 120),
+      timeoutSeconds: normalizeTimeoutSeconds(input.timeoutSeconds, 120),
+      priority: normalizePriority(input.priority, index),
+      apiKey: submittedApiKey || existing?.apiKey || fallbackApiKey,
+    });
+  }
+
+  return normalized.sort((left, right) => left.priority - right.priority);
+}
+
+function shouldPersistSubmittedOpenAIChannels(
+  inputChannels: SaveAdminSettingsInput["openaiCompatibleChannels"],
+  map: Map<string, SettingRow>,
+  legacyModel: string,
+) {
+  if (!Array.isArray(inputChannels)) {
+    return false;
+  }
+
+  if (map.get("openaiCompatibleChannels")?.value) {
+    return true;
+  }
+
+  return inputChannels.some((channel) => {
+    const id = normalizeChannelId(channel.id, "");
+    const apiKey = typeof channel.apiKey === "string" ? channel.apiKey.trim() : "";
+    const baseUrl = typeof channel.baseUrl === "string" ? channel.baseUrl.trim().replace(/\/+$/, "") : "";
+    const model = typeof channel.model === "string" ? channel.model.trim() : "";
+
+    return Boolean(
+      apiKey ||
+        id !== DEFAULT_OPENAI_CHANNEL_ID ||
+        baseUrl !== DEFAULT_OPENAI_BASE_URL ||
+        (model && model !== legacyModel) ||
+        channel.enabled === false ||
+        Number(channel.timeoutSeconds) !== 120,
+    );
+  });
 }
 
 function getStoredSetting(map: Map<string, SettingRow>, key: keyof PublicAppSettings | "deepseekPolishPrompt") {
@@ -320,13 +529,18 @@ async function checkDatabase(): Promise<AdminDiagnosticItem> {
 
 async function buildDiagnostics(
   settings: PublicAppSettings,
+  openaiCompatibleChannels: OpenAICompatibleChannelSetting[],
   deepseekApiKeyConfigured: boolean,
   openaiApiKeyConfigured: boolean,
+  stabilityAiApiKeyConfigured: boolean,
   moderation: ModerationRuntimeConfig,
 ): Promise<AdminDiagnosticItem[]> {
   const encryptionReady = hasSettingsEncryptionKey();
   const providerIsOpenAI = settings.defaultGenerationProvider === "openai";
   const providerIsChatGPTWeb = settings.defaultGenerationProvider === "chatgpt_web";
+  const providerIsStabilityAi = settings.defaultGenerationProvider === "stability_ai";
+  const enabledOpenAIChannels = openaiCompatibleChannels.filter((channel) => channel.enabled);
+  const configuredOpenAIChannels = enabledOpenAIChannels.filter((channel) => channel.apiKeyConfigured);
   const forbiddenWordCount = normalizeForbiddenWords(moderation.forbiddenWords)
     .split("\n")
     .filter(Boolean).length;
@@ -347,9 +561,17 @@ async function buildDiagnostics(
     },
     {
       key: "openai",
-      label: "OpenAI 生图",
+      label: "OpenAI 兼容生图",
       status: openaiApiKeyConfigured ? "ok" : providerIsOpenAI ? "error" : "warning",
-      message: openaiApiKeyConfigured ? `已配置 ${settings.openaiImageModel}。` : "未配置 OpenAI API Key，OpenAI 官方通道不可用。",
+      message: openaiApiKeyConfigured
+        ? `已配置 ${configuredOpenAIChannels.length}/${enabledOpenAIChannels.length || openaiCompatibleChannels.length} 个启用通道。`
+        : "未配置可用 OpenAI 兼容通道 API Key，OpenAI 通道不可用。",
+    },
+    {
+      key: "stability_ai",
+      label: "Stability AI 生图",
+      status: stabilityAiApiKeyConfigured ? "ok" : providerIsStabilityAi ? "error" : "warning",
+      message: stabilityAiApiKeyConfigured ? `已配置 ${settings.stabilityAiModel}，支持参考图 img2img。` : "未配置 Stability AI API Key，Stability AI 通道不可用。",
     },
     {
       key: "chatgpt_web",
@@ -362,8 +584,13 @@ async function buildDiagnostics(
     {
       key: "provider",
       label: "默认 Provider",
-      status: providerIsChatGPTWeb && !settings.chatgptWebEnabled ? "error" : "ok",
-      message: providerIsChatGPTWeb ? "默认使用 ChatGPT Web 本机浏览器通道。" : "默认使用 OpenAI 官方 API。",
+      status:
+        (providerIsOpenAI && !openaiApiKeyConfigured) ||
+        (providerIsChatGPTWeb && !settings.chatgptWebEnabled) ||
+        (providerIsStabilityAi && !stabilityAiApiKeyConfigured)
+          ? "error"
+          : "ok",
+      message: providerIsChatGPTWeb ? "默认使用 ChatGPT Web 本机浏览器通道。" : providerIsStabilityAi ? "默认使用 Stability AI 通道。" : "默认使用 OpenAI 官方 API。",
     },
     {
       key: "storage",
@@ -394,6 +621,7 @@ export async function getPublicAppSettings(): Promise<PublicAppSettings> {
     defaultSettings.chatgptWebUserDataDir,
     300,
   );
+  const openaiImageModel = getStoredSetting(map, "openaiImageModel") || process.env.OPENAI_IMAGE_MODEL || defaultSettings.openaiImageModel;
 
   return {
     browserTitle: getStoredSetting(map, "browserTitle") || defaultSettings.browserTitle,
@@ -404,7 +632,8 @@ export async function getPublicAppSettings(): Promise<PublicAppSettings> {
     ),
     deepseekBaseUrl: getStoredSetting(map, "deepseekBaseUrl") || process.env.DEEPSEEK_BASE_URL || defaultSettings.deepseekBaseUrl,
     deepseekModel: getStoredSetting(map, "deepseekModel") || process.env.DEEPSEEK_MODEL || defaultSettings.deepseekModel,
-    openaiImageModel: getStoredSetting(map, "openaiImageModel") || process.env.OPENAI_IMAGE_MODEL || defaultSettings.openaiImageModel,
+    openaiImageModel,
+    stabilityAiModel: getStoredSetting(map, "stabilityAiModel") || process.env.STABILITY_AI_MODEL || defaultSettings.stabilityAiModel,
     chatgptWebEnabled: getStoredBoolean(map, "chatgptWebEnabled", process.env.CHATGPT_WEB_ENABLED, defaultSettings.chatgptWebEnabled),
     chatgptWebUserDataDir,
     chatgptWebHeadless: getStoredBoolean(map, "chatgptWebHeadless", process.env.CHATGPT_WEB_HEADLESS, defaultSettings.chatgptWebHeadless),
@@ -425,33 +654,47 @@ export async function getPublicAppSettings(): Promise<PublicAppSettings> {
   };
 }
 
+export async function getOpenAICompatibleChannelSettings(): Promise<OpenAICompatibleChannelSetting[]> {
+  const map = toMap(await readSettingRows());
+  const openaiImageModel = getStoredSetting(map, "openaiImageModel") || process.env.OPENAI_IMAGE_MODEL || defaultSettings.openaiImageModel;
+  return toPublicOpenAICompatibleChannels(map, { openaiImageModel });
+}
+
 export async function getAdminAppSettings(): Promise<AdminAppSettings> {
   const map = toMap(await readSettingRows());
   const publicSettings = await getPublicAppSettings();
+  const openaiCompatibleChannels = toPublicOpenAICompatibleChannels(map, { openaiImageModel: publicSettings.openaiImageModel });
   const moderationSettings = getModerationSettings(map);
   const deepseekApiKeyConfigured = Boolean(map.get("deepseekApiKey")?.value || process.env.DEEPSEEK_API_KEY);
-  const openaiApiKeyConfigured = Boolean(map.get("openaiApiKey")?.value || process.env.OPENAI_API_KEY);
+  const legacyOpenaiApiKeyConfigured = Boolean(map.get("openaiApiKey")?.value || process.env.OPENAI_API_KEY);
+  const openaiApiKeyConfigured = openaiCompatibleChannels.some((channel) => channel.enabled && channel.apiKeyConfigured);
+  const stabilityAiApiKeyConfigured = Boolean(map.get("stabilityAiApiKey")?.value || process.env.STABILITY_AI_API_KEY);
 
   return {
     ...publicSettings,
+    openaiCompatibleChannels,
     deepseekPolishPrompt: getStoredSetting(map, "deepseekPolishPrompt") || defaultDeepSeekPolishPrompt,
     moderationEnabled: moderationSettings.enabled,
     moderationForbiddenWords: moderationSettings.forbiddenWords,
     moderationBlockMessage: moderationSettings.blockMessage,
     deepseekApiKeyConfigured,
     openaiApiKeyConfigured,
+    legacyOpenaiApiKeyConfigured,
+    stabilityAiApiKeyConfigured,
     encryptionReady: hasSettingsEncryptionKey(),
-    diagnostics: await buildDiagnostics(publicSettings, deepseekApiKeyConfigured, openaiApiKeyConfigured, moderationSettings),
+    diagnostics: await buildDiagnostics(publicSettings, openaiCompatibleChannels, deepseekApiKeyConfigured, openaiApiKeyConfigured, stabilityAiApiKeyConfigured, moderationSettings),
   };
 }
 
 export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
+  const settingsMap = toMap(await readSettingRows());
   const browserTitle = normalizeText(input.browserTitle, defaultSettings.browserTitle);
   const siteTitle = normalizeText(input.siteTitle, defaultSettings.siteTitle);
   const siteSubtitle = normalizeText(input.siteSubtitle, defaultSettings.siteSubtitle);
   const deepseekBaseUrl = normalizeText(input.deepseekBaseUrl, defaultSettings.deepseekBaseUrl, 200);
   const deepseekModel = normalizeText(input.deepseekModel, defaultSettings.deepseekModel);
   const openaiImageModel = normalizeText(input.openaiImageModel, defaultSettings.openaiImageModel);
+  const stabilityAiModel = normalizeText(input.stabilityAiModel, defaultSettings.stabilityAiModel);
   const deepseekPolishPrompt = normalizeText(input.deepseekPolishPrompt, defaultDeepSeekPolishPrompt, 6000);
   const moderationEnabled = normalizeBoolean(input.moderationEnabled, defaultModerationSettings.enabled);
   const moderationForbiddenWords = normalizeForbiddenWords(input.moderationForbiddenWords);
@@ -473,6 +716,14 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
   const storageEndpoint = normalizeText(input.storageEndpoint, defaultSettings.storageEndpoint, 300);
   const storageBucket = normalizeText(input.storageBucket, defaultSettings.storageBucket, 160);
   const storageRegion = normalizeText(input.storageRegion, defaultSettings.storageRegion, 120);
+  const shouldSaveOpenAICompatibleChannels = shouldPersistSubmittedOpenAIChannels(input.openaiCompatibleChannels, settingsMap, openaiImageModel);
+  const openaiCompatibleChannels = shouldSaveOpenAICompatibleChannels
+    ? normalizeSubmittedOpenAIChannels(
+        input.openaiCompatibleChannels,
+        parseStoredOpenAICompatibleChannels(settingsMap),
+        getEncryptedSettingValue(settingsMap.get("openaiApiKey")) || process.env.OPENAI_API_KEY || "",
+      )
+    : null;
 
   await upsertSetting("browserTitle", browserTitle);
   await upsertSetting("siteTitle", siteTitle);
@@ -480,6 +731,7 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
   await upsertSetting("deepseekBaseUrl", deepseekBaseUrl);
   await upsertSetting("deepseekModel", deepseekModel);
   await upsertSetting("openaiImageModel", openaiImageModel);
+  await upsertSetting("stabilityAiModel", stabilityAiModel);
   await upsertSetting("deepseekPolishPrompt", deepseekPolishPrompt);
   await upsertSetting("moderationEnabled", String(moderationEnabled));
   await upsertSetting("moderationForbiddenWords", moderationForbiddenWords);
@@ -505,9 +757,17 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
   if (input.openaiApiKey?.trim()) {
     await upsertSetting("openaiApiKey", encryptSecret(input.openaiApiKey.trim()), true);
   }
+
+  if (openaiCompatibleChannels) {
+    await upsertSetting("openaiCompatibleChannels", encryptSecret(JSON.stringify(openaiCompatibleChannels)), true);
+  }
+
+  if (input.stabilityAiApiKey?.trim()) {
+    await upsertSetting("stabilityAiApiKey", encryptSecret(input.stabilityAiApiKey.trim()), true);
+  }
 }
 
-async function getSecretValue(key: "deepseekApiKey" | "openaiApiKey", envValue?: string) {
+async function getSecretValue(key: "deepseekApiKey" | "openaiApiKey" | "stabilityAiApiKey", envValue?: string) {
   const map = toMap(await readSettingRows());
   const row = map.get(key);
 
@@ -539,13 +799,58 @@ export async function getOpenAIRuntimeConfig() {
   };
 }
 
+export async function getOpenAICompatibleRuntimeChannels(): Promise<OpenAICompatibleRuntimeChannel[]> {
+  const map = toMap(await readSettingRows());
+  const settings = await getPublicAppSettings();
+  const storedChannels = parseStoredOpenAICompatibleChannels(map);
+
+  if (storedChannels.length) {
+    return storedChannels
+      .filter((channel) => channel.enabled)
+      .map(({ apiKey, ...channel }) => ({
+        ...channel,
+        apiKey,
+      }))
+      .sort((left, right) => left.priority - right.priority);
+  }
+
+  return [
+    {
+      id: DEFAULT_OPENAI_CHANNEL_ID,
+      name: "OpenAI 官方 API",
+      enabled: true,
+      baseUrl: DEFAULT_OPENAI_BASE_URL,
+      model: settings.openaiImageModel,
+      timeoutSeconds: 120,
+      priority: 0,
+      apiKey: await getSecretValue("openaiApiKey", process.env.OPENAI_API_KEY),
+    },
+  ];
+}
+
+export async function getStabilityAiRuntimeConfig() {
+  const settings = await getPublicAppSettings();
+
+  return {
+    apiKey: await getSecretValue("stabilityAiApiKey", process.env.STABILITY_AI_API_KEY),
+    model: settings.stabilityAiModel,
+  };
+}
+
 export async function getChatGPTWebRuntimeConfig(): Promise<ChatGPTWebRuntimeConfig> {
   const settings = await getPublicAppSettings();
+
+  let headless = settings.chatgptWebHeadless;
+  if (process.env.CHATGPT_WEB_HEADLESS !== undefined) {
+    headless = normalizeBoolean(process.env.CHATGPT_WEB_HEADLESS, false);
+  } else if (process.platform === "linux" && !process.env.DISPLAY && !process.env.WAYLAND_DISPLAY) {
+    headless = true;
+  }
 
   return {
     enabled: settings.chatgptWebEnabled,
     userDataDir: resolveLocalPath(settings.chatgptWebUserDataDir),
-    headless: settings.chatgptWebHeadless,
+    headless,
     timeoutMs: settings.chatgptWebTimeoutSeconds * 1000,
   };
 }

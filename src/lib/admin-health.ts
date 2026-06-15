@@ -4,7 +4,7 @@ import path from "path";
 import { isUsableSecret } from "@/lib/app-crypto";
 import { prisma } from "@/lib/db";
 import { getPaymentDiagnostics } from "@/lib/payment-diagnostics";
-import { getStorageRuntimeConfig } from "@/lib/settings";
+import { getOpenAICompatibleChannelSettings, getPublicAppSettings, getStorageRuntimeConfig } from "@/lib/settings";
 
 export type AdminHealthStatus = "ok" | "warning" | "error";
 
@@ -140,6 +140,22 @@ export async function getAdminHealthReport(originValue?: string | null): Promise
             ? `local 存储目录已存在：${generatedDir}`
             : `local 存储目录尚不存在，首次保存图片时会自动创建：${generatedDir}`
           : `${storageConfig.provider} 已预留配置，当前版本仍建议使用 local 存储。`,
+    }),
+  );
+
+  const appSettings = await getPublicAppSettings();
+  const openAIChannels = await getOpenAICompatibleChannelSettings();
+  const enabledOpenAIChannels = openAIChannels.filter((channel) => channel.enabled);
+  const readyOpenAIChannels = enabledOpenAIChannels.filter((channel) => channel.apiKeyConfigured && channel.baseUrl && channel.model);
+  items.push(
+    makeItem({
+      id: "openai-compatible-channels",
+      label: "OpenAI 兼容通道",
+      status: readyOpenAIChannels.length > 0 ? "ok" : appSettings.defaultGenerationProvider === "openai" ? "error" : "warning",
+      description:
+        readyOpenAIChannels.length > 0
+          ? `已有 ${readyOpenAIChannels.length}/${enabledOpenAIChannels.length || openAIChannels.length} 个启用通道配置完整。`
+          : "暂无启用且配置完整的 OpenAI 兼容通道。",
     }),
   );
 

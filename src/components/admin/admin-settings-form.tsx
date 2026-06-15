@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, ExternalLink, Loader2, LogOut, RefreshCw, Save, ShieldAlert, XCircle } from "lucide-react";
+import { ArrowDown, ArrowUp, CheckCircle2, ExternalLink, Loader2, LogOut, Plus, RefreshCw, Save, ShieldAlert, Trash2, XCircle } from "lucide-react";
 
-import type { AdminAppSettings, AdminDiagnosticStatus, GenerationProviderName, StorageProviderName } from "@/lib/settings";
+import type { AdminAppSettings, AdminDiagnosticStatus, GenerationProviderName, OpenAICompatibleChannelSetting, StorageProviderName } from "@/lib/settings";
 
 type SettingsResponse = {
   ok: boolean;
@@ -23,6 +23,40 @@ type ChatGPTWebStatusResponse = {
   };
   error?: string;
 };
+
+type EditableOpenAIChannel = OpenAICompatibleChannelSetting & {
+  apiKey: string;
+};
+
+function createEditableOpenAIChannels(channels: OpenAICompatibleChannelSetting[]): EditableOpenAIChannel[] {
+  return channels.map((channel) => ({
+    ...channel,
+    apiKey: "",
+  }));
+}
+
+function createOpenAIChannel(index: number): EditableOpenAIChannel {
+  const now = Date.now();
+
+  return {
+    id: `openai-compatible-${now}-${index + 1}`,
+    name: `中转站 ${index + 1}`,
+    enabled: true,
+    baseUrl: "https://api.openai.com/v1",
+    model: "gpt-image-2",
+    timeoutSeconds: 120,
+    priority: index,
+    apiKeyConfigured: false,
+    apiKey: "",
+  };
+}
+
+function orderOpenAIChannels(channels: EditableOpenAIChannel[]) {
+  return channels.map((channel, index) => ({
+    ...channel,
+    priority: index,
+  }));
+}
 
 async function readSettingsResponse(response: Response): Promise<SettingsResponse> {
   const contentType = response.headers.get("content-type") || "";
@@ -75,8 +109,10 @@ function statusStyle(status: AdminDiagnosticStatus) {
 
 export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminAppSettings }) {
   const [settings, setSettings] = useState(initialSettings);
+  const [openaiChannels, setOpenaiChannels] = useState<EditableOpenAIChannel[]>(createEditableOpenAIChannels(initialSettings.openaiCompatibleChannels));
   const [deepseekApiKey, setDeepseekApiKey] = useState("");
   const [openaiApiKey, setOpenaiApiKey] = useState("");
+  const [stabilityAiApiKey, setStabilityAiApiKey] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [chatgptMessage, setChatgptMessage] = useState("");
@@ -88,6 +124,40 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
 
   function update<K extends keyof AdminAppSettings>(key: K, value: AdminAppSettings[K]) {
     setSettings((current) => ({ ...current, [key]: value }));
+  }
+
+  function updateOpenAIChannel<K extends keyof EditableOpenAIChannel>(id: string, key: K, value: EditableOpenAIChannel[K]) {
+    setOpenaiChannels((current) => current.map((channel) => (channel.id === id ? { ...channel, [key]: value } : channel)));
+  }
+
+  function addOpenAIChannel() {
+    setOpenaiChannels((current) => {
+      if (current.length >= 8) {
+        setError("OpenAI 兼容通道最多 8 个。");
+        return current;
+      }
+
+      return orderOpenAIChannels([...current, createOpenAIChannel(current.length)]);
+    });
+  }
+
+  function removeOpenAIChannel(id: string) {
+    setOpenaiChannels((current) => orderOpenAIChannels(current.filter((channel) => channel.id !== id)));
+  }
+
+  function moveOpenAIChannel(id: string, direction: -1 | 1) {
+    setOpenaiChannels((current) => {
+      const index = current.findIndex((channel) => channel.id === id);
+      const nextIndex = index + direction;
+      if (index < 0 || nextIndex < 0 || nextIndex >= current.length) {
+        return current;
+      }
+
+      const next = [...current];
+      const [item] = next.splice(index, 1);
+      next.splice(nextIndex, 0, item);
+      return orderOpenAIChannels(next);
+    });
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -114,6 +184,17 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
           moderationForbiddenWords: settings.moderationForbiddenWords,
           moderationBlockMessage: settings.moderationBlockMessage,
           openaiImageModel: settings.openaiImageModel,
+          openaiCompatibleChannels: openaiChannels.map((channel, index) => ({
+            id: channel.id,
+            name: channel.name,
+            enabled: channel.enabled,
+            baseUrl: channel.baseUrl,
+            model: channel.model,
+            timeoutSeconds: channel.timeoutSeconds,
+            priority: index,
+            apiKey: channel.apiKey,
+          })),
+          stabilityAiModel: settings.stabilityAiModel,
           chatgptWebEnabled: settings.chatgptWebEnabled,
           chatgptWebUserDataDir: settings.chatgptWebUserDataDir,
           chatgptWebHeadless: settings.chatgptWebHeadless,
@@ -128,6 +209,7 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
           storageRegion: settings.storageRegion,
           deepseekApiKey,
           openaiApiKey,
+          stabilityAiApiKey,
         }),
       });
       const data = await readSettingsResponse(response);
@@ -137,8 +219,10 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
       }
 
       setSettings(data.settings);
+      setOpenaiChannels(createEditableOpenAIChannels(data.settings.openaiCompatibleChannels));
       setDeepseekApiKey("");
       setOpenaiApiKey("");
+      setStabilityAiApiKey("");
       setMessage("配置已保存。");
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "保存失败。");
@@ -238,6 +322,7 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
               >
                 <option value="chatgpt_web">ChatGPT Web 本机浏览器</option>
                 <option value="openai">OpenAI 官方 API</option>
+                <option value="stability_ai">Stability AI（支持参考图）</option>
               </select>
             </label>
             <label className="block">
@@ -249,12 +334,149 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
               />
             </label>
             <label className="block">
-              <span className="text-sm font-bold text-slate-700">OpenAI API Key</span>
+              <span className="text-sm font-bold text-slate-700">旧版 OpenAI API Key</span>
               <input
                 value={openaiApiKey}
                 onChange={(event) => setOpenaiApiKey(event.target.value)}
                 className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
-                placeholder={settings.openaiApiKeyConfigured ? "已配置，留空表示不修改" : "未配置"}
+                placeholder={settings.legacyOpenaiApiKeyConfigured ? "已配置，留空表示不修改" : "未配置"}
+                type="password"
+              />
+              <span className="mt-2 block text-xs font-bold leading-5 text-slate-400">未配置兼容通道列表时，会自动使用这里的旧版单通道配置。</span>
+            </label>
+            <div className="rounded-[24px] border border-slate-200 bg-slate-50/70 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">OpenAI Compatible</p>
+                  <h3 className="mt-1 text-lg font-black text-slate-950">兼容中转通道</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={addOpenAIChannel}
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600 shadow-card"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  新增通道
+                </button>
+              </div>
+
+              <div className="mt-4 grid gap-3">
+                {openaiChannels.map((channel, index) => (
+                  <div key={channel.id} className="rounded-[22px] border border-slate-200 bg-white p-4 shadow-card">
+                    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                      <label className="inline-flex items-center gap-2 text-sm font-black text-slate-800">
+                        <input
+                          checked={channel.enabled}
+                          onChange={(event) => updateOpenAIChannel(channel.id, "enabled", event.target.checked)}
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-slate-300 text-slate-950"
+                        />
+                        启用通道 #{index + 1}
+                      </label>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => moveOpenAIChannel(channel.id, -1)}
+                          disabled={index === 0}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500 disabled:opacity-40"
+                          title="上移"
+                        >
+                          <ArrowUp className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveOpenAIChannel(channel.id, 1)}
+                          disabled={index === openaiChannels.length - 1}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500 disabled:opacity-40"
+                          title="下移"
+                        >
+                          <ArrowDown className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeOpenAIChannel(channel.id)}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-red-100 bg-red-50 text-red-500"
+                          title="删除"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-3">
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <label className="block">
+                          <span className="text-sm font-bold text-slate-700">名称</span>
+                          <input
+                            value={channel.name}
+                            onChange={(event) => updateOpenAIChannel(channel.id, "name", event.target.value)}
+                            className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
+                          />
+                        </label>
+                        <label className="block">
+                          <span className="text-sm font-bold text-slate-700">模型</span>
+                          <input
+                            value={channel.model}
+                            onChange={(event) => updateOpenAIChannel(channel.id, "model", event.target.value)}
+                            className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
+                          />
+                        </label>
+                      </div>
+                      <label className="block">
+                        <span className="text-sm font-bold text-slate-700">Base URL</span>
+                        <input
+                          value={channel.baseUrl}
+                          onChange={(event) => updateOpenAIChannel(channel.id, "baseUrl", event.target.value)}
+                          className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
+                          placeholder="https://example.com/v1"
+                        />
+                      </label>
+                      <div className="grid gap-3 sm:grid-cols-[1fr_160px]">
+                        <label className="block">
+                          <span className="text-sm font-bold text-slate-700">API Key</span>
+                          <input
+                            value={channel.apiKey}
+                            onChange={(event) => updateOpenAIChannel(channel.id, "apiKey", event.target.value)}
+                            className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
+                            placeholder={channel.apiKeyConfigured ? "已配置，留空表示不修改" : "未配置"}
+                            type="password"
+                          />
+                        </label>
+                        <label className="block">
+                          <span className="text-sm font-bold text-slate-700">超时秒数</span>
+                          <input
+                            value={channel.timeoutSeconds}
+                            onChange={(event) => updateOpenAIChannel(channel.id, "timeoutSeconds", Number(event.target.value))}
+                            type="number"
+                            min={30}
+                            max={900}
+                            className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-3 text-xs font-bold leading-5 text-slate-400">保存后会按当前顺序尝试；上一个通道超时、限流或服务错误时自动切到下一个。</p>
+            </div>
+            <hr className="my-2 border-slate-100" />
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">Stability AI — 原生支持参考图 img2img</p>
+            <label className="block">
+              <span className="text-sm font-bold text-slate-700">Stability AI 模型</span>
+              <input
+                value={settings.stabilityAiModel}
+                onChange={(event) => update("stabilityAiModel", event.target.value)}
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm font-bold text-slate-700">Stability AI API Key</span>
+              <input
+                value={stabilityAiApiKey}
+                onChange={(event) => setStabilityAiApiKey(event.target.value)}
+                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
+                placeholder={settings.stabilityAiApiKeyConfigured ? "已配置，留空表示不修改" : "未配置"}
                 type="password"
               />
             </label>
