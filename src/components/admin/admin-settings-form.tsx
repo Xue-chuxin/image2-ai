@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { ArrowDown, ArrowUp, CheckCircle2, ExternalLink, Loader2, LogOut, Plus, RefreshCw, Save, ShieldAlert, Trash2, XCircle } from "lucide-react";
-
+import { useState, type FormEvent } from "react";
+import { Alert, Button, Card, Form, Input, InputNumber, Select, Space, Switch, Tag, Textarea } from "tdesign-react";
 import type { AdminAppSettings, AdminDiagnosticStatus, GenerationProviderName, OpenAICompatibleChannelSetting, StorageProviderName } from "@/lib/settings";
 
 type SettingsResponse = {
@@ -40,15 +39,11 @@ type EditableOpenAIChannel = OpenAICompatibleChannelSetting & {
 };
 
 function createEditableOpenAIChannels(channels: OpenAICompatibleChannelSetting[]): EditableOpenAIChannel[] {
-  return channels.map((channel) => ({
-    ...channel,
-    apiKey: "",
-  }));
+  return channels.map((channel) => ({ ...channel, apiKey: "" }));
 }
 
 function createOpenAIChannel(index: number): EditableOpenAIChannel {
   const now = Date.now();
-
   return {
     id: `openai-compatible-${now}-${index + 1}`,
     name: `中转站 ${index + 1}`,
@@ -63,73 +58,34 @@ function createOpenAIChannel(index: number): EditableOpenAIChannel {
 }
 
 function orderOpenAIChannels(channels: EditableOpenAIChannel[]) {
-  return channels.map((channel, index) => ({
-    ...channel,
-    priority: index,
-  }));
+  return channels.map((channel, index) => ({ ...channel, priority: index }));
 }
 
 async function readSettingsResponse(response: Response): Promise<SettingsResponse> {
   const contentType = response.headers.get("content-type") || "";
-
-  if (contentType.includes("application/json")) {
-    return (await response.json()) as SettingsResponse;
-  }
-
+  if (contentType.includes("application/json")) return (await response.json()) as SettingsResponse;
   const text = await response.text();
-  return {
-    ok: false,
-    error: text.includes("<!DOCTYPE") ? "接口返回了 HTML 错误页，请查看服务端日志。" : text || "接口返回格式异常。",
-  };
+  return { ok: false, error: text.includes("<!DOCTYPE") ? "接口返回了 HTML 错误页，请查看服务端日志。" : text || "接口返回格式异常。" };
 }
 
 async function readChatGPTWebResponse(response: Response): Promise<ChatGPTWebStatusResponse> {
   const contentType = response.headers.get("content-type") || "";
-
-  if (contentType.includes("application/json")) {
-    return (await response.json()) as ChatGPTWebStatusResponse;
-  }
-
+  if (contentType.includes("application/json")) return (await response.json()) as ChatGPTWebStatusResponse;
   const text = await response.text();
-  return {
-    ok: false,
-    error: text.includes("<!DOCTYPE") ? "接口返回了 HTML 错误页，请查看服务端日志。" : text || "接口返回格式异常。",
-  };
+  return { ok: false, error: text.includes("<!DOCTYPE") ? "接口返回了 HTML 错误页，请查看服务端日志。" : text || "接口返回格式异常。" };
 }
 
 async function readOpenAIChannelCheckResponse(response: Response): Promise<OpenAIChannelCheckResponse> {
   const contentType = response.headers.get("content-type") || "";
-
-  if (contentType.includes("application/json")) {
-    return (await response.json()) as OpenAIChannelCheckResponse;
-  }
-
+  if (contentType.includes("application/json")) return (await response.json()) as OpenAIChannelCheckResponse;
   const text = await response.text();
-  return {
-    ok: false,
-    error: text.includes("<!DOCTYPE") ? "接口返回了 HTML 错误页，请查看服务端日志。" : text || "接口返回格式异常。",
-  };
+  return { ok: false, error: text.includes("<!DOCTYPE") ? "接口返回了 HTML 错误页，请查看服务端日志。" : text || "接口返回格式异常。" };
 }
 
-function statusStyle(status: AdminDiagnosticStatus) {
-  if (status === "ok") {
-    return {
-      icon: <CheckCircle2 className="h-4 w-4 text-emerald-500" />,
-      card: "border-emerald-100 bg-emerald-50/70 text-emerald-800",
-    };
-  }
-
-  if (status === "warning") {
-    return {
-      icon: <ShieldAlert className="h-4 w-4 text-amber-500" />,
-      card: "border-amber-100 bg-amber-50/70 text-amber-800",
-    };
-  }
-
-  return {
-    icon: <XCircle className="h-4 w-4 text-red-500" />,
-    card: "border-red-100 bg-red-50/70 text-red-700",
-  };
+function diagnosticTheme(status: AdminDiagnosticStatus): "success" | "warning" | "danger" {
+  if (status === "ok") return "success";
+  if (status === "warning") return "warning";
+  return "danger";
 }
 
 export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminAppSettings }) {
@@ -164,7 +120,6 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
         setError("OpenAI 兼容通道最多 8 个。");
         return current;
       }
-
       return orderOpenAIChannels([...current, createOpenAIChannel(current.length)]);
     });
   }
@@ -177,10 +132,7 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
     setOpenaiChannels((current) => {
       const index = current.findIndex((channel) => channel.id === id);
       const nextIndex = index + direction;
-      if (index < 0 || nextIndex < 0 || nextIndex >= current.length) {
-        return current;
-      }
-
+      if (index < 0 || nextIndex < 0 || nextIndex >= current.length) return current;
       const next = [...current];
       const [item] = next.splice(index, 1);
       next.splice(nextIndex, 0, item);
@@ -188,7 +140,7 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
     });
   }
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
     setMessage("");
@@ -197,9 +149,7 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
     try {
       const response = await fetch("/api/admin/settings", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           browserTitle: settings.browserTitle,
           siteTitle: settings.siteTitle,
@@ -242,9 +192,7 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
       });
       const data = await readSettingsResponse(response);
 
-      if (!response.ok || !data.ok || !data.settings) {
-        throw new Error(data.error || "保存失败。");
-      }
+      if (!response.ok || !data.ok || !data.settings) throw new Error(data.error || "保存失败。");
 
       setSettings(data.settings);
       setOpenaiChannels(createEditableOpenAIChannels(data.settings.openaiCompatibleChannels));
@@ -263,13 +211,10 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
     setChatgptError("");
     setChatgptMessage("");
     setIsOpeningChatGPT(true);
-
     try {
       const response = await fetch("/api/admin/chatgpt-web/open-login", { method: "POST" });
       const data = await readChatGPTWebResponse(response);
-      if (!response.ok || !data.ok || !data.status) {
-        throw new Error(data.error || "打开登录浏览器失败。");
-      }
+      if (!response.ok || !data.ok || !data.status) throw new Error(data.error || "打开登录浏览器失败。");
       setChatgptMessage(data.status.message);
     } catch (caughtError) {
       setChatgptError(caughtError instanceof Error ? caughtError.message : "打开登录浏览器失败。");
@@ -282,13 +227,10 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
     setChatgptError("");
     setChatgptMessage("");
     setIsCheckingChatGPT(true);
-
     try {
       const response = await fetch("/api/admin/chatgpt-web/check", { method: "POST" });
       const data = await readChatGPTWebResponse(response);
-      if (!response.ok || !data.ok || !data.status) {
-        throw new Error(data.error || "检测登录状态失败。");
-      }
+      if (!response.ok || !data.ok || !data.status) throw new Error(data.error || "检测登录状态失败。");
       setChatgptMessage(data.status.message);
     } catch (caughtError) {
       setChatgptError(caughtError instanceof Error ? caughtError.message : "检测登录状态失败。");
@@ -301,19 +243,14 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
     setOpenaiChannelCheckError("");
     setOpenaiChannelCheckMessage("");
     setCheckingOpenAIChannelId(channelId);
-
     try {
       const response = await fetch("/api/admin/openai-compatible/check", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ channelId }),
       });
       const data = await readOpenAIChannelCheckResponse(response);
-      if (!response.ok || !data.ok || !data.status) {
-        throw new Error(data.error || "通道连通性检查失败。");
-      }
+      if (!response.ok || !data.ok || !data.status) throw new Error(data.error || "通道连通性检查失败。");
       setOpenaiChannelCheckMessage(data.status.message);
     } catch (caughtError) {
       setOpenaiChannelCheckError(caughtError instanceof Error ? caughtError.message : "通道连通性检查失败。");
@@ -329,522 +266,223 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-5 lg:grid-cols-[1fr_.9fr]">
-      <section className="space-y-5">
-        <div className="rounded-[28px] border border-slate-200 bg-white/88 p-5 shadow-card backdrop-blur">
-          <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-400">Site</p>
-          <h2 className="mt-2 text-2xl font-black text-slate-950">站点显示</h2>
-          <div className="mt-5 grid gap-4">
-            <label className="block">
-              <span className="text-sm font-bold text-slate-700">浏览器标题</span>
-              <input
-                value={settings.browserTitle}
-                onChange={(event) => update("browserTitle", event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
-              />
-            </label>
-            <label className="block">
-              <span className="text-sm font-bold text-slate-700">网站标题</span>
-              <input
-                value={settings.siteTitle}
-                onChange={(event) => update("siteTitle", event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
-              />
-            </label>
-            <label className="block">
-              <span className="text-sm font-bold text-slate-700">网站副标题</span>
-              <input
-                value={settings.siteSubtitle}
-                onChange={(event) => update("siteSubtitle", event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
-              />
-            </label>
-          </div>
-        </div>
+    <form onSubmit={handleSubmit} className="admin-td-grid">
+      {message ? <Alert theme="success" message={message} /> : null}
+      {error ? <Alert theme="error" message={error} /> : null}
 
-        <div className="rounded-[28px] border border-slate-200 bg-white/88 p-5 shadow-card backdrop-blur">
-          <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-400">Provider</p>
-          <h2 className="mt-2 text-2xl font-black text-slate-950">生图配置</h2>
-          <div className="mt-5 grid gap-4">
-            <label className="block">
-              <span className="text-sm font-bold text-slate-700">默认生图 Provider</span>
-              <select
-                value={settings.defaultGenerationProvider}
-                onChange={(event) => update("defaultGenerationProvider", event.target.value as GenerationProviderName)}
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
-              >
-                <option value="chatgpt_web">ChatGPT Web 本机浏览器</option>
-                <option value="openai">OpenAI 官方 API</option>
-                <option value="stability_ai">Stability AI（支持参考图）</option>
-              </select>
-            </label>
-            <label className="block">
-              <span className="text-sm font-bold text-slate-700">OpenAI 图像模型</span>
-              <input
-                value={settings.openaiImageModel}
-                onChange={(event) => update("openaiImageModel", event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
-              />
-            </label>
-            <label className="block">
-              <span className="text-sm font-bold text-slate-700">旧版 OpenAI API Key</span>
-              <input
+      <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
+        <section className="admin-td-grid">
+          <Card className="admin-td-card" title="站点显示">
+            <Form labelAlign="top">
+              <SettingInput label="浏览器标题" value={settings.browserTitle} onChange={(value) => update("browserTitle", value)} />
+              <SettingInput label="网站标题" value={settings.siteTitle} onChange={(value) => update("siteTitle", value)} />
+              <SettingInput label="网站副标题" value={settings.siteSubtitle} onChange={(value) => update("siteSubtitle", value)} />
+            </Form>
+          </Card>
+
+          <Card className="admin-td-card" title="生图配置">
+            <Form labelAlign="top">
+              <Form.FormItem label="默认生图 Provider">
+                <Select
+                  value={settings.defaultGenerationProvider}
+                  options={[
+                    { value: "chatgpt_web", label: "ChatGPT Web 本机浏览器" },
+                    { value: "openai", label: "OpenAI 官方 API" },
+                    { value: "stability_ai", label: "Stability AI（支持参考图）" },
+                  ]}
+                  onChange={(value) => update("defaultGenerationProvider", String(value) as GenerationProviderName)}
+                />
+              </Form.FormItem>
+              <SettingInput label="OpenAI 图像模型" value={settings.openaiImageModel} onChange={(value) => update("openaiImageModel", value)} />
+              <SettingInput
+                label="旧版 OpenAI API Key"
                 value={openaiApiKey}
-                onChange={(event) => setOpenaiApiKey(event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
+                onChange={setOpenaiApiKey}
                 placeholder={settings.legacyOpenaiApiKeyConfigured ? "已配置，留空表示不修改" : "未配置"}
                 type="password"
               />
-              <span className="mt-2 block text-xs font-bold leading-5 text-slate-400">未配置兼容通道列表时，会自动使用这里的旧版单通道配置。</span>
-            </label>
-            <div className="rounded-[24px] border border-slate-200 bg-slate-50/70 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">OpenAI Compatible</p>
-                  <h3 className="mt-1 text-lg font-black text-slate-950">兼容中转通道</h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={addOpenAIChannel}
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600 shadow-card"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  新增通道
-                </button>
-              </div>
+              <p className="mb-4 text-xs font-bold leading-5 text-slate-400">未配置兼容通道列表时，会自动使用这里的旧版单通道配置。</p>
+            </Form>
 
-              <div className="mt-4 grid gap-3">
+            <Card bordered title="OpenAI 兼容中转通道" actions={<Button variant="outline" onClick={addOpenAIChannel}>新增通道</Button>}>
+              <div className="admin-td-grid">
                 {openaiChannels.map((channel, index) => (
-                  <div key={channel.id} className="rounded-[22px] border border-slate-200 bg-white p-4 shadow-card">
-                    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                      <label className="inline-flex items-center gap-2 text-sm font-black text-slate-800">
-                        <input
-                          checked={channel.enabled}
-                          onChange={(event) => updateOpenAIChannel(channel.id, "enabled", event.target.checked)}
-                          type="checkbox"
-                          className="h-4 w-4 rounded border-slate-300 text-slate-950"
-                        />
-                        启用通道 #{index + 1}
-                      </label>
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => checkOpenAIChannel(channel.id)}
-                          disabled={checkingOpenAIChannelId === channel.id || !channel.enabled || !channel.apiKeyConfigured}
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-blue-100 bg-blue-50 text-blue-600 disabled:opacity-40"
-                          title={!channel.enabled ? "启用通道后可检测" : channel.apiKeyConfigured ? "检测 /models 连通性" : "保存 API Key 后可检测"}
-                        >
-                          {checkingOpenAIChannelId === channel.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => moveOpenAIChannel(channel.id, -1)}
-                          disabled={index === 0}
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500 disabled:opacity-40"
-                          title="上移"
-                        >
-                          <ArrowUp className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => moveOpenAIChannel(channel.id, 1)}
-                          disabled={index === openaiChannels.length - 1}
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500 disabled:opacity-40"
-                          title="下移"
-                        >
-                          <ArrowDown className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => removeOpenAIChannel(channel.id)}
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-red-100 bg-red-50 text-red-500"
-                          title="删除"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="grid gap-3">
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <label className="block">
-                          <span className="text-sm font-bold text-slate-700">名称</span>
-                          <input
-                            value={channel.name}
-                            onChange={(event) => updateOpenAIChannel(channel.id, "name", event.target.value)}
-                            className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
-                          />
-                        </label>
-                        <label className="block">
-                          <span className="text-sm font-bold text-slate-700">模型</span>
-                          <input
-                            value={channel.model}
-                            onChange={(event) => updateOpenAIChannel(channel.id, "model", event.target.value)}
-                            className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
-                          />
-                        </label>
-                      </div>
-                      <label className="block">
-                        <span className="text-sm font-bold text-slate-700">Base URL</span>
-                        <input
-                          value={channel.baseUrl}
-                          onChange={(event) => updateOpenAIChannel(channel.id, "baseUrl", event.target.value)}
-                          className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
-                          placeholder="https://example.com/v1"
-                        />
-                      </label>
-                      <div className="grid gap-3 sm:grid-cols-[1fr_160px]">
-                        <label className="block">
-                          <span className="text-sm font-bold text-slate-700">API Key</span>
-                          <input
-                            value={channel.apiKey}
-                            onChange={(event) => updateOpenAIChannel(channel.id, "apiKey", event.target.value)}
-                            className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
-                            placeholder={channel.apiKeyConfigured ? "已配置，留空表示不修改" : "未配置"}
-                            type="password"
-                          />
-                        </label>
-                        <label className="block">
-                          <span className="text-sm font-bold text-slate-700">超时秒数</span>
-                          <input
-                            value={channel.timeoutSeconds}
-                            onChange={(event) => updateOpenAIChannel(channel.id, "timeoutSeconds", Number(event.target.value))}
-                            type="number"
-                            min={30}
-                            max={900}
-                            className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
-                          />
-                        </label>
-                      </div>
-                    </div>
-                  </div>
+                  <Card key={channel.id} bordered title={`${index + 1}. ${channel.name}`} actions={
+                    <Space>
+                      <Switch value={channel.enabled} onChange={(value) => updateOpenAIChannel(channel.id, "enabled", Boolean(value))} />
+                      <Button
+                        size="small"
+                        variant="outline"
+                        loading={checkingOpenAIChannelId === channel.id}
+                        disabled={!channel.enabled || !channel.apiKeyConfigured}
+                        onClick={() => void checkOpenAIChannel(channel.id)}
+                      >
+                        检测
+                      </Button>
+                      <Button size="small" variant="outline" disabled={index === 0} onClick={() => moveOpenAIChannel(channel.id, -1)}>上移</Button>
+                      <Button size="small" variant="outline" disabled={index === openaiChannels.length - 1} onClick={() => moveOpenAIChannel(channel.id, 1)}>下移</Button>
+                      <Button size="small" theme="danger" variant="outline" onClick={() => removeOpenAIChannel(channel.id)}>删除</Button>
+                    </Space>
+                  }>
+                    <Form labelAlign="top">
+                      <SettingInput label="名称" value={channel.name} onChange={(value) => updateOpenAIChannel(channel.id, "name", value)} />
+                      <SettingInput label="模型" value={channel.model} onChange={(value) => updateOpenAIChannel(channel.id, "model", value)} />
+                      <SettingInput label="Base URL" value={channel.baseUrl} onChange={(value) => updateOpenAIChannel(channel.id, "baseUrl", value)} placeholder="https://example.com/v1" />
+                      <SettingInput
+                        label="API Key"
+                        value={channel.apiKey}
+                        onChange={(value) => updateOpenAIChannel(channel.id, "apiKey", value)}
+                        placeholder={channel.apiKeyConfigured ? "已配置，留空表示不修改" : "未配置"}
+                        type="password"
+                      />
+                      <Form.FormItem label="超时秒数">
+                        <InputNumber value={channel.timeoutSeconds} min={30} max={900} onChange={(value) => updateOpenAIChannel(channel.id, "timeoutSeconds", Number(value || 120))} />
+                      </Form.FormItem>
+                    </Form>
+                  </Card>
                 ))}
+                {openaiChannelCheckMessage ? <Alert theme="success" message={openaiChannelCheckMessage} /> : null}
+                {openaiChannelCheckError ? <Alert theme="error" message={openaiChannelCheckError} /> : null}
               </div>
-              {openaiChannelCheckMessage ? <p className="mt-3 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-xs font-bold leading-5 text-emerald-700">{openaiChannelCheckMessage}</p> : null}
-              {openaiChannelCheckError ? <p className="mt-3 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-xs font-bold leading-5 text-red-600">{openaiChannelCheckError}</p> : null}
-              <p className="mt-3 text-xs font-bold leading-5 text-slate-400">保存后会按当前顺序尝试；上一个通道超时、限流或服务错误时自动切到下一个。</p>
-            </div>
-            <hr className="my-2 border-slate-100" />
-            <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">Stability AI — 原生支持参考图 img2img</p>
-            <label className="block">
-              <span className="text-sm font-bold text-slate-700">Stability AI 模型</span>
-              <input
-                value={settings.stabilityAiModel}
-                onChange={(event) => update("stabilityAiModel", event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
-              />
-            </label>
-            <label className="block">
-              <span className="text-sm font-bold text-slate-700">Stability AI API Key</span>
-              <input
+            </Card>
+
+            <Form className="mt-4" labelAlign="top">
+              <SettingInput label="Stability AI 模型" value={settings.stabilityAiModel} onChange={(value) => update("stabilityAiModel", value)} />
+              <SettingInput
+                label="Stability AI API Key"
                 value={stabilityAiApiKey}
-                onChange={(event) => setStabilityAiApiKey(event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
+                onChange={setStabilityAiApiKey}
                 placeholder={settings.stabilityAiApiKeyConfigured ? "已配置，留空表示不修改" : "未配置"}
                 type="password"
               />
-            </label>
-          </div>
-        </div>
+            </Form>
+          </Card>
 
-        <div className="rounded-[28px] border border-slate-200 bg-white/88 p-5 shadow-card backdrop-blur">
-          <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-400">Safety</p>
-          <h2 className="mt-2 text-2xl font-black text-slate-950">内容安全</h2>
-          <p className="mt-2 text-sm font-bold leading-6 text-slate-500">
-            用户润色和生图提交前会先检查违禁词。命中后不会调用模型，也不会创建任务或扣积分。
-          </p>
-          <div className="mt-5 grid gap-4">
-            <label className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3">
-              <span>
-                <span className="block text-sm font-black text-slate-800">启用违禁词拦截</span>
-                <span className="mt-1 block text-xs font-bold text-slate-400">正式上线建议保持开启。</span>
-              </span>
-              <input
-                checked={settings.moderationEnabled}
-                onChange={(event) => update("moderationEnabled", event.target.checked)}
-                type="checkbox"
-                className="h-5 w-5 rounded border-slate-300 text-slate-950"
-              />
-            </label>
-            <label className="block">
-              <span className="text-sm font-bold text-slate-700">违禁词词库</span>
-              <textarea
-                value={settings.moderationForbiddenWords}
-                onChange={(event) => update("moderationForbiddenWords", event.target.value)}
-                rows={9}
-                className="mt-2 w-full resize-y rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 outline-none focus:border-ocean-400"
-                placeholder="每行一个词"
-              />
-              <span className="mt-2 block text-xs font-bold leading-5 text-slate-400">每行一个词，保存时会自动去掉空行和重复项。英文匹配不区分大小写。</span>
-            </label>
-            <label className="block">
-              <span className="text-sm font-bold text-slate-700">拦截提示文案</span>
-              <input
-                value={settings.moderationBlockMessage}
-                onChange={(event) => update("moderationBlockMessage", event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
-              />
-              <span className="mt-2 block text-xs font-bold leading-5 text-slate-400">前台只展示这段文案，不展示命中的具体词。</span>
-            </label>
-          </div>
-        </div>
+          <Card className="admin-td-card" title="内容安全">
+            <Form labelAlign="top">
+              <Form.FormItem label="启用违禁词拦截">
+                <Switch value={settings.moderationEnabled} onChange={(value) => update("moderationEnabled", Boolean(value))} />
+              </Form.FormItem>
+              <SettingInput label="违禁词词库" value={settings.moderationForbiddenWords} onChange={(value) => update("moderationForbiddenWords", value)} textarea minRows={8} />
+              <SettingInput label="拦截提示文案" value={settings.moderationBlockMessage} onChange={(value) => update("moderationBlockMessage", value)} />
+            </Form>
+          </Card>
 
-        <div className="rounded-[28px] border border-slate-200 bg-white/88 p-5 shadow-card backdrop-blur">
-          <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-400">Storage</p>
-          <h2 className="mt-2 text-2xl font-black text-slate-950">图片存储</h2>
-          <p className="mt-2 text-sm font-bold leading-6 text-slate-500">
-            当前版本已统一走 StorageService。local 可直接使用，OSS / COS / S3 先预留配置，后续接入对应 SDK。
-          </p>
-          <div className="mt-5 grid gap-4">
-            <label className="block">
-              <span className="text-sm font-bold text-slate-700">存储类型</span>
-              <select
-                value={settings.storageProvider}
-                onChange={(event) => update("storageProvider", event.target.value as StorageProviderName)}
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
-              >
-                <option value="local">Local 本地存储</option>
-                <option value="oss">阿里云 OSS（预留）</option>
-                <option value="cos">腾讯云 COS（预留）</option>
-                <option value="s3">S3 兼容存储（预留）</option>
-              </select>
-            </label>
-            <label className="block">
-              <span className="text-sm font-bold text-slate-700">本地根目录</span>
-              <input
-                value={settings.storageLocalBaseDir}
-                onChange={(event) => update("storageLocalBaseDir", event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
-                placeholder="public"
-              />
-              <span className="mt-2 block text-xs font-bold leading-5 text-slate-400">相对路径会基于项目根目录解析。默认 public 会继续生成 /generated 与 /uploads URL。</span>
-            </label>
-            <label className="block">
-              <span className="text-sm font-bold text-slate-700">公开访问域名</span>
-              <input
-                value={settings.storagePublicBaseUrl}
-                onChange={(event) => update("storagePublicBaseUrl", event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
-                placeholder="留空使用当前站点相对路径"
-              />
-            </label>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block">
-                <span className="text-sm font-bold text-slate-700">生成图前缀</span>
-                <input
-                  value={settings.storageGeneratedPrefix}
-                  onChange={(event) => update("storageGeneratedPrefix", event.target.value)}
-                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
-                  placeholder="generated"
+          <Card className="admin-td-card" title="图片存储">
+            <Form labelAlign="top">
+              <Form.FormItem label="存储类型">
+                <Select
+                  value={settings.storageProvider}
+                  options={[
+                    { value: "local", label: "Local 本地存储" },
+                    { value: "oss", label: "阿里云 OSS（预留）" },
+                    { value: "cos", label: "腾讯云 COS（预留）" },
+                    { value: "s3", label: "S3 兼容存储（预留）" },
+                  ]}
+                  onChange={(value) => update("storageProvider", String(value) as StorageProviderName)}
                 />
-              </label>
-              <label className="block">
-                <span className="text-sm font-bold text-slate-700">上传图前缀</span>
-                <input
-                  value={settings.storageUploadsPrefix}
-                  onChange={(event) => update("storageUploadsPrefix", event.target.value)}
-                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
-                  placeholder="uploads"
-                />
-              </label>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <label className="block">
-                <span className="text-sm font-bold text-slate-700">Endpoint</span>
-                <input
-                  value={settings.storageEndpoint}
-                  onChange={(event) => update("storageEndpoint", event.target.value)}
-                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
-                  placeholder="预留"
-                />
-              </label>
-              <label className="block">
-                <span className="text-sm font-bold text-slate-700">Bucket</span>
-                <input
-                  value={settings.storageBucket}
-                  onChange={(event) => update("storageBucket", event.target.value)}
-                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
-                  placeholder="预留"
-                />
-              </label>
-              <label className="block">
-                <span className="text-sm font-bold text-slate-700">Region</span>
-                <input
-                  value={settings.storageRegion}
-                  onChange={(event) => update("storageRegion", event.target.value)}
-                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
-                  placeholder="预留"
-                />
-              </label>
-            </div>
-          </div>
-        </div>
+              </Form.FormItem>
+              <SettingInput label="本地根目录" value={settings.storageLocalBaseDir} onChange={(value) => update("storageLocalBaseDir", value)} placeholder="public" />
+              <SettingInput label="公开访问域名" value={settings.storagePublicBaseUrl} onChange={(value) => update("storagePublicBaseUrl", value)} placeholder="留空使用当前站点相对路径" />
+              <SettingInput label="生成图前缀" value={settings.storageGeneratedPrefix} onChange={(value) => update("storageGeneratedPrefix", value)} />
+              <SettingInput label="上传图前缀" value={settings.storageUploadsPrefix} onChange={(value) => update("storageUploadsPrefix", value)} />
+              <SettingInput label="Endpoint" value={settings.storageEndpoint} onChange={(value) => update("storageEndpoint", value)} placeholder="预留" />
+              <SettingInput label="Bucket" value={settings.storageBucket} onChange={(value) => update("storageBucket", value)} placeholder="预留" />
+              <SettingInput label="Region" value={settings.storageRegion} onChange={(value) => update("storageRegion", value)} placeholder="预留" />
+            </Form>
+          </Card>
 
-        <div className="rounded-[28px] border border-slate-200 bg-white/88 p-5 shadow-card backdrop-blur">
-          <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-400">ChatGPT Web</p>
-          <h2 className="mt-2 text-2xl font-black text-slate-950">网页版 ChatGPT</h2>
-          <p className="mt-2 text-sm font-bold leading-6 text-slate-500">
-            使用本机浏览器 Profile 保存登录态，不保存 ChatGPT 账号、密码或 Cookie。
-          </p>
-          <div className="mt-5 grid gap-4">
-            <label className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3">
-              <span>
-                <span className="block text-sm font-black text-slate-800">启用 ChatGPT Web</span>
-                <span className="mt-1 block text-xs font-bold text-slate-400">启用后才能作为默认 Provider 使用。</span>
-              </span>
-              <input
-                checked={settings.chatgptWebEnabled}
-                onChange={(event) => update("chatgptWebEnabled", event.target.checked)}
-                type="checkbox"
-                className="h-5 w-5 rounded border-slate-300 text-slate-950"
-              />
-            </label>
-            <label className="block">
-              <span className="text-sm font-bold text-slate-700">浏览器 Profile 路径</span>
-              <input
-                value={settings.chatgptWebUserDataDir}
-                onChange={(event) => update("chatgptWebUserDataDir", event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
-              />
-            </label>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                <span>
-                  <span className="block text-sm font-black text-slate-800">无头模式</span>
-                  <span className="mt-1 block text-xs font-bold text-slate-400">登录阶段会强制显示浏览器。</span>
-                </span>
-                <input
-                  checked={settings.chatgptWebHeadless}
-                  onChange={(event) => update("chatgptWebHeadless", event.target.checked)}
-                  type="checkbox"
-                  className="h-5 w-5 rounded border-slate-300 text-slate-950"
-                />
-              </label>
-              <label className="block">
-                <span className="text-sm font-bold text-slate-700">超时时间（秒）</span>
-                <input
-                  value={settings.chatgptWebTimeoutSeconds}
-                  onChange={(event) => update("chatgptWebTimeoutSeconds", Number(event.target.value))}
-                  type="number"
-                  min={30}
-                  max={900}
-                  className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
-                />
-              </label>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <button
-                type="button"
-                onClick={openChatGPTLoginBrowser}
-                disabled={isOpeningChatGPT}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 shadow-card disabled:opacity-60"
-              >
-                {isOpeningChatGPT ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
-                打开登录浏览器
-              </button>
-              <button
-                type="button"
-                onClick={checkChatGPTStatus}
-                disabled={isCheckingChatGPT}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white shadow-card disabled:opacity-60"
-              >
-                {isCheckingChatGPT ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                检测登录状态
-              </button>
-            </div>
-          </div>
-          {chatgptMessage ? <p className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{chatgptMessage}</p> : null}
-          {chatgptError ? <p className="mt-4 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">{chatgptError}</p> : null}
-        </div>
-      </section>
+          <Card className="admin-td-card" title="网页版 ChatGPT">
+            <Form labelAlign="top">
+              <Form.FormItem label="启用 ChatGPT Web">
+                <Switch value={settings.chatgptWebEnabled} onChange={(value) => update("chatgptWebEnabled", Boolean(value))} />
+              </Form.FormItem>
+              <SettingInput label="浏览器 Profile 路径" value={settings.chatgptWebUserDataDir} onChange={(value) => update("chatgptWebUserDataDir", value)} />
+              <Form.FormItem label="无头模式">
+                <Switch value={settings.chatgptWebHeadless} onChange={(value) => update("chatgptWebHeadless", Boolean(value))} />
+              </Form.FormItem>
+              <Form.FormItem label="超时时间（秒）">
+                <InputNumber value={settings.chatgptWebTimeoutSeconds} min={30} max={900} onChange={(value) => update("chatgptWebTimeoutSeconds", Number(value || 120))} />
+              </Form.FormItem>
+              <Space>
+                <Button variant="outline" loading={isOpeningChatGPT} onClick={() => void openChatGPTLoginBrowser()}>打开登录浏览器</Button>
+                <Button theme="primary" loading={isCheckingChatGPT} onClick={() => void checkChatGPTStatus()}>检测登录状态</Button>
+              </Space>
+            </Form>
+            {chatgptMessage ? <Alert className="mt-4" theme="success" message={chatgptMessage} /> : null}
+            {chatgptError ? <Alert className="mt-4" theme="error" message={chatgptError} /> : null}
+          </Card>
+        </section>
 
-      <aside className="space-y-5">
-        <div className="rounded-[28px] border border-slate-200 bg-white/88 p-5 shadow-card backdrop-blur">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-400">Health</p>
-              <h2 className="mt-2 text-2xl font-black text-slate-950">配置检测</h2>
-            </div>
-            <button
-              type="button"
-              onClick={logout}
-              disabled={isLoggingOut}
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600 shadow-card disabled:opacity-60"
-            >
-              {isLoggingOut ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <LogOut className="h-3.5 w-3.5" />}
-              退出
-            </button>
-          </div>
-          <div className="mt-5 grid gap-3">
-            {settings.diagnostics.map((item) => {
-              const visual = statusStyle(item.status);
-              return (
-                <div key={item.key} className={`rounded-2xl border px-4 py-3 ${visual.card}`}>
-                  <div className="flex items-center gap-2 text-sm font-black">
-                    {visual.icon}
-                    {item.label}
-                  </div>
-                  <p className="mt-2 text-xs font-bold leading-5 opacity-80">{item.message}</p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        <aside className="admin-td-grid">
+          <Card className="admin-td-card" title="配置检测" actions={<Button variant="outline" loading={isLoggingOut} onClick={() => void logout()}>退出</Button>}>
+            <Space direction="vertical" style={{ width: "100%" }}>
+              {settings.diagnostics.map((item) => (
+                <Alert
+                  key={item.key}
+                  theme={diagnosticTheme(item.status)}
+                  message={
+                    <div>
+                      <div className="mb-1 flex items-center gap-2">
+                        <Tag theme={diagnosticTheme(item.status)} variant="light">{item.status}</Tag>
+                        <strong>{item.label}</strong>
+                      </div>
+                      <p className="text-xs leading-5">{item.message}</p>
+                    </div>
+                  }
+                />
+              ))}
+            </Space>
+          </Card>
 
-        <div className="rounded-[28px] border border-slate-200 bg-white/88 p-5 shadow-card backdrop-blur">
-          <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-400">DeepSeek</p>
-          <h2 className="mt-2 text-2xl font-black text-slate-950">润色接口</h2>
-          <div className="mt-5 grid gap-4">
-            <label className="block">
-              <span className="text-sm font-bold text-slate-700">Base URL</span>
-              <input
-                value={settings.deepseekBaseUrl}
-                onChange={(event) => update("deepseekBaseUrl", event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
-              />
-            </label>
-            <label className="block">
-              <span className="text-sm font-bold text-slate-700">模型</span>
-              <input
-                value={settings.deepseekModel}
-                onChange={(event) => update("deepseekModel", event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
-              />
-            </label>
-            <label className="block">
-              <span className="text-sm font-bold text-slate-700">DeepSeek API Key</span>
-              <input
+          <Card className="admin-td-card" title="DeepSeek 润色接口">
+            <Form labelAlign="top">
+              <SettingInput label="Base URL" value={settings.deepseekBaseUrl} onChange={(value) => update("deepseekBaseUrl", value)} />
+              <SettingInput label="模型" value={settings.deepseekModel} onChange={(value) => update("deepseekModel", value)} />
+              <SettingInput
+                label="DeepSeek API Key"
                 value={deepseekApiKey}
-                onChange={(event) => setDeepseekApiKey(event.target.value)}
-                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-ocean-400"
+                onChange={setDeepseekApiKey}
                 placeholder={settings.deepseekApiKeyConfigured ? "已配置，留空表示不修改" : "未配置"}
                 type="password"
               />
-            </label>
-            <label className="block">
-              <span className="text-sm font-bold text-slate-700">润色系统提示词</span>
-              <textarea
-                value={settings.deepseekPolishPrompt}
-                onChange={(event) => update("deepseekPolishPrompt", event.target.value)}
-                rows={9}
-                className="mt-2 w-full resize-y rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 outline-none focus:border-ocean-400"
-              />
-              <span className="mt-2 block text-xs font-bold leading-5 text-slate-400">
-                点击前台“AI 润色”时，会把这里的提示词和用户输入一起提交给 DeepSeek。
-              </span>
-            </label>
-          </div>
-          {message ? <p className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{message}</p> : null}
-          {error ? <p className="mt-4 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">{error}</p> : null}
-          <button
-            disabled={isSaving}
-            className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white shadow-card disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              <SettingInput label="润色系统提示词" value={settings.deepseekPolishPrompt} onChange={(value) => update("deepseekPolishPrompt", value)} textarea minRows={9} />
+            </Form>
+          </Card>
+
+          <Button theme="primary" size="large" type="submit" loading={isSaving} block>
             {isSaving ? "保存中" : "保存配置"}
-          </button>
-        </div>
-      </aside>
+          </Button>
+        </aside>
+      </div>
     </form>
+  );
+}
+
+function SettingInput({
+  label,
+  value,
+  onChange,
+  placeholder,
+  textarea,
+  type,
+  minRows = 3,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  textarea?: boolean;
+  type?: string;
+  minRows?: number;
+}) {
+  return (
+    <Form.FormItem label={label}>
+      {textarea ? (
+        <Textarea value={value} placeholder={placeholder} autosize={{ minRows, maxRows: Math.max(minRows + 2, 6) }} onChange={(nextValue) => onChange(String(nextValue))} />
+      ) : (
+        <Input value={value} type={type} placeholder={placeholder} onChange={(nextValue) => onChange(String(nextValue))} />
+      )}
+    </Form.FormItem>
   );
 }

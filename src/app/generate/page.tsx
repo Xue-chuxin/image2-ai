@@ -1,4 +1,5 @@
 import { GenerateWorkbench } from "@/components/generate-workbench";
+import { BlurText, SpotlightCard } from "@/components/front/react-bits";
 
 function toArray(value?: string | string[]) {
   if (!value) {
@@ -33,13 +34,13 @@ export default async function GeneratePage({
 
   return (
     <main className="space-y-5 pb-28">
-      <section className="rounded-[28px] border border-slate-200 bg-white/86 p-5 shadow-card backdrop-blur">
+      <SpotlightCard className="p-5" spotlightColor="rgba(14, 165, 233, 0.16)">
         <p className="text-xs font-bold uppercase tracking-[0.24em] text-slate-400">Create</p>
-        <h1 className="mt-2 text-3xl font-black text-slate-950">创作工作台</h1>
+        <BlurText as="h1" text="创作工作台" className="mt-2 text-3xl font-black text-slate-950" delay={0.04} />
         <p className="mt-2 text-sm leading-6 text-slate-500">
           先用 DeepSeek 整理画面描述，再提交图片生成任务。正式版首发先开放文字生图。
         </p>
-      </section>
+      </SpotlightCard>
       <GenerateWorkbench initialPrompt={initialPrompt} initialReferenceImages={initialReferenceImages.filter((image) => image.id)} referenceImagesEnabled={false} />
     </main>
   );

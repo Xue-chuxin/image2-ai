@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, BookOpen, CheckCircle2 } from "lucide-react";
 import { GenerateComposer } from "@/components/generate-composer";
+import { AnimatedContent, BlurText, FloatingActionBeam, GlassSurface, SpotlightCard, SplitText } from "@/components/front/react-bits";
 import { HomeWorksShowcase } from "@/components/home-works-showcase";
 import { GALLERY_CATEGORIES, listPublicGalleryImages, type GalleryImageView } from "@/lib/gallery";
 import { promptCards } from "@/lib/mock-data";
@@ -21,26 +22,44 @@ export default async function HomePage() {
     galleryError = "作品库暂时不可用，请检查数据库服务。";
   }
 
+  const heroWorks = publicWorks.slice(0, 3);
+  const primaryHeroWork = heroWorks[0];
+  const secondaryHeroWork = heroWorks[1];
+  const tertiaryHeroWork = heroWorks[2];
+  const heroCounter = publicWorks.length > 0 ? `${Math.min(heroWorks.length, publicWorks.length).toString().padStart(2, "0")} / ${publicWorks.length.toString().padStart(2, "0")}` : "00 / 00";
+
   return (
     <main className="space-y-8 pb-28">
-      <section className="grid gap-5 lg:grid-cols-[0.88fr_1.12fr] lg:items-stretch">
-        <div className="relative overflow-hidden rounded-[30px] border border-slate-200 bg-white/88 px-6 py-7 text-slate-950 shadow-card backdrop-blur animate-float-in md:px-8 md:py-9">
-          <div className="absolute -right-24 top-10 h-72 w-72 rounded-full bg-[#e6eef6] blur-3xl" />
+      <section className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr] lg:items-stretch">
+        <GlassSurface className="px-6 py-7 text-slate-950 md:px-8 md:py-9">
+          <div className="absolute -right-24 top-10 h-72 w-72 rounded-full bg-sky-100/80 blur-3xl" />
           <div className="relative flex h-full flex-col gap-5">
             <div className="space-y-4">
-              <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-500">
+              <AnimatedContent className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/72 px-3 py-1.5 text-xs font-bold text-slate-500 backdrop-blur">
                 <BookOpen className="h-3.5 w-3.5" />
                 图片工作台 · 作品灵感
-              </div>
+              </AnimatedContent>
               <div className="space-y-4">
-                <h1 className="max-w-2xl font-serif text-4xl font-black leading-[1.02] tracking-[-0.06em] text-slate-950 md:text-6xl">把描述整理成一张能用的图</h1>
+                <BlurText
+                  as="h1"
+                  text="把描述整理成一张能用的图"
+                  className="max-w-2xl font-serif text-4xl font-black leading-[1.02] text-slate-950 md:text-6xl"
+                  by="letters"
+                  delay={0.012}
+                />
+                <SplitText
+                  as="p"
+                  text="写描述、整理提示词、生成图片、管理历史。让在线生图更像一个安静但有生命力的创作 App。"
+                  className="max-w-xl text-base leading-7 text-slate-500"
+                  delay={0.006}
+                />
                 <p className="max-w-xl text-base leading-7 text-slate-500">
                   一个更像 App 的在线图片工作台：写描述、整理提示词、生成图片、管理历史。页面尽量保持安静，把注意力留给画面本身。
                 </p>
               </div>
             </div>
 
-            <div className="relative min-h-[25rem] flex-1 overflow-hidden rounded-[2.2rem] border border-white/75 bg-[#edf3f7] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_26px_76px_rgba(42,65,92,0.14)]">
+            <SpotlightCard className="min-h-[25rem] flex-1 p-4" spotlightColor="rgba(56, 189, 248, 0.22)">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_12%,rgba(255,255,255,0.98),transparent_26%),radial-gradient(circle_at_86%_78%,rgba(176,201,220,0.65),transparent_40%)]" />
 
               <div className="relative z-[1] flex h-full min-h-[24rem] flex-col gap-3">
@@ -49,57 +68,81 @@ export default async function HomePage() {
                     Selected works
                   </span>
                   <span className="font-mono text-[0.68rem] font-black text-slate-400">
-                    03 / 18
+                    {heroCounter}
                   </span>
                 </div>
 
                 <div className="grid flex-1 gap-3 sm:grid-cols-[1.34fr_0.86fr]">
                   <figure className="relative min-h-[18rem] overflow-hidden rounded-[1.75rem] border border-white/85 bg-slate-200 shadow-[0_24px_62px_rgba(31,52,76,0.18)]">
-                    <img
-                      src="https://picsum.photos/seed/image-studio-mist/920/1120"
-                      alt="蓝灰色调的湖面与山雾作品预览"
-                      className="h-full w-full object-cover grayscale-[18%] saturate-[0.78] contrast-[0.96]"
-                    />
+                    {primaryHeroWork?.url ? (
+                      <img
+                        src={primaryHeroWork.thumbnailUrl || primaryHeroWork.url}
+                        alt={primaryHeroWork.title || "公开作品预览"}
+                        className="h-full w-full object-cover grayscale-[12%] saturate-[0.82] contrast-[0.98]"
+                      />
+                    ) : (
+                      <div className="h-full w-full bg-[radial-gradient(circle_at_28%_24%,rgba(255,255,255,0.92),transparent_24%),linear-gradient(135deg,#dbeafe,#f8fafc_52%,#e2e8f0)]" />
+                    )}
                     <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),transparent_42%,rgba(5,13,25,0.58))]" />
                     <figcaption className="absolute bottom-5 left-5 max-w-[15rem] text-white">
                       <p className="text-[0.64rem] font-black uppercase tracking-[0.32em] text-white/68">
                         Gallery 01
                       </p>
                       <p className="mt-2 text-3xl font-black tracking-[-0.06em]">
-                        雨后山谷
+                        {primaryHeroWork?.title || "等待第一张作品"}
                       </p>
                       <p className="mt-2 max-w-[12rem] text-xs font-semibold leading-5 text-white/70">
-                        山雾、湿冷空气和低饱和色调。
+                        {primaryHeroWork?.summary || "公开作品会自动成为首页的视觉焦点。"}
                       </p>
                     </figcaption>
                   </figure>
 
                   <div className="grid gap-3 sm:grid-rows-[1fr_0.92fr]">
                     <figure className="overflow-hidden rounded-[1.55rem] border border-white/85 bg-white/72 p-1.5 shadow-[0_18px_44px_rgba(31,52,76,0.12)] backdrop-blur">
-                      <img
-                        src="https://picsum.photos/seed/image-studio-portrait/420/560"
-                        alt="柔和自然光人像作品预览"
-                        className="h-40 w-full rounded-[1.25rem] object-cover grayscale-[12%] saturate-[0.74] sm:h-full"
-                      />
+                      {secondaryHeroWork?.url ? (
+                        <img
+                          src={secondaryHeroWork.thumbnailUrl || secondaryHeroWork.url}
+                          alt={secondaryHeroWork.title || "公开作品预览"}
+                          className="h-40 w-full rounded-[1.25rem] object-cover grayscale-[10%] saturate-[0.78] sm:h-full"
+                        />
+                      ) : (
+                        <div className="h-40 w-full rounded-[1.25rem] bg-[linear-gradient(135deg,#eff6ff,#ffffff,#e0f2fe)] sm:h-full" />
+                      )}
                     </figure>
 
                     <figure className="overflow-hidden rounded-[1.55rem] border border-white/85 bg-white/76 p-1.5 shadow-[0_18px_44px_rgba(31,52,76,0.12)] backdrop-blur">
-                      <img
-                        src="https://picsum.photos/seed/image-studio-still-life/520/390"
-                        alt="静物产品布景作品预览"
-                        className="h-28 w-full rounded-[1.25rem] object-cover grayscale-[10%] saturate-[0.74]"
-                      />
+                      {tertiaryHeroWork?.url ? (
+                        <img
+                          src={tertiaryHeroWork.thumbnailUrl || tertiaryHeroWork.url}
+                          alt={tertiaryHeroWork.title || "公开作品预览"}
+                          className="h-28 w-full rounded-[1.25rem] object-cover grayscale-[8%] saturate-[0.78]"
+                        />
+                      ) : (
+                        <div className="h-28 w-full rounded-[1.25rem] bg-[radial-gradient(circle_at_70%_20%,#ffffff,transparent_28%),linear-gradient(135deg,#e2e8f0,#f8fafc,#dbeafe)]" />
+                      )}
                       <figcaption className="flex items-center justify-between px-3 py-2 text-xs font-bold text-slate-600">
-                        <span>静物布景</span>
-                        <span className="font-mono text-slate-400">3:4</span>
+                        <span>{tertiaryHeroWork?.title || "公开作品"}</span>
+                        <span className="font-mono text-slate-400">{tertiaryHeroWork?.ratio || "3:4"}</span>
                       </figcaption>
                     </figure>
                   </div>
                 </div>
               </div>
+            </SpotlightCard>
+
+            <div className="flex flex-wrap gap-3">
+              <FloatingActionBeam>
+                <Link href="/generate" className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-card transition hover:-translate-y-0.5">
+                  开始创作
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </FloatingActionBeam>
+              <Link href="/prompts" className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/76 px-5 py-3 text-sm font-black text-slate-700 shadow-card backdrop-blur transition hover:-translate-y-0.5">
+                浏览灵感
+              </Link>
             </div>
           </div>
-        </div>
+        </GlassSurface>
 
         <GenerateComposer compact />
       </section>
@@ -111,7 +154,7 @@ export default async function HomePage() {
         galleryError={galleryError}
       />
 
-      <section className="rounded-[30px] border border-slate-200 bg-white/88 p-5 shadow-card backdrop-blur md:p-6">
+      <SpotlightCard className="p-5 md:p-6">
         <div className="mb-5 flex items-center justify-between gap-4">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">How it works</p>
@@ -134,7 +177,7 @@ export default async function HomePage() {
             </div>
           ))}
         </div>
-      </section>
+      </SpotlightCard>
     </main>
   );
 }

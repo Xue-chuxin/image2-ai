@@ -1,8 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AlertCircle, CheckCircle2, Clock3, Loader2, RefreshCw, RotateCcw, Search, XCircle } from "lucide-react";
-
+import { Alert, Button, Card, Form, Input, Select, Space, Statistic, Table, Tag } from "tdesign-react";
 import type { AdminGenerationJobView } from "@/lib/generation-jobs";
 
 type JobsResponse = {
@@ -26,66 +25,34 @@ const statusOptions = [
 const activeStatuses = new Set(["QUEUED", "POLISHING", "GENERATING", "UPLOADING"]);
 
 function statusText(status: string) {
-  if (status === "COMPLETED") {
-    return "已完成";
-  }
-  if (status === "FAILED") {
-    return "失败";
-  }
-  if (status === "GENERATING") {
-    return "生成中";
-  }
-  if (status === "POLISHING") {
-    return "润色中";
-  }
-  if (status === "UPLOADING") {
-    return "保存中";
-  }
-  if (status === "QUEUED") {
-    return "排队中";
-  }
-  if (status === "CANCELED") {
-    return "已取消";
-  }
-  return status;
+  return statusOptions.find((item) => item.value === status)?.label || status;
 }
 
-function statusClass(status: string) {
-  if (status === "COMPLETED") {
-    return "border-emerald-100 bg-emerald-50 text-emerald-700";
-  }
-  if (status === "FAILED") {
-    return "border-red-100 bg-red-50 text-red-600";
-  }
-  if (activeStatuses.has(status)) {
-    return "border-blue-100 bg-blue-50 text-blue-700";
-  }
-  return "border-slate-200 bg-slate-50 text-slate-500";
+function statusTheme(status: string): "success" | "danger" | "primary" | "default" {
+  if (status === "COMPLETED") return "success";
+  if (status === "FAILED") return "danger";
+  if (activeStatuses.has(status)) return "primary";
+  return "default";
 }
 
 function formatDate(value: string) {
-  return new Date(value).toLocaleString("zh-CN", {
-    hour12: false,
-  });
+  return new Date(value).toLocaleString("zh-CN", { hour12: false });
 }
 
 function summarizePrompt(value: string) {
-  return value.length > 96 ? `${value.slice(0, 96)}...` : value;
+  return value.length > 92 ? `${value.slice(0, 92)}...` : value;
 }
 
 function queueText(job: AdminGenerationJobView) {
   if (job.provider !== "chatgpt_web") {
     return "";
   }
-
   if (job.status === "GENERATING") {
     return "ChatGPT Web 正在执行";
   }
-
   if (job.status === "QUEUED") {
     return job.queueWaitingCount > 0 ? `队列 #${job.queuePosition}，前面 ${job.queueWaitingCount} 个` : "队列 #1，即将开始";
   }
-
   return "";
 }
 
@@ -94,7 +61,6 @@ async function readJobsResponse(response: Response): Promise<JobsResponse> {
   if (contentType.includes("application/json")) {
     return (await response.json()) as JobsResponse;
   }
-
   const text = await response.text();
   return {
     ok: false,
@@ -111,47 +77,38 @@ export function AdminJobsDashboard({ initialJobs }: { initialJobs: AdminGenerati
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  const stats = useMemo(() => {
-    return {
+  const stats = useMemo(
+    () => ({
       total: jobs.length,
       running: jobs.filter((job) => activeStatuses.has(job.status)).length,
       completed: jobs.filter((job) => job.status === "COMPLETED").length,
       failed: jobs.filter((job) => job.status === "FAILED").length,
-    };
-  }, [jobs]);
+    }),
+    [jobs],
+  );
 
   function replaceJob(updatedJob: AdminGenerationJobView) {
     setJobs((current) => current.map((job) => (job.id === updatedJob.id ? updatedJob : job)));
   }
 
-  function buildJobsUrl() {
+  function buildJobsUrl(nextStatus = status, nextQuery = query) {
     const params = new URLSearchParams();
-    if (status) {
-      params.set("status", status);
-    }
-    if (query.trim()) {
-      params.set("q", query.trim());
-    }
-
+    if (nextStatus) params.set("status", nextStatus);
+    if (nextQuery.trim()) params.set("q", nextQuery.trim());
     const suffix = params.toString();
     return suffix ? `/api/admin/generation/jobs?${suffix}` : "/api/admin/generation/jobs";
   }
 
-  async function refreshJobs() {
+  async function refreshJobs(nextStatus = status, nextQuery = query) {
     setIsRefreshing(true);
     setMessage("");
     setError("");
-
     try {
-      const response = await fetch(buildJobsUrl(), {
-        method: "GET",
-      });
+      const response = await fetch(buildJobsUrl(nextStatus, nextQuery), { method: "GET" });
       const data = await readJobsResponse(response);
-
       if (!response.ok || !data.ok || !data.jobs) {
         throw new Error(data.error || "刷新任务失败");
       }
-
       setJobs(data.jobs);
       setMessage("任务列表已刷新。");
     } catch (caughtError) {
@@ -165,17 +122,12 @@ export function AdminJobsDashboard({ initialJobs }: { initialJobs: AdminGenerati
     setBusyJobId(jobId);
     setMessage("");
     setError("");
-
     try {
-      const response = await fetch(`/api/admin/generation/jobs/${jobId}`, {
-        method: "GET",
-      });
+      const response = await fetch(`/api/admin/generation/jobs/${jobId}`, { method: "GET" });
       const data = await readJobsResponse(response);
-
       if (!response.ok || !data.ok || !data.job) {
         throw new Error(data.error || "刷新单个任务失败");
       }
-
       replaceJob(data.job);
       setMessage("单个任务已刷新。");
     } catch (caughtError) {
@@ -189,17 +141,12 @@ export function AdminJobsDashboard({ initialJobs }: { initialJobs: AdminGenerati
     setBusyJobId(jobId);
     setMessage("");
     setError("");
-
     try {
-      const response = await fetch(`/api/admin/generation/jobs/${jobId}/retry`, {
-        method: "POST",
-      });
+      const response = await fetch(`/api/admin/generation/jobs/${jobId}/retry`, { method: "POST" });
       const data = await readJobsResponse(response);
-
       if (!response.ok || !data.ok || !data.job) {
         throw new Error(data.error || "重试任务失败");
       }
-
       replaceJob(data.job);
       setMessage("任务已重新加入队列。");
     } catch (caughtError) {
@@ -213,17 +160,12 @@ export function AdminJobsDashboard({ initialJobs }: { initialJobs: AdminGenerati
     setBusyJobId(jobId);
     setMessage("");
     setError("");
-
     try {
-      const response = await fetch(`/api/admin/generation/jobs/${jobId}/fail`, {
-        method: "POST",
-      });
+      const response = await fetch(`/api/admin/generation/jobs/${jobId}/fail`, { method: "POST" });
       const data = await readJobsResponse(response);
-
       if (!response.ok || !data.ok || !data.job) {
         throw new Error(data.error || "标记失败失败");
       }
-
       replaceJob(data.job);
       setMessage("任务已标记失败。");
     } catch (caughtError) {
@@ -233,170 +175,148 @@ export function AdminJobsDashboard({ initialJobs }: { initialJobs: AdminGenerati
     }
   }
 
-  return (
-    <section className="space-y-5">
-      <div className="grid gap-3 md:grid-cols-4">
-        <div className="rounded-[24px] border border-slate-200 bg-white/88 p-4 shadow-card backdrop-blur">
-          <div className="flex items-center gap-2 text-sm font-black text-slate-500">
-            <Clock3 className="h-4 w-4" />
-            当前列表
-          </div>
-          <p className="mt-3 text-3xl font-black text-slate-950">{stats.total}</p>
-        </div>
-        <div className="rounded-[24px] border border-blue-100 bg-blue-50/80 p-4 shadow-card backdrop-blur">
-          <div className="flex items-center gap-2 text-sm font-black text-blue-600">
-            <Loader2 className="h-4 w-4" />
-            进行中
-          </div>
-          <p className="mt-3 text-3xl font-black text-blue-700">{stats.running}</p>
-        </div>
-        <div className="rounded-[24px] border border-emerald-100 bg-emerald-50/80 p-4 shadow-card backdrop-blur">
-          <div className="flex items-center gap-2 text-sm font-black text-emerald-600">
-            <CheckCircle2 className="h-4 w-4" />
-            已完成
-          </div>
-          <p className="mt-3 text-3xl font-black text-emerald-700">{stats.completed}</p>
-        </div>
-        <div className="rounded-[24px] border border-red-100 bg-red-50/80 p-4 shadow-card backdrop-blur">
-          <div className="flex items-center gap-2 text-sm font-black text-red-600">
-            <AlertCircle className="h-4 w-4" />
-            失败
-          </div>
-          <p className="mt-3 text-3xl font-black text-red-600">{stats.failed}</p>
-        </div>
-      </div>
-
-      <div className="rounded-[28px] border border-slate-200 bg-white/88 p-5 shadow-card backdrop-blur">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-400">Recent</p>
-            <h2 className="mt-2 text-2xl font-black text-slate-950">最近生成任务</h2>
-          </div>
-          <button
-            type="button"
-            onClick={refreshJobs}
-            disabled={isRefreshing}
-            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-600 shadow-card disabled:opacity-60"
-          >
-            {isRefreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-            刷新列表
-          </button>
-        </div>
-
-        <div className="mt-5 grid gap-3 md:grid-cols-[180px_1fr_auto]">
-          <select
-            value={status}
-            onChange={(event) => setStatus(event.target.value)}
-            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-600 outline-none focus:border-ocean-400"
-          >
-            {statusOptions.map((option) => (
-              <option key={option.value || "all"} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="搜索用户邮箱、昵称或任务 ID"
-              className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm font-bold text-slate-600 outline-none focus:border-ocean-400"
-            />
-          </div>
-          <button
-            type="button"
-            onClick={refreshJobs}
-            disabled={isRefreshing}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-card disabled:opacity-60"
-          >
-            筛选
-          </button>
-        </div>
-
-        {message ? <p className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{message}</p> : null}
-        {error ? <p className="mt-4 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">{error}</p> : null}
-
-        <div className="mt-5 grid min-w-0 gap-3">
-          {jobs.map((job) => (
-            <article key={job.id} className="min-w-0 overflow-hidden rounded-[24px] border border-slate-200 bg-white/82 p-4 shadow-card">
-              <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className={`rounded-full border px-3 py-1 text-xs font-black ${statusClass(job.status)}`}>{statusText(job.status)}</span>
-                    {job.isStale ? <span className="rounded-full border border-amber-100 bg-amber-50 px-3 py-1 text-xs font-black text-amber-700">疑似卡住，可刷新后重试或标记失败</span> : null}
-                    <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-black text-slate-500">{job.provider}</span>
-                    {queueText(job) ? (
-                      <span className="rounded-full border border-amber-100 bg-amber-50 px-3 py-1 text-xs font-black text-amber-700">
-                        {queueText(job)}
-                      </span>
-                    ) : null}
-                    <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-black text-slate-500">
-                      {job.creditCost} 积分
-                    </span>
-                    <span className="text-xs font-bold text-slate-400">{formatDate(job.createdAt)}</span>
-                  </div>
-                  <h3 className="mt-3 break-words text-base font-black leading-6 text-slate-950">{summarizePrompt(job.promptZh)}</h3>
-                  <p className="mt-2 break-words text-xs font-bold leading-5 text-slate-500 [overflow-wrap:anywhere]">
-                    用户：{job.user.email || job.user.displayName || job.user.id} · 任务：{job.id} · 比例：{job.ratio} · 质量：{job.quality} · 张数：{job.imageCount}
-                  </p>
-                  {job.errorMessage ? (
-                    <p className="mt-3 max-w-full overflow-hidden break-words rounded-2xl border border-red-100 bg-red-50 px-3 py-2 text-xs font-bold leading-5 text-red-600 [overflow-wrap:anywhere]">
-                      {job.errorMessage}
-                    </p>
-                  ) : null}
-                  {job.images.length ? (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {job.images.map((image) => (
-                        <img key={image.id} src={image.url} alt={job.promptZh} className="h-20 w-20 rounded-2xl border border-slate-100 object-cover" />
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-                <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto">
-                  <button
-                    type="button"
-                    onClick={() => refreshSingleJob(job.id)}
-                    disabled={busyJobId === job.id}
-                    className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-600 shadow-card disabled:opacity-60"
-                  >
-                    {busyJobId === job.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                    刷新
-                  </button>
-                  {job.status === "FAILED" || job.status === "CANCELED" ? (
-                    <button
-                      type="button"
-                      onClick={() => retryJob(job.id)}
-                      disabled={busyJobId === job.id}
-                      className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-card disabled:opacity-60"
-                    >
-                      {busyJobId === job.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
-                      重新执行
-                    </button>
-                  ) : null}
-                  {activeStatuses.has(job.status) ? (
-                    <button
-                      type="button"
-                      onClick={() => failJob(job.id)}
-                      disabled={busyJobId === job.id}
-                      className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-2xl border border-red-100 bg-red-50 px-4 py-2 text-xs font-black text-red-600 shadow-card disabled:opacity-60"
-                    >
-                      {busyJobId === job.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
-                      标记失败
-                    </button>
-                  ) : null}
-                </div>
-              </div>
-            </article>
-          ))}
-
-          {!jobs.length ? (
-            <div className="rounded-[24px] border border-dashed border-slate-200 bg-white/70 p-8 text-center text-sm font-bold text-slate-400">
-              暂无生成任务。
-            </div>
+  const columns = [
+    {
+      colKey: "status",
+      title: "状态",
+      width: 170,
+      cell: ({ row }: { row: AdminGenerationJobView }) => (
+        <Space direction="vertical" size={4}>
+          <Tag theme={statusTheme(row.status)} variant="light">
+            {statusText(row.status)}
+          </Tag>
+          {row.isStale ? (
+            <Tag theme="warning" variant="light">
+              疑似卡住
+            </Tag>
           ) : null}
+          {queueText(row) ? <span className="text-xs text-slate-500">{queueText(row)}</span> : null}
+        </Space>
+      ),
+    },
+    {
+      colKey: "promptZh",
+      title: "任务",
+      minWidth: 360,
+      cell: ({ row }: { row: AdminGenerationJobView }) => (
+        <div>
+          <p className="font-black text-slate-900">{summarizePrompt(row.promptZh)}</p>
+          <p className="mt-1 break-all text-xs text-slate-400">{row.id}</p>
+          {row.errorMessage ? <p className="mt-2 text-xs font-bold text-red-500">{row.errorMessage}</p> : null}
         </div>
+      ),
+    },
+    {
+      colKey: "provider",
+      title: "Provider",
+      width: 180,
+      cell: ({ row }: { row: AdminGenerationJobView }) => (
+        <Space direction="vertical" size={4}>
+          <Tag>{row.provider}</Tag>
+          <span className="text-xs text-slate-500">{row.model || "未返回模型"}</span>
+        </Space>
+      ),
+    },
+    {
+      colKey: "meta",
+      title: "参数",
+      width: 170,
+      cell: ({ row }: { row: AdminGenerationJobView }) => (
+        <div className="text-xs leading-5 text-slate-500">
+          <p>{row.ratio} · {row.quality}</p>
+          <p>{row.imageCount} 张 · {row.creditCost} 积分</p>
+        </div>
+      ),
+    },
+    {
+      colKey: "images",
+      title: "图片",
+      width: 150,
+      cell: ({ row }: { row: AdminGenerationJobView }) => (
+        <div className="flex gap-1">
+          {row.images.slice(0, 3).map((image) => (
+            <img key={image.id} src={image.url} alt={row.promptZh} className="h-12 w-12 rounded object-cover" />
+          ))}
+          {!row.images.length ? <span className="text-xs text-slate-400">暂无</span> : null}
+        </div>
+      ),
+    },
+    {
+      colKey: "createdAt",
+      title: "时间",
+      width: 190,
+      cell: ({ row }: { row: AdminGenerationJobView }) => <span className="text-xs text-slate-500">{formatDate(row.createdAt)}</span>,
+    },
+    {
+      colKey: "actions",
+      title: "操作",
+      fixed: "right" as const,
+      width: 230,
+      cell: ({ row }: { row: AdminGenerationJobView }) => (
+        <Space size="small">
+          <Button variant="outline" size="small" loading={busyJobId === row.id} onClick={() => void refreshSingleJob(row.id)}>
+            刷新
+          </Button>
+          {row.status === "FAILED" || row.isStale ? (
+            <Button theme="primary" size="small" loading={busyJobId === row.id} onClick={() => void retryJob(row.id)}>
+              重试
+            </Button>
+          ) : null}
+          {activeStatuses.has(row.status) || row.isStale ? (
+            <Button theme="danger" variant="outline" size="small" loading={busyJobId === row.id} onClick={() => void failJob(row.id)}>
+              标失败
+            </Button>
+          ) : null}
+        </Space>
+      ),
+    },
+  ];
+
+  return (
+    <section className="admin-td-grid">
+      <div className="admin-td-stat-grid">
+        <Card className="admin-td-card"><Statistic title="当前列表" value={stats.total} /></Card>
+        <Card className="admin-td-card"><Statistic title="进行中" value={stats.running} /></Card>
+        <Card className="admin-td-card"><Statistic title="已完成" value={stats.completed} /></Card>
+        <Card className="admin-td-card"><Statistic title="失败" value={stats.failed} /></Card>
       </div>
+
+      <Card className="admin-td-card" title="最近生成任务">
+        <Form layout="inline" className="mb-4">
+          <Form.FormItem label="状态">
+            <Select
+              value={status}
+              options={statusOptions}
+              style={{ width: 180 }}
+              onChange={(value) => {
+                const nextStatus = String(value);
+                setStatus(nextStatus);
+                void refreshJobs(nextStatus, query);
+              }}
+            />
+          </Form.FormItem>
+          <Form.FormItem label="搜索">
+            <Input
+              value={query}
+              clearable
+              placeholder="任务 ID、用户邮箱、提示词"
+              style={{ width: 320 }}
+              onChange={(value) => setQuery(String(value))}
+              onEnter={() => void refreshJobs()}
+            />
+          </Form.FormItem>
+          <Form.FormItem>
+            <Button theme="primary" loading={isRefreshing} onClick={() => void refreshJobs()}>
+              刷新任务
+            </Button>
+          </Form.FormItem>
+        </Form>
+
+        {message ? <Alert className="mb-3" theme="success" message={message} /> : null}
+        {error ? <Alert className="mb-3" theme="error" message={error} /> : null}
+
+        <Table rowKey="id" data={jobs} columns={columns} hover stripe bordered tableLayout="auto" empty="暂无任务" />
+      </Card>
     </section>
   );
 }

@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { HistoryJobActions } from "@/components/history-job-actions";
+import { BlurText, GlassSurface, SpotlightCard } from "@/components/front/react-bits";
 import { getUserSession } from "@/lib/auth";
 import { listRecentGenerationJobs, type GenerationJobView } from "@/lib/generation-jobs";
 
@@ -85,7 +86,7 @@ function HistoryItem({ job }: { job: GenerationJobView }) {
   const firstImage = job.images[0];
 
   return (
-    <article className="history-card">
+    <SpotlightCard className="history-card">
       <div className="history-image">
         {firstImage ? (
           <Image src={firstImage.url} alt={job.promptZh} width={640} height={640} />
@@ -145,7 +146,7 @@ function HistoryItem({ job }: { job: GenerationJobView }) {
           referenceImages={job.referenceImages}
         />
       </div>
-    </article>
+    </SpotlightCard>
   );
 }
 
@@ -155,18 +156,18 @@ export default async function HistoryPage() {
   if (!session) {
     return (
       <main className="history-page">
-        <section className="section-heading">
+        <GlassSurface className="section-heading">
           <span className="eyebrow">History</span>
-          <h1>生成历史</h1>
+          <BlurText as="h1" text="生成历史" delay={0.035} />
           <p>登录普通用户账号后，只会看到你自己的生图任务和图片结果。</p>
-        </section>
-        <section className="empty-state">
+        </GlassSurface>
+        <SpotlightCard className="empty-state">
           <span>请先登录</span>
           <p>用户历史记录已按账号隔离，未登录时不会读取任何任务。</p>
           <Link className="primary-button mt-3 px-6" href="/signin?next=/history">
             去登录
           </Link>
-        </section>
+        </SpotlightCard>
       </main>
     );
   }
@@ -181,11 +182,11 @@ export default async function HistoryPage() {
 
   return (
     <main className="history-page">
-      <section className="section-heading">
+      <GlassSurface className="section-heading">
         <span className="eyebrow">History</span>
-        <h1>生成历史</h1>
+        <BlurText as="h1" text="生成历史" delay={0.035} />
         <p>这里展示当前账号最近创建的生图任务，包括成功图片、失败原因、Provider 和积分记录。</p>
-      </section>
+      </GlassSurface>
 
       {jobs.length ? (
         <section className="history-list">
@@ -194,13 +195,13 @@ export default async function HistoryPage() {
           ))}
         </section>
       ) : (
-        <section className="empty-state">
+        <SpotlightCard className="empty-state">
           <span>暂无生成记录</span>
           <p>去创作页提交第一个生图任务后，结果会出现在这里。</p>
           <Link className="primary-button mt-3 px-6" href="/generate">
             去创作
           </Link>
-        </section>
+        </SpotlightCard>
       )}
     </main>
   );

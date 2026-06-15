@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
+import "tdesign-react/es/style/index.css";
 import "./globals.css";
 import { AppShell } from "@/components/app-shell";
 import { getPublicAppSettings } from "@/lib/settings";
@@ -14,7 +16,7 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   const settings = await getPublicAppSettings();
 
   return (

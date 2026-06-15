@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { Download, Eye, ImageIcon, Search, X } from "lucide-react";
+import { Download, Search, X } from "lucide-react";
 import { CopyPromptButton } from "@/components/copy-prompt-button";
+import { AnimatedContent, MasonryShowcase, SpotlightCard } from "@/components/front/react-bits";
 import type { GalleryImageView } from "@/lib/gallery";
 import type { PromptCardData } from "@/lib/mock-data";
 
@@ -224,18 +225,13 @@ export function HomeWorksShowcase({
     return () => controller.abort();
   }, [category, hasGalleryError, initialWorks, query, usingFallback]);
 
-  function openItem(event: React.MouseEvent<HTMLButtonElement>, item: ShowcaseItem) {
-    event.currentTarget.blur();
-    setSelectedItem(item);
-  }
-
   return (
     <>
-      <section className="rounded-[28px] border border-slate-200 bg-white/88 p-4 shadow-card backdrop-blur md:p-5">
+      <SpotlightCard className="p-4 md:p-5" spotlightColor="rgba(14, 116, 144, 0.16)">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">{eyebrow}</p>
-            <h2 className="mt-1 text-3xl font-black tracking-[-0.05em] text-slate-950">{title}</h2>
+            <h2 className="mt-1 text-3xl font-black text-slate-950">{title}</h2>
             <p className="mt-2 text-sm font-bold text-slate-500">{galleryError || (usingFallback ? fallbackDescription : realDescription)}</p>
           </div>
           <label className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 lg:max-w-md">
@@ -261,69 +257,37 @@ export function HomeWorksShowcase({
             </button>
           ))}
         </div>
-      </section>
+      </SpotlightCard>
 
       {visibleItems.length > 0 ? (
-        <section className="columns-1 gap-4 sm:columns-2 xl:columns-3 2xl:columns-4">
-          {visibleItems.map((item) => (
-            <div key={item.id} className="break-inside-avoid">
-              <button
-                type="button"
-                onClick={(event) => openItem(event, item)}
-                className="group mb-4 inline-block w-full overflow-hidden rounded-[24px] border border-slate-200 bg-white/88 text-left shadow-card transition duration-300 hover:-translate-y-1 hover:shadow-app"
-              >
-                <div className={`relative ${item.heightClass} bg-gradient-to-br ${item.gradient} p-4`}>
-                  <div className="absolute right-4 top-4 z-10 rounded-full border border-white/80 bg-white/82 px-3 py-1 text-xs font-black text-slate-600 backdrop-blur">
-                    {item.ratio}
-                  </div>
-                  {item.thumbnailUrl ? (
-                    <img src={item.thumbnailUrl} alt={item.title} className="h-full w-full rounded-[20px] border border-white/80 object-cover shadow-inner" />
-                  ) : (
-                    <div className="flex h-full items-end rounded-[20px] border border-white/80 bg-white/54 p-4 text-slate-900 shadow-inner backdrop-blur-sm">
-                      <div>
-                        <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-2xl bg-white/84 text-slate-600">
-                          <ImageIcon className="h-4 w-4" />
-                        </div>
-                        <p className="text-xl font-black leading-tight">{item.title}</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <div className="space-y-3 p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">{item.category}</p>
-                    <span className="rounded-full bg-slate-50 px-2.5 py-1 text-[0.68rem] font-black text-slate-400">
-                      {item.isFallback ? fallbackBadgeLabel : formatDate(item.createdAt)}
-                    </span>
-                  </div>
-                  <h3 className="text-lg font-black leading-tight text-slate-950">{item.title}</h3>
-                  <p className="line-clamp-2 text-sm leading-6 text-slate-500">{item.summary}</p>
-                  <div className="flex flex-wrap gap-2">
-                    {item.tags.slice(0, 3).map((tag) => (
-                      <span key={tag} className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[0.68rem] font-black text-slate-500">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="flex items-center justify-between border-t border-slate-100 pt-3 text-xs font-black">
-                    <span className="truncate text-slate-400">{item.authorName}</span>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-950 px-3 py-1.5 text-white transition group-hover:bg-[#254c73]">
-                      <Eye className="h-3.5 w-3.5" />
-                      查看详情
-                    </span>
-                  </div>
-                </div>
-              </button>
-            </div>
-          ))}
-        </section>
+        <AnimatedContent>
+          <MasonryShowcase
+            items={visibleItems.map((item) => ({
+              id: item.id,
+              title: item.title,
+              summary: item.summary,
+              category: item.category,
+              ratio: item.ratio,
+              imageUrl: item.imageUrl,
+              thumbnailUrl: item.thumbnailUrl,
+              heightClass: item.heightClass,
+              isFallback: item.isFallback,
+            }))}
+            onSelect={(item) => {
+              const fullItem = visibleItems.find((visibleItem) => visibleItem.id === item.id);
+              if (fullItem) {
+                setSelectedItem(fullItem);
+              }
+            }}
+          />
+        </AnimatedContent>
       ) : (
-        <section className="rounded-[24px] border border-slate-200 bg-white/88 p-8 text-center shadow-card backdrop-blur">
+        <SpotlightCard className="p-8 text-center">
           <p className="text-lg font-black text-slate-950">{galleryError ? "作品库暂时不可用" : isLibraryEmpty ? "暂无公开作品" : emptyTitle}</p>
           <p className="mt-2 text-sm text-slate-500">
             {galleryError ? "这里原本展示用户发布到首页广场的作品，数据库恢复后会自动显示。" : isLibraryEmpty ? "用户发布作品或后台添加运营精选后，这里会自动显示。" : emptyDescription}
           </p>
-        </section>
+        </SpotlightCard>
       )}
 
       {selectedItem

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Download, Search } from "lucide-react";
+import { Alert, Button, Card, Form, Image, Input, Space, Statistic, Table, Tag } from "tdesign-react";
 import type { AdminUploadedImageView } from "@/lib/uploads";
 
 type UploadsPayload = {
@@ -9,6 +9,13 @@ type UploadsPayload = {
   images?: AdminUploadedImageView[];
   error?: string;
 };
+
+function formatSize(bytes: number) {
+  if (bytes >= 1024 * 1024) {
+    return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  }
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
 
 export function AdminUploadsDashboard({ initialImages }: { initialImages: AdminUploadedImageView[] }) {
   const [images, setImages] = useState(initialImages);
@@ -27,13 +34,13 @@ export function AdminUploadsDashboard({ initialImages }: { initialImages: AdminU
       if (query.trim()) {
         params.set("q", query.trim());
       }
-
       const response = await fetch(`/api/admin/uploads?${params.toString()}`);
       const payload = (await response.json().catch(() => ({}))) as UploadsPayload;
       if (!response.ok || !payload.ok) {
         throw new Error(payload.error || "刷新失败");
       }
       setImages(payload.images || []);
+      setMessage("上传资源已刷新。");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "刷新失败");
     } finally {
@@ -41,84 +48,89 @@ export function AdminUploadsDashboard({ initialImages }: { initialImages: AdminU
     }
   }
 
+  const columns = [
+    {
+      colKey: "preview",
+      title: "预览",
+      width: 120,
+      cell: ({ row }: { row: AdminUploadedImageView }) => <Image src={row.thumbnailUrl || row.url} fit="cover" style={{ width: 82, height: 82, borderRadius: 8 }} />,
+    },
+    {
+      colKey: "id",
+      title: "资源",
+      minWidth: 280,
+      cell: ({ row }: { row: AdminUploadedImageView }) => (
+        <div>
+          <p className="break-all font-black text-slate-900">{row.id}</p>
+          <p className="mt-1 break-all text-xs text-slate-400">{row.url}</p>
+        </div>
+      ),
+    },
+    {
+      colKey: "user",
+      title: "用户",
+      width: 220,
+      cell: ({ row }: { row: AdminUploadedImageView }) => <span>{row.userEmail || row.userDisplayName || row.userId}</span>,
+    },
+    {
+      colKey: "file",
+      title: "文件",
+      width: 180,
+      cell: ({ row }: { row: AdminUploadedImageView }) => (
+        <Space direction="vertical" size={4}>
+          <Tag>{row.mimeType}</Tag>
+          <span className="text-xs text-slate-500">{formatSize(row.fileSize)}</span>
+        </Space>
+      ),
+    },
+    {
+      colKey: "createdAt",
+      title: "上传时间",
+      width: 190,
+      cell: ({ row }: { row: AdminUploadedImageView }) => <span className="text-xs text-slate-500">{new Date(row.createdAt).toLocaleString("zh-CN")}</span>,
+    },
+    {
+      colKey: "action",
+      title: "操作",
+      width: 110,
+      cell: ({ row }: { row: AdminUploadedImageView }) => (
+        <Button variant="outline" size="small" href={row.url} target="_blank" rel="noreferrer">
+          打开
+        </Button>
+      ),
+    },
+  ];
+
   return (
-    <section className="space-y-4">
-      <div className="grid gap-3 md:grid-cols-3">
-        {[
-          ["上传图", images.length],
-          ["总大小", `${Math.round(totalSize / 1024)} KB`],
-          ["用途", "参考图"],
-        ].map(([label, value]) => (
-          <div key={label} className="rounded-[22px] border border-slate-200 bg-white/88 p-4 shadow-card backdrop-blur">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">{label}</p>
-            <p className="mt-2 text-3xl font-black text-slate-950">{value}</p>
-          </div>
-        ))}
+    <section className="admin-td-grid">
+      <div className="admin-td-stat-grid">
+        <Card className="admin-td-card"><Statistic title="上传图" value={images.length} /></Card>
+        <Card className="admin-td-card"><Statistic title="总大小" value={formatSize(totalSize)} /></Card>
+        <Card className="admin-td-card"><Statistic title="用途" value="参考图" /></Card>
       </div>
 
-      <div className="rounded-[26px] border border-slate-200 bg-white/88 p-4 shadow-card backdrop-blur">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <label className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-            <Search className="h-4 w-4 shrink-0 text-slate-500" />
-            <input
+      <Card className="admin-td-card" title="上传资源">
+        <Form layout="inline" className="mb-4">
+          <Form.FormItem label="搜索">
+            <Input
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  void loadImages();
-                }
-              }}
-              className="w-full bg-transparent text-sm font-bold text-slate-700 outline-none placeholder:text-slate-400"
-              placeholder="搜索用户邮箱、上传图 ID、URL"
+              clearable
+              placeholder="用户邮箱、上传图 ID、URL"
+              style={{ width: 360 }}
+              onChange={(value) => setQuery(String(value))}
+              onEnter={() => void loadImages()}
             />
-          </label>
-          <button type="button" onClick={loadImages} className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white">
-            {pending ? "搜索中" : "搜索"}
-          </button>
-        </div>
-      </div>
+          </Form.FormItem>
+          <Form.FormItem>
+            <Button theme="primary" loading={pending} onClick={() => void loadImages()}>
+              搜索
+            </Button>
+          </Form.FormItem>
+        </Form>
 
-      {message ? <p className="rounded-2xl border border-slate-200 bg-white/90 px-4 py-3 text-sm font-bold text-slate-600 shadow-card">{message}</p> : null}
-
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {images.map((image) => (
-          <article key={image.id} className="overflow-hidden rounded-[26px] border border-slate-200 bg-white/90 shadow-card backdrop-blur">
-            <img src={image.thumbnailUrl || image.url} alt={image.id} className="h-56 w-full object-cover" />
-            <div className="space-y-3 p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Reference</p>
-                  <h3 className="mt-1 truncate text-base font-black text-slate-950">{image.id}</h3>
-                </div>
-                <a href={image.url} download className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600">
-                  <Download className="h-4 w-4" />
-                  下载
-                </a>
-              </div>
-              <dl className="grid gap-2 text-xs font-bold text-slate-500">
-                {[
-                  ["用户", image.userEmail || image.userDisplayName || image.userId],
-                  ["类型", image.mimeType],
-                  ["大小", `${Math.round(image.fileSize / 1024)} KB`],
-                  ["上传时间", new Date(image.createdAt).toLocaleString("zh-CN")],
-                ].map(([label, value]) => (
-                  <div key={label} className="flex items-center justify-between rounded-2xl bg-slate-50 px-3 py-2">
-                    <dt className="text-slate-400">{label}</dt>
-                    <dd className="max-w-[70%] truncate text-slate-700">{value}</dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
-          </article>
-        ))}
-      </div>
-
-      {images.length === 0 ? (
-        <div className="rounded-[26px] border border-slate-200 bg-white/90 p-8 text-center shadow-card backdrop-blur">
-          <p className="text-lg font-black text-slate-950">暂无上传图</p>
-          <p className="mt-2 text-sm text-slate-500">用户上传参考图后，这里会显示资源记录。</p>
-        </div>
-      ) : null}
+        {message ? <Alert className="mb-3" theme="info" message={message} /> : null}
+        <Table rowKey="id" data={images} columns={columns} hover stripe bordered tableLayout="auto" empty="暂无上传图" />
+      </Card>
     </section>
   );
 }

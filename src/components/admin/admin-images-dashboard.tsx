@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Download, Pencil, RefreshCcw, Search, ShieldAlert, Trash2 } from "lucide-react";
+import { Alert, Button, Card, Form, Image, Input, Select, Space, Statistic, Switch, Table, Tabs, Tag, Textarea } from "tdesign-react";
 import type { AdminCuratedGalleryImageView, AdminGalleryImageView } from "@/lib/gallery";
 
 type AdminImagesPayload = {
@@ -38,38 +38,15 @@ type CuratedForm = {
 };
 
 const statusOptions = [
-  ["all", "全部"],
-  ["public", "已公开"],
-  ["private", "未公开"],
-  ["taken_down", "已下架"],
-  ["deleted", "已删除"],
+  { value: "all", label: "全部" },
+  { value: "public", label: "已公开" },
+  { value: "private", label: "未公开" },
+  { value: "taken_down", label: "已下架" },
+  { value: "deleted", label: "已删除" },
 ];
 
-const categoryOptions = ["写真", "商品", "角色", "界面", "建筑", "插画", "国风", "其他"];
-const ratioOptions = ["1:1", "3:4", "4:3", "9:16", "16:9"];
-
-function statusLabel(image: AdminGalleryImageView) {
-  if (image.isDeleted) {
-    return "已删除";
-  }
-  if (image.takenDownAt) {
-    return "已下架";
-  }
-  if (image.isPublic) {
-    return "已公开";
-  }
-  return "未公开";
-}
-
-function statusClass(image: AdminGalleryImageView) {
-  if (image.isDeleted || image.takenDownAt) {
-    return "bg-rose-50 text-rose-600 border-rose-100";
-  }
-  if (image.isPublic) {
-    return "bg-emerald-50 text-emerald-600 border-emerald-100";
-  }
-  return "bg-slate-50 text-slate-500 border-slate-200";
-}
+const categoryOptions = ["写真", "商品", "角色", "界面", "建筑", "插画", "国风", "其他"].map((value) => ({ value, label: value }));
+const ratioOptions = ["1:1", "3:4", "4:3", "9:16", "16:9"].map((value) => ({ value, label: value }));
 
 const emptyCuratedForm: CuratedForm = {
   id: "",
@@ -90,21 +67,32 @@ const emptyCuratedForm: CuratedForm = {
   isActive: true,
 };
 
+function statusLabel(image: AdminGalleryImageView) {
+  if (image.isDeleted) return "已删除";
+  if (image.takenDownAt) return "已下架";
+  if (image.isPublic) return "已公开";
+  return "未公开";
+}
+
+function statusTheme(image: AdminGalleryImageView): "success" | "danger" | "default" {
+  if (image.isDeleted || image.takenDownAt) return "danger";
+  if (image.isPublic) return "success";
+  return "default";
+}
+
 function curatedStatusLabel(image: AdminCuratedGalleryImageView) {
-  if (image.isDeleted) {
-    return "已删除";
-  }
-  if (image.takenDownAt || !image.isActive) {
-    return "已下架";
-  }
+  if (image.isDeleted) return "已删除";
+  if (image.takenDownAt || !image.isActive) return "已下架";
   return "展示中";
 }
 
-function curatedStatusClass(image: AdminCuratedGalleryImageView) {
-  if (image.isDeleted || image.takenDownAt || !image.isActive) {
-    return "bg-rose-50 text-rose-600 border-rose-100";
-  }
-  return "bg-emerald-50 text-emerald-600 border-emerald-100";
+function curatedStatusTheme(image: AdminCuratedGalleryImageView): "success" | "danger" {
+  return image.isDeleted || image.takenDownAt || !image.isActive ? "danger" : "success";
+}
+
+function formatSize(value?: number | null) {
+  if (!value) return "未知";
+  return value >= 1024 * 1024 ? `${(value / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(value / 1024))} KB`;
 }
 
 export function AdminImagesDashboard({
@@ -136,26 +124,19 @@ export function AdminImagesDashboard({
   async function requestJson(url: string, init?: RequestInit) {
     const response = await fetch(url, init);
     const payload = (await response.json().catch(() => ({}))) as AdminImagesPayload;
-    if (!response.ok || !payload.ok) {
-      throw new Error(payload.error || "操作失败");
-    }
+    if (!response.ok || !payload.ok) throw new Error(payload.error || "操作失败");
     return payload;
   }
 
   async function requestCuratedJson(url: string, init?: RequestInit) {
     const response = await fetch(url, init);
     const payload = (await response.json().catch(() => ({}))) as AdminCuratedPayload;
-    if (!response.ok || !payload.ok) {
-      throw new Error(payload.error || "操作失败");
-    }
+    if (!response.ok || !payload.ok) throw new Error(payload.error || "操作失败");
     return payload;
   }
 
   function patchCuratedForm(key: keyof CuratedForm, value: string | boolean) {
-    setCuratedForm((current) => ({
-      ...current,
-      [key]: value,
-    }));
+    setCuratedForm((current) => ({ ...current, [key]: value }));
   }
 
   function editCuratedImage(image: AdminCuratedGalleryImageView) {
@@ -182,10 +163,10 @@ export function AdminImagesDashboard({
   async function loadCuratedImages() {
     setPending("curated-refresh");
     setMessage("");
-
     try {
       const payload = await requestCuratedJson("/api/admin/gallery/curated");
       setCuratedImages(payload.images || []);
+      setMessage("运营精选已刷新。");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "刷新运营精选失败");
     } finally {
@@ -196,13 +177,10 @@ export function AdminImagesDashboard({
   async function saveCuratedImage() {
     setPending("curated-save");
     setMessage("");
-
     try {
       const payload = await requestCuratedJson("/api/admin/gallery/curated", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...curatedForm,
           id: curatedForm.id || undefined,
@@ -210,7 +188,6 @@ export function AdminImagesDashboard({
           tags: curatedForm.tags,
         }),
       });
-
       if (payload.image) {
         setCuratedImages((current) => {
           const exists = current.some((image) => image.id === payload.image!.id);
@@ -230,18 +207,12 @@ export function AdminImagesDashboard({
     const reason = window.prompt("请输入下架原因", "运营暂不展示") || "运营暂不展示";
     setPending(`curated-take-down:${imageId}`);
     setMessage("");
-
     try {
       const payload = await requestCuratedJson(`/api/admin/gallery/curated/${imageId}`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          reason,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason }),
       });
-
       if (payload.image) {
         setCuratedImages((current) => current.map((image) => (image.id === imageId ? payload.image! : image)));
       }
@@ -254,18 +225,11 @@ export function AdminImagesDashboard({
   }
 
   async function deleteCuratedImage(imageId: string) {
-    if (!window.confirm("确认删除这个运营精选作品吗？它会从公开作品流移除。")) {
-      return;
-    }
-
+    if (!window.confirm("确认删除这个运营精选作品吗？它会从公开作品流移除。")) return;
     setPending(`curated-delete:${imageId}`);
     setMessage("");
-
     try {
-      const payload = await requestCuratedJson(`/api/admin/gallery/curated/${imageId}`, {
-        method: "DELETE",
-      });
-
+      const payload = await requestCuratedJson(`/api/admin/gallery/curated/${imageId}`, { method: "DELETE" });
       if (payload.image) {
         setCuratedImages((current) => current.map((image) => (image.id === imageId ? payload.image! : image)));
       }
@@ -280,18 +244,13 @@ export function AdminImagesDashboard({
   async function loadImages(nextStatus = status, nextQuery = query) {
     setPending("refresh");
     setMessage("");
-
     try {
       const params = new URLSearchParams();
-      if (nextStatus !== "all") {
-        params.set("status", nextStatus);
-      }
-      if (nextQuery.trim()) {
-        params.set("q", nextQuery.trim());
-      }
-
+      if (nextStatus !== "all") params.set("status", nextStatus);
+      if (nextQuery.trim()) params.set("q", nextQuery.trim());
       const payload = await requestJson(`/api/admin/images?${params.toString()}`);
       setImages(payload.images || []);
+      setMessage("作品列表已刷新。");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "刷新失败");
     } finally {
@@ -303,18 +262,12 @@ export function AdminImagesDashboard({
     const reason = window.prompt("请输入下架原因", "管理员下架") || "管理员下架";
     setPending(`take-down:${imageId}`);
     setMessage("");
-
     try {
       const payload = await requestJson(`/api/admin/images/${imageId}/take-down`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          reason,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason }),
       });
-
       if (payload.image) {
         setImages((current) => current.map((image) => (image.id === imageId ? payload.image! : image)));
       }
@@ -326,275 +279,224 @@ export function AdminImagesDashboard({
     }
   }
 
+  const imageColumns = [
+    {
+      colKey: "preview",
+      title: "预览",
+      width: 120,
+      cell: ({ row }: { row: AdminGalleryImageView }) => <Image src={row.thumbnailUrl || row.url} fit="cover" style={{ width: 82, height: 82, borderRadius: 8 }} />,
+    },
+    {
+      colKey: "promptZh",
+      title: "作品",
+      minWidth: 360,
+      cell: ({ row }: { row: AdminGalleryImageView }) => (
+        <div>
+          <p className="line-clamp-2 font-black text-slate-900">{row.promptZh}</p>
+          <p className="mt-1 text-xs text-slate-500">{row.authorEmail || row.authorName} · {row.jobStatus} · {row.creditCost} 积分</p>
+          {row.takenDownReason ? <p className="mt-1 text-xs text-red-500">下架原因：{row.takenDownReason}</p> : null}
+        </div>
+      ),
+    },
+    {
+      colKey: "status",
+      title: "状态",
+      width: 110,
+      cell: ({ row }: { row: AdminGalleryImageView }) => <Tag theme={statusTheme(row)} variant="light">{statusLabel(row)}</Tag>,
+    },
+    {
+      colKey: "meta",
+      title: "元数据",
+      width: 210,
+      cell: ({ row }: { row: AdminGalleryImageView }) => (
+        <div className="text-xs leading-5 text-slate-500">
+          <p>{row.provider} · {row.ratio} · {row.category}</p>
+          <p>{row.mimeType || "未知 MIME"} · {formatSize(row.fileSize)}</p>
+        </div>
+      ),
+    },
+    {
+      colKey: "publishedAt",
+      title: "发布时间",
+      width: 190,
+      cell: ({ row }: { row: AdminGalleryImageView }) => <span className="text-xs text-slate-500">{row.publishedAt ? new Date(row.publishedAt).toLocaleString("zh-CN") : "未发布"}</span>,
+    },
+    {
+      colKey: "action",
+      title: "操作",
+      width: 180,
+      fixed: "right" as const,
+      cell: ({ row }: { row: AdminGalleryImageView }) => (
+        <Space size="small">
+          <Button variant="outline" size="small" href={row.url} target="_blank" rel="noreferrer">打开</Button>
+          {!row.isDeleted && !row.takenDownAt ? (
+            <Button theme="danger" variant="outline" size="small" loading={pending === `take-down:${row.id}`} onClick={() => void takeDown(row.id)}>
+              下架
+            </Button>
+          ) : null}
+        </Space>
+      ),
+    },
+  ];
+
+  const curatedColumns = [
+    {
+      colKey: "preview",
+      title: "预览",
+      width: 120,
+      cell: ({ row }: { row: AdminCuratedGalleryImageView }) => <Image src={row.thumbnailUrl || row.url} fit="cover" style={{ width: 82, height: 82, borderRadius: 8 }} />,
+    },
+    {
+      colKey: "title",
+      title: "精选作品",
+      minWidth: 320,
+      cell: ({ row }: { row: AdminCuratedGalleryImageView }) => (
+        <div>
+          <p className="font-black text-slate-900">{row.title}</p>
+          <p className="mt-1 line-clamp-2 text-xs text-slate-500">{row.summary}</p>
+          {row.takenDownReason ? <p className="mt-1 text-xs text-red-500">下架原因：{row.takenDownReason}</p> : null}
+        </div>
+      ),
+    },
+    {
+      colKey: "status",
+      title: "状态",
+      width: 120,
+      cell: ({ row }: { row: AdminCuratedGalleryImageView }) => <Tag theme={curatedStatusTheme(row)} variant="light">{curatedStatusLabel(row)}</Tag>,
+    },
+    {
+      colKey: "meta",
+      title: "分类",
+      width: 170,
+      cell: ({ row }: { row: AdminCuratedGalleryImageView }) => <span className="text-xs text-slate-500">{row.category} · {row.ratio} · 排序 {row.sortOrder}</span>,
+    },
+    {
+      colKey: "action",
+      title: "操作",
+      width: 240,
+      fixed: "right" as const,
+      cell: ({ row }: { row: AdminCuratedGalleryImageView }) => (
+        <Space size="small">
+          <Button variant="outline" size="small" onClick={() => editCuratedImage(row)}>编辑</Button>
+          {!row.isDeleted && !row.takenDownAt && row.isActive ? (
+            <Button theme="warning" variant="outline" size="small" loading={pending === `curated-take-down:${row.id}`} onClick={() => void takeDownCuratedImage(row.id)}>下架</Button>
+          ) : null}
+          {!row.isDeleted ? (
+            <Button theme="danger" variant="outline" size="small" loading={pending === `curated-delete:${row.id}`} onClick={() => void deleteCuratedImage(row.id)}>删除</Button>
+          ) : null}
+        </Space>
+      ),
+    },
+  ];
+
   return (
-    <section className="space-y-4">
-      <div className="grid gap-3 md:grid-cols-5">
-        {[
-          ["全部", stats.total],
-          ["已公开", stats.public],
-          ["运营精选", stats.curated],
-          ["已下架", stats.takenDown],
-          ["已删除", stats.deleted],
-        ].map(([label, value]) => (
-          <div key={label} className="rounded-[22px] border border-slate-200 bg-white/88 p-4 shadow-card backdrop-blur">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">{label}</p>
-            <p className="mt-2 text-3xl font-black text-slate-950">{value}</p>
-          </div>
-        ))}
+    <section className="admin-td-grid">
+      <div className="admin-td-stat-grid">
+        <Card className="admin-td-card"><Statistic title="全部作品" value={stats.total} /></Card>
+        <Card className="admin-td-card"><Statistic title="已公开" value={stats.public} /></Card>
+        <Card className="admin-td-card"><Statistic title="运营精选" value={stats.curated} /></Card>
+        <Card className="admin-td-card"><Statistic title="已下架" value={stats.takenDown} /></Card>
+        <Card className="admin-td-card"><Statistic title="已删除" value={stats.deleted} /></Card>
       </div>
 
-      <div className="rounded-[26px] border border-slate-200 bg-white/88 p-4 shadow-card backdrop-blur">
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Curated Works</p>
-            <h2 className="mt-1 text-2xl font-black text-slate-950">运营精选作品</h2>
-            <p className="mt-2 text-sm font-bold leading-6 text-slate-500">用于补足首页和灵感页的早期内容；用户公开作品仍会优先展示。</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => setCuratedForm(emptyCuratedForm)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-600">
-              新建
-            </button>
-            <button type="button" onClick={() => void loadCuratedImages()} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-600">
-              {pending === "curated-refresh" ? "刷新中" : "刷新精选"}
-            </button>
-          </div>
-        </div>
+      {message ? <Alert theme="info" message={message} /> : null}
 
-        <div className="grid gap-3 lg:grid-cols-2">
-          <label className="block">
-            <span className="text-xs font-black text-slate-400">标题</span>
-            <input value={curatedForm.title} onChange={(event) => patchCuratedForm("title", event.target.value)} className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 outline-none" placeholder="蓝白产品海报" />
-          </label>
-          <label className="block">
-            <span className="text-xs font-black text-slate-400">图片地址</span>
-            <input value={curatedForm.imageUrl} onChange={(event) => patchCuratedForm("imageUrl", event.target.value)} className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 outline-none" placeholder="https://..." />
-          </label>
-          <label className="block">
-            <span className="text-xs font-black text-slate-400">缩略图地址</span>
-            <input value={curatedForm.thumbnailUrl} onChange={(event) => patchCuratedForm("thumbnailUrl", event.target.value)} className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 outline-none" placeholder="留空则使用原图" />
-          </label>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <label className="block">
-              <span className="text-xs font-black text-slate-400">分类</span>
-              <select value={curatedForm.category} onChange={(event) => patchCuratedForm("category", event.target.value)} className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 outline-none">
-                {categoryOptions.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="block">
-              <span className="text-xs font-black text-slate-400">比例</span>
-              <select value={curatedForm.ratio} onChange={(event) => patchCuratedForm("ratio", event.target.value)} className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 outline-none">
-                {ratioOptions.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="block">
-              <span className="text-xs font-black text-slate-400">排序</span>
-              <input value={curatedForm.sortOrder} onChange={(event) => patchCuratedForm("sortOrder", event.target.value)} className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 outline-none" placeholder="0" />
-            </label>
-          </div>
-          <label className="block lg:col-span-2">
-            <span className="text-xs font-black text-slate-400">简介</span>
-            <textarea value={curatedForm.summary} onChange={(event) => patchCuratedForm("summary", event.target.value)} className="mt-1 min-h-24 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold leading-6 text-slate-700 outline-none" placeholder="作品卡片和详情里的简短描述。" />
-          </label>
-          <label className="block lg:col-span-2">
-            <span className="text-xs font-black text-slate-400">中文提示词</span>
-            <textarea value={curatedForm.promptZh} onChange={(event) => patchCuratedForm("promptZh", event.target.value)} className="mt-1 min-h-28 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold leading-6 text-slate-700 outline-none" placeholder="用户点击复用描述时会带入这里。" />
-          </label>
-          <label className="block">
-            <span className="text-xs font-black text-slate-400">英文提示词</span>
-            <textarea value={curatedForm.promptEn} onChange={(event) => patchCuratedForm("promptEn", event.target.value)} className="mt-1 min-h-24 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold leading-6 text-slate-700 outline-none" />
-          </label>
-          <label className="block">
-            <span className="text-xs font-black text-slate-400">过滤指令</span>
-            <textarea value={curatedForm.negativePrompt} onChange={(event) => patchCuratedForm("negativePrompt", event.target.value)} className="mt-1 min-h-24 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold leading-6 text-slate-700 outline-none" />
-          </label>
-          <label className="block">
-            <span className="text-xs font-black text-slate-400">标签</span>
-            <input value={curatedForm.tags} onChange={(event) => patchCuratedForm("tags", event.target.value)} className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 outline-none" placeholder="蓝白, 产品, 留白" />
-          </label>
-          <label className="block">
-            <span className="text-xs font-black text-slate-400">作者</span>
-            <input value={curatedForm.authorName} onChange={(event) => patchCuratedForm("authorName", event.target.value)} className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 outline-none" />
-          </label>
-          <label className="block">
-            <span className="text-xs font-black text-slate-400">来源名称</span>
-            <input value={curatedForm.sourceName} onChange={(event) => patchCuratedForm("sourceName", event.target.value)} className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 outline-none" />
-          </label>
-          <label className="block">
-            <span className="text-xs font-black text-slate-400">来源链接</span>
-            <input value={curatedForm.sourceUrl} onChange={(event) => patchCuratedForm("sourceUrl", event.target.value)} className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 outline-none" placeholder="可留空" />
-          </label>
-        </div>
+      <Card className="admin-td-card">
+        <Tabs defaultValue="generated">
+          <Tabs.TabPanel value="generated" label="生成作品">
+            <Form layout="inline" className="mb-4">
+              <Form.FormItem label="状态">
+                <Select
+                  value={status}
+                  options={statusOptions}
+                  style={{ width: 160 }}
+                  onChange={(value) => {
+                    const nextStatus = String(value);
+                    setStatus(nextStatus);
+                    void loadImages(nextStatus, query);
+                  }}
+                />
+              </Form.FormItem>
+              <Form.FormItem label="搜索">
+                <Input
+                  value={query}
+                  clearable
+                  placeholder="邮箱、任务 ID、提示词"
+                  style={{ width: 340 }}
+                  onChange={(value) => setQuery(String(value))}
+                  onEnter={() => void loadImages(status, query)}
+                />
+              </Form.FormItem>
+              <Form.FormItem>
+                <Button theme="primary" loading={pending === "refresh"} onClick={() => void loadImages(status, query)}>搜索</Button>
+              </Form.FormItem>
+            </Form>
+            <Table rowKey="id" data={images} columns={imageColumns} hover stripe bordered tableLayout="auto" empty="暂无作品记录" />
+          </Tabs.TabPanel>
 
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <label className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-600">
-            <input type="checkbox" checked={curatedForm.isActive} onChange={(event) => patchCuratedForm("isActive", event.target.checked)} />
-            展示到作品流
-          </label>
-          <button type="button" onClick={() => void saveCuratedImage()} disabled={pending === "curated-save"} className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white disabled:opacity-60">
-            {pending === "curated-save" ? "保存中" : curatedForm.id ? "保存修改" : "添加精选"}
-          </button>
-        </div>
-
-        <div className="mt-5 grid gap-3">
-          {curatedImages.map((image) => (
-            <article key={image.id} className="grid gap-3 rounded-[22px] border border-slate-200 bg-slate-50/78 p-3 md:grid-cols-[120px_1fr]">
-              <img src={image.thumbnailUrl || image.url} alt={image.title} className="h-32 w-full rounded-[18px] border border-slate-200 object-cover" />
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap gap-2">
-                      <span className={`rounded-full border px-3 py-1 text-xs font-black ${curatedStatusClass(image)}`}>{curatedStatusLabel(image)}</span>
-                      <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-black text-slate-500">{image.category}</span>
-                      <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-black text-slate-500">{image.ratio}</span>
-                      <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-black text-slate-500">排序 {image.sortOrder}</span>
-                    </div>
-                    <h3 className="mt-3 line-clamp-1 text-lg font-black text-slate-950">{image.title}</h3>
-                    <p className="mt-1 line-clamp-2 text-sm font-bold leading-6 text-slate-500">{image.summary}</p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <button type="button" onClick={() => editCuratedImage(image)} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-600">
-                      <Pencil className="h-4 w-4" />
-                      编辑
-                    </button>
-                    {!image.isDeleted && !image.takenDownAt && image.isActive ? (
-                      <button type="button" disabled={pending === `curated-take-down:${image.id}`} onClick={() => void takeDownCuratedImage(image.id)} className="inline-flex items-center gap-2 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-black text-rose-600">
-                        <ShieldAlert className="h-4 w-4" />
-                        下架
-                      </button>
-                    ) : null}
-                    {!image.isDeleted ? (
-                      <button type="button" disabled={pending === `curated-delete:${image.id}`} onClick={() => void deleteCuratedImage(image.id)} className="inline-flex items-center gap-2 rounded-2xl border border-rose-100 bg-white px-4 py-3 text-sm font-black text-rose-600">
-                        <Trash2 className="h-4 w-4" />
-                        删除
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-                {image.takenDownReason ? <p className="mt-3 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-600">下架原因：{image.takenDownReason}</p> : null}
-              </div>
-            </article>
-          ))}
-          {curatedImages.length === 0 ? <p className="rounded-2xl bg-slate-50 px-4 py-6 text-center text-sm font-bold text-slate-500">暂无运营精选作品。</p> : null}
-        </div>
-      </div>
-
-      <div className="rounded-[26px] border border-slate-200 bg-white/88 p-4 shadow-card backdrop-blur">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-            {statusOptions.map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => {
-                  setStatus(value);
-                  void loadImages(value, query);
-                }}
-                className={`shrink-0 rounded-full border px-4 py-2 text-sm font-black ${status === value ? "border-slate-950 bg-slate-950 text-white" : "border-slate-200 bg-white text-slate-600"}`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <div className="flex min-w-0 flex-1 items-center gap-2 lg:max-w-lg">
-            <label className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-              <Search className="h-4 w-4 shrink-0 text-slate-500" />
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    void loadImages(status, query);
-                  }
-                }}
-                className="w-full bg-transparent text-sm font-bold text-slate-700 outline-none placeholder:text-slate-400"
-                placeholder="搜索邮箱、任务 ID、提示词"
-              />
-            </label>
-            <button type="button" onClick={() => loadImages(status, query)} className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white">
-              {pending === "refresh" ? "刷新中" : "搜索"}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {message ? <p className="rounded-2xl border border-slate-200 bg-white/90 px-4 py-3 text-sm font-bold text-slate-600 shadow-card">{message}</p> : null}
-
-      <div className="grid gap-4">
-        {images.map((image) => (
-          <article key={image.id} className="grid gap-4 rounded-[26px] border border-slate-200 bg-white/90 p-4 shadow-card backdrop-blur md:grid-cols-[180px_1fr]">
-            <div className="overflow-hidden rounded-[22px] border border-slate-200 bg-slate-50">
-              <img src={image.thumbnailUrl || image.url} alt={image.promptZh} className="h-48 w-full object-cover md:h-full" />
+          <Tabs.TabPanel value="curated" label="运营精选">
+            <div className="grid gap-4 xl:grid-cols-[420px_1fr]">
+              <Card bordered title={curatedForm.id ? "编辑精选作品" : "新增精选作品"}>
+                <Form labelAlign="top">
+                  <Form.FormItem label="标题">
+                    <Input value={curatedForm.title} placeholder="蓝白产品海报" onChange={(value) => patchCuratedForm("title", String(value))} />
+                  </Form.FormItem>
+                  <Form.FormItem label="图片地址">
+                    <Input value={curatedForm.imageUrl} placeholder="https://..." onChange={(value) => patchCuratedForm("imageUrl", String(value))} />
+                  </Form.FormItem>
+                  <Form.FormItem label="缩略图地址">
+                    <Input value={curatedForm.thumbnailUrl} placeholder="留空则使用原图" onChange={(value) => patchCuratedForm("thumbnailUrl", String(value))} />
+                  </Form.FormItem>
+                  <Space breakLine size="small">
+                    <Form.FormItem label="分类">
+                      <Select value={curatedForm.category} options={categoryOptions} style={{ width: 120 }} onChange={(value) => patchCuratedForm("category", String(value))} />
+                    </Form.FormItem>
+                    <Form.FormItem label="比例">
+                      <Select value={curatedForm.ratio} options={ratioOptions} style={{ width: 120 }} onChange={(value) => patchCuratedForm("ratio", String(value))} />
+                    </Form.FormItem>
+                    <Form.FormItem label="排序">
+                      <Input value={curatedForm.sortOrder} style={{ width: 120 }} onChange={(value) => patchCuratedForm("sortOrder", String(value))} />
+                    </Form.FormItem>
+                  </Space>
+                  <Form.FormItem label="简介">
+                    <Textarea value={curatedForm.summary} autosize={{ minRows: 2, maxRows: 4 }} onChange={(value) => patchCuratedForm("summary", String(value))} />
+                  </Form.FormItem>
+                  <Form.FormItem label="中文提示词">
+                    <Textarea value={curatedForm.promptZh} autosize={{ minRows: 3, maxRows: 6 }} onChange={(value) => patchCuratedForm("promptZh", String(value))} />
+                  </Form.FormItem>
+                  <Form.FormItem label="英文提示词">
+                    <Textarea value={curatedForm.promptEn} autosize={{ minRows: 2, maxRows: 4 }} onChange={(value) => patchCuratedForm("promptEn", String(value))} />
+                  </Form.FormItem>
+                  <Form.FormItem label="过滤指令">
+                    <Textarea value={curatedForm.negativePrompt} autosize={{ minRows: 2, maxRows: 4 }} onChange={(value) => patchCuratedForm("negativePrompt", String(value))} />
+                  </Form.FormItem>
+                  <Form.FormItem label="标签">
+                    <Input value={curatedForm.tags} placeholder="蓝白, 产品, 留白" onChange={(value) => patchCuratedForm("tags", String(value))} />
+                  </Form.FormItem>
+                  <Form.FormItem label="作者">
+                    <Input value={curatedForm.authorName} onChange={(value) => patchCuratedForm("authorName", String(value))} />
+                  </Form.FormItem>
+                  <Form.FormItem label="来源名称">
+                    <Input value={curatedForm.sourceName} onChange={(value) => patchCuratedForm("sourceName", String(value))} />
+                  </Form.FormItem>
+                  <Form.FormItem label="来源链接">
+                    <Input value={curatedForm.sourceUrl} placeholder="可留空" onChange={(value) => patchCuratedForm("sourceUrl", String(value))} />
+                  </Form.FormItem>
+                  <Form.FormItem label="展示到作品流">
+                    <Switch value={curatedForm.isActive} onChange={(value) => patchCuratedForm("isActive", Boolean(value))} />
+                  </Form.FormItem>
+                  <Space>
+                    <Button theme="primary" loading={pending === "curated-save"} onClick={() => void saveCuratedImage()}>{curatedForm.id ? "保存修改" : "添加精选"}</Button>
+                    <Button variant="outline" onClick={() => setCuratedForm(emptyCuratedForm)}>清空</Button>
+                    <Button variant="outline" loading={pending === "curated-refresh"} onClick={() => void loadCuratedImages()}>刷新精选</Button>
+                  </Space>
+                </Form>
+              </Card>
+              <Table rowKey="id" data={curatedImages} columns={curatedColumns} hover stripe bordered tableLayout="auto" empty="暂无运营精选作品" />
             </div>
-            <div className="min-w-0 space-y-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className={`rounded-full border px-3 py-1 text-xs font-black ${statusClass(image)}`}>{statusLabel(image)}</span>
-                    <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-black text-slate-500">{image.provider}</span>
-                    <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-black text-slate-500">{image.ratio}</span>
-                  </div>
-                  <h3 className="mt-3 line-clamp-2 text-xl font-black text-slate-950">{image.promptZh}</h3>
-                  <p className="mt-2 text-sm font-bold text-slate-500">{image.authorEmail || image.authorName} · {image.jobStatus} · {image.creditCost} 积分</p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <a href={image.url} download className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-600">
-                    <Download className="h-4 w-4" />
-                    下载
-                  </a>
-                  {!image.isDeleted && !image.takenDownAt ? (
-                    <button
-                      type="button"
-                      disabled={pending === `take-down:${image.id}`}
-                      onClick={() => takeDown(image.id)}
-                      className="inline-flex items-center gap-2 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-black text-rose-600"
-                    >
-                      <ShieldAlert className="h-4 w-4" />
-                      下架
-                    </button>
-                  ) : null}
-                  <button type="button" onClick={() => loadImages(status, query)} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-600">
-                    <RefreshCcw className="h-4 w-4" />
-                    刷新
-                  </button>
-                </div>
-              </div>
-
-              <dl className="grid gap-2 text-xs font-bold text-slate-500 md:grid-cols-3">
-                {[
-                  ["图片 ID", image.id],
-                  ["任务 ID", image.jobId],
-                  ["分类", image.category],
-                  ["MIME", image.mimeType || "未知"],
-                  ["大小", image.fileSize ? `${Math.round(image.fileSize / 1024)} KB` : "未知"],
-                  ["发布时间", image.publishedAt ? new Date(image.publishedAt).toLocaleString("zh-CN") : "未发布"],
-                ].map(([label, value]) => (
-                  <div key={label} className="rounded-2xl bg-slate-50 px-3 py-2">
-                    <dt className="text-slate-400">{label}</dt>
-                    <dd className="mt-1 truncate text-slate-700">{value}</dd>
-                  </div>
-                ))}
-              </dl>
-
-              {image.takenDownReason ? <p className="rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-600">下架原因：{image.takenDownReason}</p> : null}
-            </div>
-          </article>
-        ))}
-      </div>
-
-      {images.length === 0 ? (
-        <div className="rounded-[26px] border border-slate-200 bg-white/90 p-8 text-center shadow-card backdrop-blur">
-          <p className="text-lg font-black text-slate-950">暂无作品记录</p>
-          <p className="mt-2 text-sm text-slate-500">生成成功并保存图片后，这里会显示作品资产。</p>
-        </div>
-      ) : null}
+          </Tabs.TabPanel>
+        </Tabs>
+      </Card>
     </section>
   );
 }

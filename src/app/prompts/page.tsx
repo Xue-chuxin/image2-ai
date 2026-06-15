@@ -1,4 +1,5 @@
 import { HomeWorksShowcase } from "@/components/home-works-showcase";
+import { BlurText, SpotlightCard } from "@/components/front/react-bits";
 import { listPublicGalleryImages, type GalleryImageView } from "@/lib/gallery";
 import { categories, promptCards } from "@/lib/mock-data";
 
@@ -14,6 +15,11 @@ export default async function PromptsPage() {
 
   return (
     <main className="space-y-6 pb-28">
+      <SpotlightCard className="p-5">
+        <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-400">Prompt Gallery</p>
+        <BlurText as="h1" text="灵感展示" className="mt-2 text-3xl font-black text-slate-950" delay={0.035} />
+        <p className="mt-2 text-sm leading-6 text-slate-500">从公开作品和运营精选中挑选方向，一键带入创作台继续生成。</p>
+      </SpotlightCard>
       <HomeWorksShowcase
         categories={categories}
         initialWorks={publicWorks}

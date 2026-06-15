@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Clock, Coins, ImageIcon, Sparkles } from "lucide-react";
 
+import { GlassSurface, SpotlightCard, StatusStepper } from "./front/react-bits";
 import { GenerateComposer } from "./generate-composer";
 
 type ReferenceImageResult = {
@@ -18,7 +19,7 @@ type ReferenceImageResult = {
 type GenerationJobResult = {
   id: string;
   status: string;
-  provider: "openai" | "chatgpt_web";
+  provider: "openai" | "chatgpt_web" | "stability_ai";
   model: string | null;
   promptZh: string;
   promptEn: string | null;
@@ -89,13 +90,20 @@ export function GenerateWorkbench({ initialPrompt = "", initialReferenceImages =
   const [job, setJob] = useState<GenerationJobResult | null>(null);
   const firstImage = job?.images[0];
   const references = referenceImagesEnabled ? (job?.referenceImages?.length ? job.referenceImages : initialReferenceImages) : [];
+  const status = job?.status || "";
+  const statusSteps = [
+    { label: "排队", complete: Boolean(job) && status !== "QUEUED", active: status === "QUEUED" || !job },
+    { label: "生成", complete: ["UPLOADING", "COMPLETED"].includes(status), active: status === "POLISHING" || status === "GENERATING" },
+    { label: "保存", complete: status === "COMPLETED", active: status === "UPLOADING" },
+    { label: status === "FAILED" ? "失败" : "完成", active: status === "FAILED" || status === "COMPLETED", complete: status === "COMPLETED" },
+  ];
 
   return (
     <section className="generate-workbench">
       <GenerateComposer initialPrompt={initialPrompt} initialReferenceImages={initialReferenceImages} onJobChange={setJob} referenceImagesEnabled={referenceImagesEnabled} />
 
       <aside className="preview-panel">
-        <div className="preview-card">
+        <GlassSurface className="preview-card">
           {firstImage ? (
             <img src={firstImage.url} alt={job?.promptZh || "生成结果"} />
           ) : (
@@ -105,10 +113,21 @@ export function GenerateWorkbench({ initialPrompt = "", initialReferenceImages =
               <small>生成前会检查积分。成功后扣除积分，失败会退回冻结积分。</small>
             </div>
           )}
-        </div>
+        </GlassSurface>
+
+        <SpotlightCard className="job-card">
+          <div className="job-card-head">
+            <div>
+              <span className="eyebrow">Progress</span>
+              <h2>{job ? getStatusLabel(job.status) : "等待生成"}</h2>
+            </div>
+            <Sparkles size={20} />
+          </div>
+          <StatusStepper items={statusSteps} />
+        </SpotlightCard>
 
         {references.length > 0 ? (
-          <div className="job-card">
+          <SpotlightCard className="job-card">
             <div className="job-card-head">
               <div>
                 <span className="eyebrow">References</span>
@@ -122,10 +141,10 @@ export function GenerateWorkbench({ initialPrompt = "", initialReferenceImages =
               ))}
             </div>
             <p className="mt-3 text-xs font-bold leading-6 text-slate-400">参考图会保存在任务记录里，便于后续复用。</p>
-          </div>
+          </SpotlightCard>
         ) : null}
 
-        <div className="job-card">
+        <SpotlightCard className="job-card">
           <div className="job-card-head">
             <div>
               <span className="eyebrow">Task</span>
@@ -168,9 +187,9 @@ export function GenerateWorkbench({ initialPrompt = "", initialReferenceImages =
           ) : (
             <p className="muted-copy">输入描述并点击“开始生成”后，这里会显示当前任务信息。</p>
           )}
-        </div>
+        </SpotlightCard>
 
-        <div className="job-card compact">
+        <SpotlightCard className="job-card compact">
           <div className="rule-row">
             <Coins size={18} />
             <span>标准 10 积分 / 张，高清 35 积分 / 张，省积分 3 积分 / 张。</span>
@@ -179,7 +198,7 @@ export function GenerateWorkbench({ initialPrompt = "", initialReferenceImages =
             <Clock size={18} />
             <span>如果任务还在处理中，可以到“记录”页面继续查看。</span>
           </div>
-        </div>
+        </SpotlightCard>
       </aside>
     </section>
   );

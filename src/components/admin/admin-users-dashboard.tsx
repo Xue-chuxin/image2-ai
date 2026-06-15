@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Coins, Loader2, RefreshCw, Search, ShieldAlert, UserRound } from "lucide-react";
-
+import { useMemo, useState } from "react";
+import { Alert, Button, Card, Col, Form, Input, InputNumber, Row, Space, Statistic, Table, Tag } from "tdesign-react";
 import type { AdminUserView } from "@/lib/admin-users";
 
 type UsersResponse = {
@@ -13,10 +12,7 @@ type UsersResponse = {
 };
 
 function formatTime(value: string | null) {
-  if (!value) {
-    return "暂无";
-  }
-  return new Date(value).toLocaleString("zh-CN");
+  return value ? new Date(value).toLocaleString("zh-CN") : "暂无";
 }
 
 function roleLabel(role: string) {
@@ -39,11 +35,21 @@ async function readResponse(response: Response): Promise<UsersResponse> {
 export function AdminUsersDashboard({ initialUsers }: { initialUsers: AdminUserView[] }) {
   const [users, setUsers] = useState(initialUsers);
   const [query, setQuery] = useState("");
-  const [amounts, setAmounts] = useState<Record<string, string>>({});
+  const [amounts, setAmounts] = useState<Record<string, number | undefined>>({});
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const [pending, setPending] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  const stats = useMemo(
+    () => ({
+      total: users.length,
+      admins: users.filter((user) => user.role === "ADMIN").length,
+      availableCredits: users.reduce((sum, user) => sum + user.availableCredits, 0),
+      frozenCredits: users.reduce((sum, user) => sum + user.frozenCredits, 0),
+    }),
+    [users],
+  );
 
   async function refreshUsers(nextQuery = query) {
     setPending("search");
@@ -75,7 +81,7 @@ export function AdminUsersDashboard({ initialUsers }: { initialUsers: AdminUserV
   }
 
   async function adjustCredits(userId: string) {
-    const amount = Number(amounts[userId]);
+    const amount = Number(amounts[userId] || 0);
     const reason = reasons[userId] || "";
     setPending(`credits:${userId}`);
     setMessage("");
@@ -87,10 +93,7 @@ export function AdminUsersDashboard({ initialUsers }: { initialUsers: AdminUserV
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          amount,
-          reason,
-        }),
+        body: JSON.stringify({ amount, reason }),
       });
       const data = await readResponse(response);
 
@@ -99,7 +102,7 @@ export function AdminUsersDashboard({ initialUsers }: { initialUsers: AdminUserV
       }
 
       setUsers((current) => current.map((user) => (user.id === userId ? data.user! : user)));
-      setAmounts((current) => ({ ...current, [userId]: "" }));
+      setAmounts((current) => ({ ...current, [userId]: undefined }));
       setReasons((current) => ({ ...current, [userId]: "" }));
       setMessage("积分已调整，并已写入积分流水。");
     } catch (caughtError) {
@@ -109,133 +112,119 @@ export function AdminUsersDashboard({ initialUsers }: { initialUsers: AdminUserV
     }
   }
 
-  return (
-    <section className="space-y-5">
-      <section className="rounded-[28px] border border-slate-200 bg-white/88 p-5 shadow-card backdrop-blur">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-400">User Ops</p>
-            <h2 className="mt-1 text-2xl font-black text-slate-950">用户运营</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-500">搜索用户、查看积分和业务统计，并进行手动积分调整。</p>
-          </div>
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-            <label className="relative min-w-[260px] flex-1">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    void refreshUsers();
-                  }
-                }}
-                className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm font-bold text-slate-700 outline-none focus:border-ocean-400"
-                placeholder="搜索邮箱、昵称或用户 ID"
-              />
-            </label>
-            <button
-              type="button"
-              onClick={() => void refreshUsers()}
-              disabled={pending === "search"}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-card disabled:opacity-60"
-            >
-              {pending === "search" ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-              刷新
-            </button>
-          </div>
+  const columns = [
+    {
+      colKey: "identity",
+      title: "用户",
+      width: 280,
+      cell: ({ row }: { row: AdminUserView }) => (
+        <div className="min-w-0">
+          <p className="truncate font-black text-slate-900">{row.email || row.displayName || row.id}</p>
+          <p className="mt-1 break-all text-xs text-slate-400">{row.id}</p>
         </div>
-        {message ? <p className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{message}</p> : null}
-        {error ? <p className="mt-4 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">{error}</p> : null}
-      </section>
+      ),
+    },
+    {
+      colKey: "role",
+      title: "角色",
+      width: 110,
+      cell: ({ row }: { row: AdminUserView }) => (
+        <Tag theme={row.role === "ADMIN" ? "warning" : "primary"} variant="light">
+          {roleLabel(row.role)}
+        </Tag>
+      ),
+    },
+    { colKey: "availableCredits", title: "可用积分", width: 110 },
+    { colKey: "frozenCredits", title: "冻结积分", width: 110 },
+    { colKey: "generationJobCount", title: "任务", width: 90 },
+    { colKey: "rechargeOrderCount", title: "订单", width: 90 },
+    {
+      colKey: "activity",
+      title: "时间",
+      width: 260,
+      cell: ({ row }: { row: AdminUserView }) => (
+        <div className="text-xs leading-5 text-slate-500">
+          <p>注册：{formatTime(row.createdAt)}</p>
+          <p>最近登录：{formatTime(row.lastLoginAt)}</p>
+        </div>
+      ),
+    },
+    {
+      colKey: "creditsAction",
+      title: "手动调整积分",
+      width: 360,
+      cell: ({ row }: { row: AdminUserView }) =>
+        row.role !== "USER" ? (
+          <Tag theme="warning" variant="light">
+            管理员不可调整
+          </Tag>
+        ) : (
+          <Space breakLine size="small">
+            <InputNumber
+              value={amounts[row.id]}
+              placeholder="100 / -20"
+              style={{ width: 120 }}
+              onChange={(value) => setAmounts((current) => ({ ...current, [row.id]: Number(value || 0) }))}
+            />
+            <Input
+              value={reasons[row.id] || ""}
+              placeholder="原因"
+              style={{ width: 140 }}
+              onChange={(value) => setReasons((current) => ({ ...current, [row.id]: String(value) }))}
+            />
+            <Button theme="primary" loading={pending === `credits:${row.id}`} onClick={() => void adjustCredits(row.id)}>
+              确认
+            </Button>
+          </Space>
+        ),
+    },
+  ];
 
-      <section className="grid gap-4">
-        {users.map((user) => (
-          <article key={user.id} className="rounded-[30px] border border-slate-200 bg-white/88 p-5 shadow-card backdrop-blur">
-            <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="flex min-w-0 items-start gap-3">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-ocean-50 text-ocean-700 shadow-card">
-                      <UserRound className="h-5 w-5" />
-                    </div>
-                    <div className="min-w-0">
-                      <h3 className="truncate text-xl font-black text-slate-950">{user.email || user.displayName || user.id}</h3>
-                      <p className="mt-1 break-all text-xs font-bold text-slate-400">{user.id}</p>
-                    </div>
-                  </div>
-                  <span className={`rounded-full border px-3 py-1 text-xs font-black ${user.role === "ADMIN" ? "border-amber-200 bg-amber-50 text-amber-700" : "border-blue-200 bg-blue-50 text-blue-700"}`}>
-                    {roleLabel(user.role)}
-                  </span>
-                </div>
+  return (
+    <section className="admin-td-grid">
+      <div className="admin-td-stat-grid">
+        <Card className="admin-td-card">
+          <Statistic title="当前列表" value={stats.total} />
+        </Card>
+        <Card className="admin-td-card">
+          <Statistic title="管理员" value={stats.admins} />
+        </Card>
+        <Card className="admin-td-card">
+          <Statistic title="可用积分合计" value={stats.availableCredits} />
+        </Card>
+        <Card className="admin-td-card">
+          <Statistic title="冻结积分合计" value={stats.frozenCredits} />
+        </Card>
+      </div>
 
-                <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                  {[
-                    ["可用积分", user.availableCredits],
-                    ["冻结积分", user.frozenCredits],
-                    ["生成任务", user.generationJobCount],
-                    ["充值订单", user.rechargeOrderCount],
-                  ].map(([label, value]) => (
-                    <div key={label as string} className="rounded-[20px] border border-slate-200 bg-slate-50/80 p-4">
-                      <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">{label as string}</p>
-                      <p className="mt-2 text-2xl font-black text-slate-950">{value as number}</p>
-                    </div>
-                  ))}
-                </div>
+      <Card className="admin-td-card" title="用户运营">
+        <Form layout="inline" className="mb-4">
+          <Form.FormItem label="搜索">
+            <Input
+              value={query}
+              placeholder="邮箱、昵称或用户 ID"
+              clearable
+              style={{ width: 320 }}
+              onChange={(value) => setQuery(String(value))}
+              onEnter={() => void refreshUsers()}
+            />
+          </Form.FormItem>
+          <Form.FormItem>
+            <Button theme="primary" loading={pending === "search"} onClick={() => void refreshUsers()}>
+              刷新
+            </Button>
+          </Form.FormItem>
+        </Form>
 
-                <div className="mt-4 flex flex-wrap gap-2 text-xs font-bold text-slate-500">
-                  <span className="rounded-full border border-slate-200 bg-white px-3 py-1">已支付订单：{user.paidRechargeOrderCount}</span>
-                  <span className="rounded-full border border-slate-200 bg-white px-3 py-1">上传图片：{user.uploadedImageCount}</span>
-                  <span className="rounded-full border border-slate-200 bg-white px-3 py-1">注册：{formatTime(user.createdAt)}</span>
-                  <span className="rounded-full border border-slate-200 bg-white px-3 py-1">最近登录：{formatTime(user.lastLoginAt)}</span>
-                </div>
-              </div>
+        {message ? <Alert className="mb-3" theme="success" message={message} /> : null}
+        {error ? <Alert className="mb-3" theme="error" message={error} /> : null}
 
-              <div className="rounded-[24px] border border-slate-200 bg-slate-50/80 p-4">
-                <div className="flex items-center gap-2">
-                  <Coins className="h-4 w-4 text-ocean-700" />
-                  <h4 className="font-black text-slate-950">手动调整积分</h4>
-                </div>
-                <p className="mt-2 text-xs font-bold leading-5 text-slate-500">正数增加积分，负数扣减积分。扣减不会允许可用积分变成负数。</p>
-                {user.role !== "USER" ? (
-                  <div className="mt-4 rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-xs font-bold leading-5 text-amber-700">
-                    <div className="flex items-center gap-2 font-black">
-                      <ShieldAlert className="h-4 w-4" />
-                      管理员账号不可调整积分
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mt-4 grid gap-3">
-                    <input
-                      value={amounts[user.id] || ""}
-                      onChange={(event) => setAmounts((current) => ({ ...current, [user.id]: event.target.value }))}
-                      className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold outline-none focus:border-ocean-400"
-                      placeholder="例如 100 或 -20"
-                      type="number"
-                    />
-                    <input
-                      value={reasons[user.id] || ""}
-                      onChange={(event) => setReasons((current) => ({ ...current, [user.id]: event.target.value }))}
-                      className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold outline-none focus:border-ocean-400"
-                      placeholder="调整原因"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => void adjustCredits(user.id)}
-                      disabled={pending === `credits:${user.id}`}
-                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white shadow-card disabled:opacity-60"
-                    >
-                      {pending === `credits:${user.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Coins className="h-4 w-4" />}
-                      确认调整
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </article>
-        ))}
-      </section>
-
-      {users.length === 0 ? <p className="rounded-[24px] border border-dashed border-slate-200 bg-white/80 px-5 py-8 text-center text-sm font-bold text-slate-500">没有找到匹配用户。</p> : null}
+        <Row gutter={[16, 16]}>
+          <Col span={12}>
+            <Table rowKey="id" data={users} columns={columns} hover stripe bordered tableLayout="auto" empty="没有找到匹配用户" />
+          </Col>
+        </Row>
+      </Card>
     </section>
   );
 }

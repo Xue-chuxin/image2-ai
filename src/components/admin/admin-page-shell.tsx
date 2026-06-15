@@ -1,7 +1,13 @@
+"use client";
+
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { Layout, Menu, Tag } from "tdesign-react";
 
 type AdminTabKey = "users" | "jobs" | "images" | "uploads" | "billing" | "health" | "settings";
+
+const { Header, Content, Aside } = Layout;
+const { MenuItem } = Menu;
 
 const adminTabs: Array<{
   key: AdminTabKey;
@@ -34,47 +40,50 @@ export function AdminPageShell({
   children: ReactNode;
 }) {
   return (
-    <main className="space-y-5 pb-28">
-      <section className="overflow-hidden rounded-[30px] border border-slate-200 bg-white/88 shadow-card backdrop-blur">
-        <div className="flex flex-col gap-5 p-5 lg:p-6">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="max-w-2xl">
-              <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-400">{eyebrow}</p>
-              <h1 className="mt-2 text-3xl font-black tracking-[-0.04em] text-slate-950">{title}</h1>
-              <p className="mt-2 text-sm font-bold leading-6 text-slate-500">{description}</p>
-            </div>
-            <div className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-500 shadow-card">
-              {email || "admin"}
-            </div>
-          </div>
-
-          <nav className="rounded-[24px] border border-slate-200 bg-slate-50/78 p-2">
-            <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-              {adminTabs.map((tab) => {
-                const selected = tab.key === active;
-                return (
-                  <Link
-                    key={tab.key}
-                    href={tab.href}
-                    className={`group min-w-[7.2rem] rounded-[18px] px-4 py-3 transition ${
-                      selected
-                        ? "bg-slate-950 text-white shadow-[0_18px_38px_rgba(15,23,42,0.22)]"
-                        : "bg-white/70 text-slate-600 hover:bg-white hover:text-slate-950"
-                    }`}
-                  >
-                    <span className="block text-sm font-black">{tab.label}</span>
-                    <span className={`mt-1 block text-[0.68rem] font-bold ${selected ? "text-white/58" : "text-slate-400"}`}>
-                      {tab.description}
-                    </span>
-                  </Link>
-                );
-              })}
-            </div>
-          </nav>
+    <Layout className="admin-td-shell">
+      <Aside className="admin-td-sider hidden md:block" width="236px">
+        <div className="px-5 py-6">
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">{eyebrow}</p>
+          <h1 className="mt-2 text-xl font-black text-slate-950">运营后台</h1>
+          <p className="mt-2 text-xs font-bold leading-5 text-slate-500">TDesign 管理控制台</p>
         </div>
-      </section>
-
-      {children}
-    </main>
+        <Menu value={active} className="border-0">
+          {adminTabs.map((tab) => (
+            <MenuItem key={tab.key} value={tab.key}>
+              <Link href={tab.href} className="block">
+                <span className="block text-sm font-black">{tab.label}</span>
+                <span className="mt-0.5 block text-xs text-slate-400">{tab.description}</span>
+              </Link>
+            </MenuItem>
+          ))}
+        </Menu>
+      </Aside>
+      <Layout>
+        <Header className="admin-td-header">
+          <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-4">
+            <div className="min-w-0">
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">{eyebrow}</p>
+              <h2 className="mt-1 text-2xl font-black text-slate-950">{title}</h2>
+              <p className="mt-1 max-w-3xl text-sm font-bold leading-6 text-slate-500">{description}</p>
+            </div>
+            <Tag theme="primary" variant="light">
+              {email || "admin"}
+            </Tag>
+          </div>
+          <div className="flex gap-2 overflow-x-auto px-5 pb-4 md:hidden">
+            {adminTabs.map((tab) => (
+              <Link
+                key={tab.key}
+                href={tab.href}
+                className={`shrink-0 rounded px-3 py-2 text-sm font-black ${tab.key === active ? "bg-slate-950 text-white" : "bg-white text-slate-600"}`}
+              >
+                {tab.label}
+              </Link>
+            ))}
+          </div>
+        </Header>
+        <Content className="admin-td-content">{children}</Content>
+      </Layout>
+    </Layout>
   );
 }

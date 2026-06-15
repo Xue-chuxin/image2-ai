@@ -4,7 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Clock3, Home, ImagePlus, Library, Palette, UserRound } from "lucide-react";
 import { clsx } from "clsx";
+import type { ReactNode } from "react";
 import type { PublicAppSettings } from "@/lib/settings";
+import { GlassSurface, GooeyNav, Particles } from "@/components/front/react-bits";
 
 const navItems = [
   { href: "/", label: "首页", icon: Home },
@@ -21,47 +23,41 @@ function isActivePath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function AppShell({ children, settings }: { children: React.ReactNode; settings: PublicAppSettings }) {
+export function AppShell({ children, settings }: { children: ReactNode; settings: PublicAppSettings }) {
   const pathname = usePathname();
 
+  if (pathname.startsWith("/admin")) {
+    return <>{children}</>;
+  }
+
+  const navLinks = navItems.map((item) => ({
+    href: item.href,
+    label: item.label,
+    active: isActivePath(pathname, item.href),
+  }));
+
   return (
-    <div className="min-h-screen">
-      <header className="sticky inset-x-0 top-0 z-40 w-full border-b border-slate-200/70 bg-[#f8fafc]/88 px-4 py-3 backdrop-blur-xl md:px-8">
-        <div className="mx-auto max-w-[1380px]">
+    <div className="front-shell min-h-screen">
+      <Particles className="front-shell__particles" />
+      <header className="front-header sticky inset-x-0 top-0 z-40 w-full px-4 py-3 md:px-8">
+        <div className="mx-auto max-w-[1440px]">
           <div className="flex items-center justify-between gap-4">
             <Link href="/" className="group flex min-w-0 items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[15px] border border-slate-200 bg-white text-[#254c73] shadow-card transition duration-200 group-hover:-translate-y-0.5">
+              <div className="front-logo-mark flex h-11 w-11 shrink-0 items-center justify-center text-[#254c73] transition duration-200 group-hover:-translate-y-0.5">
                 <Palette className="h-5 w-5" />
               </div>
               <div className="min-w-0">
-                <p className="truncate text-base font-black leading-none tracking-[-0.04em] text-slate-950">{settings.siteTitle}</p>
+                <p className="truncate text-base font-black leading-none text-slate-950">{settings.siteTitle}</p>
                 <p className="mt-1 truncate text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">{settings.siteSubtitle}</p>
               </div>
             </Link>
 
-            <nav className="hidden items-center gap-1 rounded-[18px] border border-slate-200 bg-white/76 p-1 shadow-card md:flex">
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                const active = isActivePath(pathname, item.href);
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={clsx(
-                      "inline-flex min-h-10 items-center gap-2 rounded-[14px] px-4 py-2 text-sm font-black transition duration-200 focus:outline-none focus:ring-4 focus:ring-slate-200",
-                      active ? "bg-slate-950 text-white shadow-card" : "text-slate-500 hover:bg-slate-50 hover:text-slate-950",
-                      item.primary && !active && "bg-[#edf4fa] text-[#254c73] hover:bg-[#e4edf6]",
-                    )}
-                  >
-                    <Icon className="h-4 w-4" />
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </nav>
+            <div className="hidden md:block">
+              <GooeyNav items={navLinks} />
+            </div>
 
             <div className="flex shrink-0 items-center gap-2">
-              <Link href="/signin" className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-700 shadow-card transition hover:-translate-y-0.5 hover:text-slate-950">
+              <Link href="/signin" className="front-login-button">
                 登录
               </Link>
             </div>
@@ -90,11 +86,10 @@ export function AppShell({ children, settings }: { children: React.ReactNode; se
         </div>
       </header>
 
-      <div className="mx-auto flex min-h-[calc(100dvh-4.25rem)] max-w-[1380px] flex-col px-3 pb-10 pt-4 md:px-6 md:pb-8">
-        <div className="relative flex-1 overflow-visible rounded-[34px] border border-slate-200/80 bg-white/54 p-3 shadow-[0_28px_90px_rgba(31,49,70,0.08)] backdrop-blur-xl md:p-5">
-          <div className="pointer-events-none absolute inset-x-8 top-0 h-24 rounded-full bg-white/50 blur-3xl" />
+      <div className="mx-auto flex min-h-[calc(100dvh-4.25rem)] max-w-[1440px] flex-col px-3 pb-10 pt-4 md:px-6 md:pb-8">
+        <GlassSurface className="front-stage flex-1 p-3 md:p-5">
           <div className="relative">
-            <div className="mb-4 hidden items-center justify-between rounded-[22px] border border-slate-200/70 bg-white/78 px-4 py-3 shadow-card md:flex">
+            <div className="front-status-strip mb-4 hidden items-center justify-between px-4 py-3 md:flex">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Studio desk</p>
                 <p className="mt-1 text-sm font-black text-slate-950">一个安静的图片创作工作台</p>
@@ -106,7 +101,7 @@ export function AppShell({ children, settings }: { children: React.ReactNode; se
             </div>
             {children}
           </div>
-        </div>
+        </GlassSurface>
 
       </div>
     </div>
