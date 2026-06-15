@@ -136,7 +136,7 @@ export function AdminPaymentDiagnostics({
         <Alert theme="success" title="支付诊断未发现明显问题" message="支付渠道的启用状态、密钥配置和回调地址已完成基础检查。" />
       )}
 
-      <div className="admin-td-grid">
+      <div className="admin-td-panel-grid">
         <Card
           bordered
           title="支付联调面板"

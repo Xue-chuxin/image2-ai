@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Alert, Button, Card, Col, Form, Input, InputNumber, Row, Space, Statistic, Table, Tag } from "tdesign-react";
+import { Alert, Button, Card, Form, Input, InputNumber, Space, Statistic, Table, Tag } from "tdesign-react";
 import type { AdminUserView } from "@/lib/admin-users";
 
 type UsersResponse = {
@@ -219,11 +219,9 @@ export function AdminUsersDashboard({ initialUsers }: { initialUsers: AdminUserV
         {message ? <Alert className="mb-3" theme="success" message={message} /> : null}
         {error ? <Alert className="mb-3" theme="error" message={error} /> : null}
 
-        <Row gutter={[16, 16]}>
-          <Col span={12}>
-            <Table rowKey="id" data={users} columns={columns} hover stripe bordered tableLayout="auto" empty="没有找到匹配用户" />
-          </Col>
-        </Row>
+        <div className="admin-td-table-scroll">
+          <Table rowKey="id" data={users} columns={columns} hover stripe bordered tableLayout="auto" empty="没有找到匹配用户" />
+        </div>
       </Card>
     </section>
   );

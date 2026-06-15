@@ -564,6 +564,11 @@ textarea {
   background: #f3f6fb;
 }
 
+.admin-td-shell,
+.admin-td-shell .t-layout {
+  min-width: 0;
+}
+
 .admin-td-sider {
   border-right: 1px solid #e7eaf0;
   background: #fff;
@@ -578,7 +583,10 @@ textarea {
 }
 
 .admin-td-content {
+  width: 100%;
+  min-width: 0;
   padding: 24px;
+  overflow-x: hidden;
 }
 
 .admin-td-card {
@@ -589,14 +597,36 @@ textarea {
 
 .admin-td-grid {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.admin-td-panel-grid {
+  display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
   gap: 16px;
+  align-items: start;
 }
 
 .admin-td-stat-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
+  align-items: stretch;
+}
+
+.admin-td-stat-grid .admin-td-card {
+  min-height: 112px;
+}
+
+.admin-td-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.admin-td-table-scroll .t-table {
+  min-width: 980px;
 }
 
 .admin-td-toolbar {
