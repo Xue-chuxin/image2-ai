@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { motion, useReducedMotion, type Variants } from "motion/react";
 import { Camera, Geometry, Mesh, Program, Renderer } from "ogl";
@@ -83,9 +83,7 @@ export function GlassSurface({ children, className }: GlassSurfaceProps) {
   );
 }
 
-export function ShapeGrid({ className, cellCount = 112 }: { className?: string; cellCount?: number }) {
-  const ref = useRef<HTMLDivElement | null>(null);
-  const reduced = useReducedMotion();
+export function ShapeGrid({ className, cellCount = 72 }: { className?: string; cellCount?: number }) {
   const cells = useMemo<ShapeGridCell[]>(
     () =>
       Array.from({ length: cellCount }, (_, index) => {
@@ -105,27 +103,7 @@ export function ShapeGrid({ className, cellCount = 112 }: { className?: string; 
   );
 
   return (
-    <div
-      ref={ref}
-      className={clsx("rb-shape-grid", className)}
-      aria-hidden="true"
-      onPointerMove={
-        reduced
-          ? undefined
-          : (event) => {
-              const rect = ref.current?.getBoundingClientRect();
-              if (!rect) return;
-              const x = ((event.clientX - rect.left) / rect.width - 0.5) * 22;
-              const y = ((event.clientY - rect.top) / rect.height - 0.5) * 18;
-              ref.current?.style.setProperty("--shape-grid-x", `${x.toFixed(2)}px`);
-              ref.current?.style.setProperty("--shape-grid-y", `${y.toFixed(2)}px`);
-            }
-      }
-      onPointerLeave={() => {
-        ref.current?.style.setProperty("--shape-grid-x", "0px");
-        ref.current?.style.setProperty("--shape-grid-y", "0px");
-      }}
-    >
+    <div className={clsx("rb-shape-grid", className)} aria-hidden="true">
       {cells.map((cell, index) => (
         <span
           key={index}
@@ -153,8 +131,8 @@ export function AnimatedContent({ children, className, delay = 0, distance = 26 
   return (
     <motion.div
       className={className}
-      initial={{ opacity: 0, y: distance, filter: "blur(14px)" }}
-      whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+      initial={{ opacity: 0, y: distance }}
+      whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-80px" }}
       transition={{ duration: 0.72, delay, ease: [0.16, 1, 0.3, 1] }}
     >
@@ -181,8 +159,8 @@ export function BlurText({ text, className, as = "p", delay = 0.055, by = "words
       {units.map((unit, index) => (
         <motion.span
           key={`${unit}-${index}`}
-          initial={{ opacity: 0, y: 22, filter: "blur(12px)" }}
-          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.58, delay: index * delay, ease: [0.16, 1, 0.3, 1] }}
         >
           {unit === " " ? "\u00A0" : unit}
@@ -207,30 +185,25 @@ export function SpotlightCard({
   spotlightColor?: string;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [active, setActive] = useState(false);
+  const reduced = useReducedMotion();
+
+  function updateSpotlight(event: PointerEvent<HTMLDivElement>) {
+    const rect = ref.current?.getBoundingClientRect();
+    if (!rect) return;
+    ref.current?.style.setProperty("--spotlight-x", `${(event.clientX - rect.left).toFixed(1)}px`);
+    ref.current?.style.setProperty("--spotlight-y", `${(event.clientY - rect.top).toFixed(1)}px`);
+  }
 
   return (
     <div
       ref={ref}
       className={clsx("rb-spotlight-card", className)}
-      onMouseMove={(event) => {
-        const rect = ref.current?.getBoundingClientRect();
-        if (!rect) return;
-        setPosition({ x: event.clientX - rect.left, y: event.clientY - rect.top });
-      }}
-      onMouseEnter={() => setActive(true)}
-      onMouseLeave={() => setActive(false)}
-      onFocus={() => setActive(true)}
-      onBlur={() => setActive(false)}
+      onPointerMove={reduced ? undefined : updateSpotlight}
     >
       <span
         className="rb-spotlight-card__glow"
         aria-hidden="true"
-        style={{
-          opacity: active ? 1 : 0,
-          background: `radial-gradient(circle at ${position.x}px ${position.y}px, ${spotlightColor}, transparent 58%)`,
-        }}
+        style={{ "--spotlight-color": spotlightColor } as CSSProperties}
       />
       <div className="relative z-10">{children}</div>
     </div>
@@ -413,7 +386,7 @@ export function MasonryShowcase({ items, onSelect, emptyText = "没有找到匹�
           transition={{ duration: 0.56, delay: Math.min(index * 0.035, 0.28), ease: [0.16, 1, 0.3, 1] }}
         >
           {item.thumbnailUrl || item.imageUrl ? (
-            <img src={item.thumbnailUrl || item.imageUrl} alt={item.title} />
+            <img src={item.thumbnailUrl || item.imageUrl} alt={item.title} loading={index < 6 ? "eager" : "lazy"} decoding="async" />
           ) : (
             <span className="rb-masonry__placeholder" />
           )}

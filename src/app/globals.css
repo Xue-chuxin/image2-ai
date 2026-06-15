@@ -120,7 +120,8 @@ textarea {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  opacity: 0.78;
+  opacity: 0.54;
+  contain: layout paint style;
 }
 
 .front-header {
@@ -202,7 +203,7 @@ textarea {
   --shape-grid-x: 0px;
   --shape-grid-y: 0px;
   display: grid;
-  grid-template-columns: repeat(14, minmax(44px, 1fr));
+  grid-template-columns: repeat(12, minmax(44px, 1fr));
   grid-auto-rows: minmax(44px, 1fr);
   gap: clamp(12px, 1.6vw, 24px);
   align-content: center;
@@ -226,8 +227,7 @@ textarea {
   display: block;
   min-height: 44px;
   opacity: 0.72;
-  transform: translate3d(var(--shape-grid-x), var(--shape-grid-y), 0);
-  transition: transform 520ms cubic-bezier(0.16, 1, 0.3, 1), opacity 240ms ease;
+  transition: opacity 240ms ease;
 }
 
 .rb-shape-grid__cell::before {
@@ -243,10 +243,13 @@ textarea {
     inset 0 1px 0 rgba(255, 255, 255, 0.68),
     0 16px 36px rgba(59, 91, 124, 0.08);
   transform: rotate(var(--shape-rotate)) scale(var(--shape-scale));
-  animation: rb-shape-grid-float 7.2s ease-in-out infinite;
+}
+
+.rb-shape-grid__cell:nth-child(9n + 1)::before,
+.rb-shape-grid__cell:nth-child(13n + 4)::before {
+  animation: rb-shape-grid-float 8.8s ease-in-out infinite;
   animation-delay: var(--shape-delay);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  will-change: transform;
 }
 
 .rb-shape-grid__cell.is-circle::before {
@@ -286,7 +289,7 @@ textarea {
 
 .rb-animated-text > span {
   display: inline-block;
-  will-change: transform, opacity, filter;
+  will-change: transform, opacity;
 }
 
 .rb-gooey-nav {
@@ -341,6 +344,9 @@ textarea {
 }
 
 .rb-spotlight-card {
+  --spotlight-x: 50%;
+  --spotlight-y: 50%;
+  --spotlight-color: rgba(47, 114, 188, 0.24);
   position: relative;
   overflow: hidden;
   border: 1px solid rgba(203, 213, 225, 0.72);
@@ -355,7 +361,14 @@ textarea {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle at var(--spotlight-x) var(--spotlight-y), var(--spotlight-color), transparent 58%);
   transition: opacity 240ms ease;
+}
+
+.rb-spotlight-card:hover .rb-spotlight-card__glow,
+.rb-spotlight-card:focus-within .rb-spotlight-card__glow {
+  opacity: 1;
 }
 
 .rb-particles canvas {
@@ -382,6 +395,7 @@ textarea {
   box-shadow: 0 18px 54px rgba(31, 49, 70, 0.08);
   cursor: pointer;
   break-inside: avoid;
+  contain: paint;
 }
 
 .rb-masonry__item img,
@@ -390,6 +404,7 @@ textarea {
   width: 100%;
   min-height: inherit;
   object-fit: cover;
+  transform: translateZ(0);
 }
 
 .rb-masonry__placeholder {
@@ -546,6 +561,23 @@ textarea {
   }
 }
 
+@media (max-width: 768px) {
+  .front-shell__shape-grid {
+    opacity: 0.34;
+  }
+
+  .rb-shape-grid {
+    grid-template-columns: repeat(8, minmax(38px, 1fr));
+    grid-auto-rows: minmax(38px, 1fr);
+    gap: 14px;
+    padding: 52px 24px;
+  }
+
+  .rb-shape-grid__cell::before {
+    animation: none !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .rb-action-beam__ring {
     animation: none;
@@ -556,6 +588,10 @@ textarea {
   .rb-shape-grid__cell::before {
     animation: none;
     transform: none;
+  }
+
+  .rb-spotlight-card__glow {
+    display: none;
   }
 }
 

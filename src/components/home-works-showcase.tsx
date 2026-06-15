@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { Download, Search, X } from "lucide-react";
@@ -179,6 +179,8 @@ export function HomeWorksShowcase({
     [categories],
   );
   const [query, setQuery] = useState("");
+  const deferredQuery = useDeferredValue(query);
+  const [requestQuery, setRequestQuery] = useState("");
   const [category, setCategory] = useState("全部");
   const [works, setWorks] = useState(initialWorks);
   const [loading, setLoading] = useState(false);
@@ -188,19 +190,29 @@ export function HomeWorksShowcase({
   const realItems = useMemo(() => works.map(workToItem), [works]);
   const hasGalleryError = Boolean(galleryError);
   const usingFallback = allowFallbackSamples && !hasGalleryError && initialWorks.length === 0 && works.length === 0 && fallbackPrompts.length > 0;
-  const visibleItems = usingFallback ? filterItems(fallbackItems, query, category) : filterItems(realItems, query, category);
+  const visibleItems = usingFallback ? filterItems(fallbackItems, deferredQuery, category) : filterItems(realItems, deferredQuery, category);
   const isLibraryEmpty = !hasGalleryError && !usingFallback && realItems.length === 0 && !query.trim() && category === "全部";
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setRequestQuery(query), 220);
+    return () => window.clearTimeout(timer);
+  }, [query]);
 
   useEffect(() => {
     if (usingFallback || hasGalleryError) {
       return;
     }
 
+    const trimmedQuery = requestQuery.trim();
+    if (!trimmedQuery) {
+      setWorks(initialWorks);
+      setLoading(false);
+      return;
+    }
+
     const controller = new AbortController();
     const params = new URLSearchParams();
-    if (query.trim()) {
-      params.set("q", query.trim());
-    }
+    params.set("q", trimmedQuery);
     setLoading(true);
     fetch(`/api/gallery/images?${params.toString()}`, {
       signal: controller.signal,
@@ -223,7 +235,7 @@ export function HomeWorksShowcase({
       });
 
     return () => controller.abort();
-  }, [category, hasGalleryError, initialWorks, query, usingFallback]);
+  }, [hasGalleryError, initialWorks, requestQuery, usingFallback]);
 
   return (
     <>
