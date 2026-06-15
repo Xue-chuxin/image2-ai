@@ -43,7 +43,7 @@ export default async function AdminHealthPage() {
       email={session.email}
       eyebrow="Launch Check"
       title="上线自检"
-      description="检查数据库、会话密钥、敏感配置加密、支付回调和本地存储目录，不展示任何密钥明文。"
+      description="检查数据库、会话密钥、生图通道、任务状态、支付回调和本地存储风险，不展示任何密钥明文。"
     >
       <section className="grid gap-3 md:grid-cols-3">
         {[

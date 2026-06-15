@@ -24,6 +24,17 @@ type ChatGPTWebStatusResponse = {
   error?: string;
 };
 
+type OpenAIChannelCheckResponse = {
+  ok: boolean;
+  status?: {
+    channelId: string;
+    channelName: string;
+    checkedUrl: string;
+    message: string;
+  };
+  error?: string;
+};
+
 type EditableOpenAIChannel = OpenAICompatibleChannelSetting & {
   apiKey: string;
 };
@@ -86,6 +97,20 @@ async function readChatGPTWebResponse(response: Response): Promise<ChatGPTWebSta
   };
 }
 
+async function readOpenAIChannelCheckResponse(response: Response): Promise<OpenAIChannelCheckResponse> {
+  const contentType = response.headers.get("content-type") || "";
+
+  if (contentType.includes("application/json")) {
+    return (await response.json()) as OpenAIChannelCheckResponse;
+  }
+
+  const text = await response.text();
+  return {
+    ok: false,
+    error: text.includes("<!DOCTYPE") ? "接口返回了 HTML 错误页，请查看服务端日志。" : text || "接口返回格式异常。",
+  };
+}
+
 function statusStyle(status: AdminDiagnosticStatus) {
   if (status === "ok") {
     return {
@@ -117,10 +142,13 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
   const [error, setError] = useState("");
   const [chatgptMessage, setChatgptMessage] = useState("");
   const [chatgptError, setChatgptError] = useState("");
+  const [openaiChannelCheckMessage, setOpenaiChannelCheckMessage] = useState("");
+  const [openaiChannelCheckError, setOpenaiChannelCheckError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isOpeningChatGPT, setIsOpeningChatGPT] = useState(false);
   const [isCheckingChatGPT, setIsCheckingChatGPT] = useState(false);
+  const [checkingOpenAIChannelId, setCheckingOpenAIChannelId] = useState("");
 
   function update<K extends keyof AdminAppSettings>(key: K, value: AdminAppSettings[K]) {
     setSettings((current) => ({ ...current, [key]: value }));
@@ -269,6 +297,31 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
     }
   }
 
+  async function checkOpenAIChannel(channelId: string) {
+    setOpenaiChannelCheckError("");
+    setOpenaiChannelCheckMessage("");
+    setCheckingOpenAIChannelId(channelId);
+
+    try {
+      const response = await fetch("/api/admin/openai-compatible/check", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ channelId }),
+      });
+      const data = await readOpenAIChannelCheckResponse(response);
+      if (!response.ok || !data.ok || !data.status) {
+        throw new Error(data.error || "通道连通性检查失败。");
+      }
+      setOpenaiChannelCheckMessage(data.status.message);
+    } catch (caughtError) {
+      setOpenaiChannelCheckError(caughtError instanceof Error ? caughtError.message : "通道连通性检查失败。");
+    } finally {
+      setCheckingOpenAIChannelId("");
+    }
+  }
+
   async function logout() {
     setIsLoggingOut(true);
     await fetch("/api/auth/logout", { method: "POST" }).catch(() => null);
@@ -376,6 +429,15 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
                       <div className="flex items-center gap-1">
                         <button
                           type="button"
+                          onClick={() => checkOpenAIChannel(channel.id)}
+                          disabled={checkingOpenAIChannelId === channel.id || !channel.enabled || !channel.apiKeyConfigured}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-blue-100 bg-blue-50 text-blue-600 disabled:opacity-40"
+                          title={!channel.enabled ? "启用通道后可检测" : channel.apiKeyConfigured ? "检测 /models 连通性" : "保存 API Key 后可检测"}
+                        >
+                          {checkingOpenAIChannelId === channel.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => moveOpenAIChannel(channel.id, -1)}
                           disabled={index === 0}
                           className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500 disabled:opacity-40"
@@ -458,6 +520,8 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
                   </div>
                 ))}
               </div>
+              {openaiChannelCheckMessage ? <p className="mt-3 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-xs font-bold leading-5 text-emerald-700">{openaiChannelCheckMessage}</p> : null}
+              {openaiChannelCheckError ? <p className="mt-3 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-xs font-bold leading-5 text-red-600">{openaiChannelCheckError}</p> : null}
               <p className="mt-3 text-xs font-bold leading-5 text-slate-400">保存后会按当前顺序尝试；上一个通道超时、限流或服务错误时自动切到下一个。</p>
             </div>
             <hr className="my-2 border-slate-100" />

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { jsonError } from "@/lib/app-error";
 import { getUserSession } from "@/lib/auth";
 import { retryGenerationJobForUser } from "@/lib/generation-jobs";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -29,9 +30,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const job = await retryGenerationJobForUser(session.userId, id);
     return NextResponse.json({ ok: true, job }, { status: 202 });
   } catch (error) {
-    return NextResponse.json(
-      { ok: false, error: error instanceof Error ? error.message : "重试任务失败。" },
-      { status: 500 },
-    );
+    return jsonError(error, "重试任务失败。");
   }
 }

@@ -15,11 +15,15 @@ type JobsResponse = {
 const statusOptions = [
   { value: "", label: "全部" },
   { value: "QUEUED", label: "排队中" },
+  { value: "POLISHING", label: "润色中" },
   { value: "GENERATING", label: "生成中" },
+  { value: "UPLOADING", label: "保存中" },
   { value: "COMPLETED", label: "已完成" },
   { value: "FAILED", label: "失败" },
   { value: "CANCELED", label: "已取消" },
 ];
+
+const activeStatuses = new Set(["QUEUED", "POLISHING", "GENERATING", "UPLOADING"]);
 
 function statusText(status: string) {
   if (status === "COMPLETED") {
@@ -30,6 +34,12 @@ function statusText(status: string) {
   }
   if (status === "GENERATING") {
     return "生成中";
+  }
+  if (status === "POLISHING") {
+    return "润色中";
+  }
+  if (status === "UPLOADING") {
+    return "保存中";
   }
   if (status === "QUEUED") {
     return "排队中";
@@ -47,7 +57,7 @@ function statusClass(status: string) {
   if (status === "FAILED") {
     return "border-red-100 bg-red-50 text-red-600";
   }
-  if (status === "GENERATING" || status === "QUEUED") {
+  if (activeStatuses.has(status)) {
     return "border-blue-100 bg-blue-50 text-blue-700";
   }
   return "border-slate-200 bg-slate-50 text-slate-500";
@@ -104,7 +114,7 @@ export function AdminJobsDashboard({ initialJobs }: { initialJobs: AdminGenerati
   const stats = useMemo(() => {
     return {
       total: jobs.length,
-      running: jobs.filter((job) => job.status === "QUEUED" || job.status === "GENERATING").length,
+      running: jobs.filter((job) => activeStatuses.has(job.status)).length,
       completed: jobs.filter((job) => job.status === "COMPLETED").length,
       failed: jobs.filter((job) => job.status === "FAILED").length,
     };
@@ -314,7 +324,7 @@ export function AdminJobsDashboard({ initialJobs }: { initialJobs: AdminGenerati
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className={`rounded-full border px-3 py-1 text-xs font-black ${statusClass(job.status)}`}>{statusText(job.status)}</span>
-                    {job.isStale ? <span className="rounded-full border border-amber-100 bg-amber-50 px-3 py-1 text-xs font-black text-amber-700">疑似卡住</span> : null}
+                    {job.isStale ? <span className="rounded-full border border-amber-100 bg-amber-50 px-3 py-1 text-xs font-black text-amber-700">疑似卡住，可刷新后重试或标记失败</span> : null}
                     <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-black text-slate-500">{job.provider}</span>
                     {queueText(job) ? (
                       <span className="rounded-full border border-amber-100 bg-amber-50 px-3 py-1 text-xs font-black text-amber-700">
@@ -364,7 +374,7 @@ export function AdminJobsDashboard({ initialJobs }: { initialJobs: AdminGenerati
                       重新执行
                     </button>
                   ) : null}
-                  {job.status === "QUEUED" || job.status === "GENERATING" ? (
+                  {activeStatuses.has(job.status) ? (
                     <button
                       type="button"
                       onClick={() => failJob(job.id)}

@@ -646,6 +646,13 @@ textarea {
   background: rgba(219, 234, 254, 0.86);
 }
 
+.status-pill.queued,
+.status-pill.polishing,
+.status-pill.uploading {
+  color: #1d4ed8;
+  background: rgba(219, 234, 254, 0.86);
+}
+
 .history-meta {
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }

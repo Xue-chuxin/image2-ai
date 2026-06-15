@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { redirect } from "next/navigation";
 
+import { AppError } from "@/lib/app-error";
 import { isUsableSecret, safeEqual } from "@/lib/app-crypto";
 
 export const ADMIN_SESSION_COOKIE = "image2_admin_session";
@@ -95,7 +96,7 @@ function normalizeEmail(email: string) {
 
 function assertPasswordUsable(password: string) {
   if (password.length < 6) {
-    throw new Error("密码至少需要 6 位。");
+    throw new AppError("BAD_REQUEST", "密码至少需要 6 位。", 400);
   }
 }
 
@@ -286,7 +287,7 @@ export async function loginOrCreateUser(email: string, password: string) {
 
   const normalizedEmail = normalizeEmail(email);
   if (!normalizedEmail) {
-    throw new Error("请输入邮箱。");
+    throw new AppError("BAD_REQUEST", "请输入邮箱。", 400);
   }
   assertPasswordUsable(password);
 
@@ -302,7 +303,7 @@ export async function loginOrCreateUser(email: string, password: string) {
 
   if (existingUser) {
     if (existingUser.role === "ADMIN") {
-      throw new Error("管理员账号请切换到管理员登录。");
+      throw new AppError("FORBIDDEN", "管理员账号请切换到管理员登录。", 403);
     }
 
     if (!existingUser.passwordHash) {
@@ -328,7 +329,7 @@ export async function loginOrCreateUser(email: string, password: string) {
     }
 
     if (!verifyPassword(password, existingUser.passwordHash)) {
-      throw new Error("邮箱或密码错误。");
+      throw new AppError("UNAUTHORIZED", "邮箱或密码错误。", 401);
     }
 
     const user = await prisma.user.update({

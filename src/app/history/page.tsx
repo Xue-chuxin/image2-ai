@@ -8,6 +8,18 @@ import { listRecentGenerationJobs, type GenerationJobView } from "@/lib/generati
 export const dynamic = "force-dynamic";
 
 function getStatusLabel(status: string) {
+  if (status === "QUEUED") {
+    return "排队中";
+  }
+
+  if (status === "POLISHING") {
+    return "润色中";
+  }
+
+  if (status === "UPLOADING") {
+    return "保存中";
+  }
+
   if (status === "COMPLETED") {
     return "已完成";
   }
@@ -18,10 +30,6 @@ function getStatusLabel(status: string) {
 
   if (status === "GENERATING") {
     return "生成中";
-  }
-
-  if (status === "QUEUED") {
-    return "排队中";
   }
 
   if (status === "CANCELED") {
@@ -60,7 +68,7 @@ function getQueueStatusLabel(job: GenerationJobView) {
 }
 
 function shouldShowQueueHint(job: GenerationJobView) {
-  return job.provider === "chatgpt_web" && (job.status === "QUEUED" || job.status === "GENERATING");
+  return job.provider === "chatgpt_web" && (job.status === "QUEUED" || job.status === "POLISHING" || job.status === "GENERATING" || job.status === "UPLOADING");
 }
 
 function formatTime(value: string) {

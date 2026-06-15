@@ -5,6 +5,7 @@ import {
   listRecentGenerationJobs,
   type CreateGenerationJobInput,
 } from "@/lib/generation-jobs";
+import { jsonError } from "@/lib/app-error";
 import { getUserSession } from "@/lib/auth";
 import { checkModerationText } from "@/lib/moderation";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -51,15 +52,7 @@ export async function GET() {
       jobs,
     });
   } catch (error) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: error instanceof Error ? error.message : "读取生成任务失败",
-      },
-      {
-        status: 500,
-      },
-    );
+    return jsonError(error, "读取生成任务失败");
   }
 }
 
@@ -150,18 +143,10 @@ export async function POST(request: Request) {
         error: failed ? job.errorMessage || "生成任务失败" : undefined,
       },
       {
-        status: failed ? 500 : 202,
+        status: failed ? 409 : 202,
       },
     );
   } catch (error) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: error instanceof Error ? error.message : "创建生成任务失败",
-      },
-      {
-        status: 500,
-      },
-    );
+    return jsonError(error, "创建生成任务失败");
   }
 }

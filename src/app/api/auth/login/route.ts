@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { jsonError } from "@/lib/app-error";
 import { loginOrCreateUser, setUserSessionCookie } from "@/lib/auth";
 import { getUserCreditBalance } from "@/lib/credits";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -42,14 +43,6 @@ export async function POST(request: Request) {
     setUserSessionCookie(response, { id: user.id, email: user.email || email });
     return response;
   } catch (error) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: error instanceof Error ? error.message : "登录失败，请检查邮箱和密码。",
-      },
-      {
-        status: 500,
-      },
-    );
+    return jsonError(error, "登录失败，请检查邮箱和密码。");
   }
 }

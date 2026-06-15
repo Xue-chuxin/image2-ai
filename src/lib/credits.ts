@@ -1,4 +1,5 @@
 import { prisma } from "./db";
+import { AppError } from "./app-error";
 
 export function estimateGenerationCreditCost(quality: string, imageCount: number) {
   const singleCost = quality === "high" ? 35 : quality === "low" ? 3 : 10;
@@ -53,7 +54,7 @@ export async function reserveCreditsForJob(userId: string, amount: number, jobId
     });
 
     if (updated.count === 0) {
-      throw new Error(`积分不足，本次生成需要 ${amount} 积分。`);
+      throw new AppError("INSUFFICIENT_CREDITS", `积分不足，本次生成需要 ${amount} 积分。`, 402);
     }
 
     const account = await tx.creditAccount.findUniqueOrThrow({

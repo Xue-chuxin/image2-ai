@@ -4,7 +4,7 @@ import path from "path";
 import { isUsableSecret } from "@/lib/app-crypto";
 import { prisma } from "@/lib/db";
 import { getPaymentDiagnostics } from "@/lib/payment-diagnostics";
-import { getOpenAICompatibleChannelSettings, getPublicAppSettings, getStorageRuntimeConfig } from "@/lib/settings";
+import { getModerationRuntimeConfig, getOpenAICompatibleChannelSettings, getPublicAppSettings, getStorageRuntimeConfig } from "@/lib/settings";
 
 export type AdminHealthStatus = "ok" | "warning" | "error";
 
@@ -47,6 +47,13 @@ function isLocalOrigin(origin: string) {
 
 function isUsableAdminBootstrap(email?: string, password?: string) {
   return Boolean(email && email !== "admin@example.com" && isUsableSecret(password, 12));
+}
+
+function countModerationWords(value: string) {
+  return value
+    .split(/\r?\n/)
+    .map((word) => word.trim())
+    .filter(Boolean).length;
 }
 
 export async function getAdminHealthReport(originValue?: string | null): Promise<AdminHealthReport> {
@@ -133,17 +140,18 @@ export async function getAdminHealthReport(originValue?: string | null): Promise
     makeItem({
       id: "generated-storage",
       label: "图片存储",
-      status: storageConfig.provider === "local" && existsSync(generatedDir) ? "ok" : "warning",
+      status: "warning",
       description:
         storageConfig.provider === "local"
           ? existsSync(generatedDir)
-            ? `local 存储目录已存在：${generatedDir}`
-            : `local 存储目录尚不存在，首次保存图片时会自动创建：${generatedDir}`
+            ? `当前使用 local 存储：${generatedDir}。生产需关注磁盘容量、备份、迁移和 CDN。`
+            : `local 存储目录尚不存在，首次保存图片时会自动创建：${generatedDir}。生产需关注磁盘容量、备份、迁移和 CDN。`
           : `${storageConfig.provider} 已预留配置，当前版本仍建议使用 local 存储。`,
     }),
   );
 
   const appSettings = await getPublicAppSettings();
+  const moderation = await getModerationRuntimeConfig();
   const openAIChannels = await getOpenAICompatibleChannelSettings();
   const enabledOpenAIChannels = openAIChannels.filter((channel) => channel.enabled);
   const readyOpenAIChannels = enabledOpenAIChannels.filter((channel) => channel.apiKeyConfigured && channel.baseUrl && channel.model);
@@ -156,6 +164,74 @@ export async function getAdminHealthReport(originValue?: string | null): Promise
         readyOpenAIChannels.length > 0
           ? `已有 ${readyOpenAIChannels.length}/${enabledOpenAIChannels.length || openAIChannels.length} 个启用通道配置完整。`
           : "暂无启用且配置完整的 OpenAI 兼容通道。",
+    }),
+  );
+
+  if (appSettings.defaultGenerationProvider === "openai" && readyOpenAIChannels.length === 1) {
+    items.push(
+      makeItem({
+        id: "openai-single-channel",
+        label: "生图通道冗余",
+        status: "warning",
+        description: `当前只有 1 个可用 OpenAI 兼容通道：${readyOpenAIChannels[0]?.name || "未命名通道"}。建议配置备用通道以降低上游故障风险。`,
+      }),
+    );
+  }
+
+  const recentSince = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const [recentJobStats, staleJobCount] = await Promise.all([
+    prisma.generationJob.groupBy({
+      by: ["status"],
+      where: {
+        createdAt: {
+          gte: recentSince,
+        },
+      },
+      _count: {
+        status: true,
+      },
+    }),
+    prisma.generationJob.count({
+      where: {
+        status: {
+          in: ["QUEUED", "POLISHING", "GENERATING", "UPLOADING"],
+        },
+        updatedAt: {
+          lt: new Date(Date.now() - 20 * 60 * 1000),
+        },
+      },
+    }),
+  ]);
+  const recentCounts = Object.fromEntries(recentJobStats.map((item) => [item.status, item._count.status]));
+  const recentCompleted = recentCounts.COMPLETED || 0;
+  const recentFailed = recentCounts.FAILED || 0;
+  const recentActive = (recentCounts.QUEUED || 0) + (recentCounts.POLISHING || 0) + (recentCounts.GENERATING || 0) + (recentCounts.UPLOADING || 0);
+
+  items.push(
+    makeItem({
+      id: "generation-recent",
+      label: "最近任务",
+      status: recentFailed > 0 ? "warning" : "ok",
+      description: `最近 24 小时：完成 ${recentCompleted} 个，失败 ${recentFailed} 个，进行中 ${recentActive} 个。`,
+    }),
+  );
+
+  items.push(
+    makeItem({
+      id: "generation-stale",
+      label: "卡住任务",
+      status: staleJobCount > 0 ? "warning" : "ok",
+      description: staleJobCount > 0 ? `发现 ${staleJobCount} 个疑似卡住任务，可到任务后台刷新、重试或标记失败。` : "未发现超过 20 分钟仍处于活跃状态的任务。",
+    }),
+  );
+
+  const moderationWordCount = countModerationWords(moderation.forbiddenWords);
+  items.push(
+    makeItem({
+      id: "moderation-words",
+      label: "内容审核词库",
+      status: moderation.enabled && moderationWordCount === 0 ? "warning" : "ok",
+      description: moderation.enabled ? (moderationWordCount > 0 ? `违禁词拦截已启用，共 ${moderationWordCount} 条。` : "违禁词拦截已启用，但词库为空。") : "违禁词拦截未启用。",
     }),
   );
 

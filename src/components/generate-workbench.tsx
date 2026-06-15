@@ -46,6 +46,18 @@ type GenerateWorkbenchProps = {
 };
 
 function getStatusLabel(status?: string) {
+  if (status === "QUEUED") {
+    return "排队中";
+  }
+
+  if (status === "POLISHING") {
+    return "润色中";
+  }
+
+  if (status === "UPLOADING") {
+    return "保存中";
+  }
+
   if (status === "COMPLETED") {
     return "已完成";
   }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { jsonError } from "@/lib/app-error";
 import { getAdminSession } from "@/lib/auth";
 import { retryFailedGenerationJobByAdmin } from "@/lib/generation-jobs";
 
@@ -17,9 +18,6 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     const job = await retryFailedGenerationJobByAdmin(id);
     return NextResponse.json({ ok: true, job });
   } catch (error) {
-    return NextResponse.json(
-      { ok: false, error: error instanceof Error ? error.message : "重新执行任务失败。" },
-      { status: 500 },
-    );
+    return jsonError(error, "重新执行任务失败。");
   }
 }

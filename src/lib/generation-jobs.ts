@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 
+import { AppError } from "./app-error";
 import { prisma } from "./db";
 import {
   getImageGenerationProvider,
@@ -116,6 +117,8 @@ const runningJobIds = new Set<string>();
 let chatGPTWebQueuePump: Promise<void> | null = null;
 let chatGPTWebActiveJobId: string | null = null;
 const STALE_JOB_MS = 20 * 60 * 1000;
+const ACTIVE_GENERATION_STATUSES = ["QUEUED", "POLISHING", "GENERATING", "UPLOADING"] as const;
+const ADMIN_FILTERABLE_STATUSES = [...ACTIVE_GENERATION_STATUSES, "COMPLETED", "FAILED", "CANCELED"] as const;
 
 type QueueMeta = {
   queuePosition: number | null;
@@ -140,12 +143,12 @@ function serializeDate(value: Date | string) {
 
 function assertReferenceImagesNotUsed(referenceImageCount?: number) {
   if (referenceImageCount) {
-    throw new Error(text.referenceImagesDisabled);
+    throw new AppError("BAD_REQUEST", text.referenceImagesDisabled, 400);
   }
 }
 
 function isActiveStatus(status: string) {
-  return status === "QUEUED" || status === "GENERATING";
+  return ACTIVE_GENERATION_STATUSES.includes(status as (typeof ACTIVE_GENERATION_STATUSES)[number]);
 }
 
 function isChatGPTWebProvider(provider?: string | null) {
@@ -165,7 +168,7 @@ async function getChatGPTWebQueueMetaMap() {
     where: {
       provider: "chatgpt_web",
       status: {
-        in: ["QUEUED", "GENERATING"],
+        in: [...ACTIVE_GENERATION_STATUSES],
       },
     },
     orderBy: {
@@ -357,7 +360,7 @@ async function recoverStaleGenerationJobs(userId?: string) {
     where: {
       userId,
       status: {
-        in: ["QUEUED", "GENERATING"],
+        in: [...ACTIVE_GENERATION_STATUSES],
       },
       updatedAt: {
         lt: new Date(Date.now() - STALE_JOB_MS),
@@ -397,6 +400,15 @@ export async function executeGenerationJob(jobId: string, userId: string) {
     const provider = await getImageGenerationProvider(activeJob.provider as GenerationProviderName);
     const result = await provider.generate(toGenerationRequest(activeJob));
 
+    await prisma.generationJob.update({
+      where: {
+        id: jobId,
+      },
+      data: {
+        status: "UPLOADING",
+      },
+    });
+
     for (const [index, image] of result.images.entries()) {
       const storedImage = await saveGeneratedImage(jobId, index, image.buffer, image.mimeType);
 
@@ -420,7 +432,7 @@ export async function executeGenerationJob(jobId: string, userId: string) {
       include: generationJobInclude,
     });
 
-    if (!latestJob || latestJob.status !== "GENERATING") {
+    if (!latestJob || latestJob.status !== "UPLOADING") {
       return latestJob ? serializeJob(latestJob) : null;
     }
 
@@ -557,7 +569,7 @@ export async function createAndQueueGenerationJob(userId: string, input: CreateG
   const promptZh = normalizePrompt(input.promptZh);
 
   if (!promptZh) {
-    throw new Error(text.promptRequired);
+    throw new AppError("BAD_REQUEST", text.promptRequired, 400);
   }
 
   const publicSettings = await getPublicAppSettings();
@@ -635,7 +647,7 @@ export async function retryGenerationJobForUser(userId: string, jobId: string) {
   });
 
   if (!job) {
-    throw new Error("\u4efb\u52a1\u4e0d\u5b58\u5728");
+    throw new AppError("NOT_FOUND", "\u4efb\u52a1\u4e0d\u5b58\u5728", 404);
   }
 
   assertReferenceImagesNotUsed(job.referenceImages.length);
@@ -647,7 +659,7 @@ export async function retryGenerationJobForUser(userId: string, jobId: string) {
       return currentJob ? serializeJobWithQueueMeta(currentJob) : null;
     }
 
-    throw new Error("\u53ea\u80fd\u91cd\u8bd5\u5931\u8d25\u6216\u5df2\u53d6\u6d88\u7684\u4efb\u52a1");
+    throw new AppError("CONFLICT", "\u53ea\u80fd\u91cd\u8bd5\u5931\u8d25\u6216\u5df2\u53d6\u6d88\u7684\u4efb\u52a1", 409);
   }
 
   await resetGenerationJobForRetry(job);
@@ -706,7 +718,7 @@ export async function listAdminGenerationJobsFiltered({
   await recoverStaleGenerationJobs();
   scheduleChatGPTWebQueue();
 
-  const cleanStatus = status && ["QUEUED", "GENERATING", "COMPLETED", "FAILED", "CANCELED"].includes(status) ? status : undefined;
+  const cleanStatus = status && ADMIN_FILTERABLE_STATUSES.includes(status as (typeof ADMIN_FILTERABLE_STATUSES)[number]) ? status : undefined;
   const cleanQuery = q?.trim();
 
   const jobs = await prisma.generationJob.findMany({
@@ -766,17 +778,17 @@ export async function retryFailedGenerationJobByAdmin(jobId: string) {
   });
 
   if (!job) {
-    throw new Error("\u4efb\u52a1\u4e0d\u5b58\u5728");
+    throw new AppError("NOT_FOUND", "\u4efb\u52a1\u4e0d\u5b58\u5728", 404);
   }
 
   assertReferenceImagesNotUsed(job.referenceImages.length);
 
   if (job.status !== "FAILED" && job.status !== "CANCELED") {
-    if (job.status === "QUEUED" || job.status === "GENERATING") {
+    if (isActiveStatus(job.status)) {
       return rescheduleGenerationJobForAdmin(job.id, job.userId);
     }
 
-    throw new Error("\u53ea\u80fd\u91cd\u8bd5\u5931\u8d25\u6216\u5df2\u53d6\u6d88\u7684\u4efb\u52a1");
+    throw new AppError("CONFLICT", "\u53ea\u80fd\u91cd\u8bd5\u5931\u8d25\u6216\u5df2\u53d6\u6d88\u7684\u4efb\u52a1", 409);
   }
 
   await resetGenerationJobForRetry(job);
@@ -794,15 +806,15 @@ export async function markGenerationJobFailedByAdmin(jobId: string) {
   });
 
   if (!job) {
-    throw new Error("\u4efb\u52a1\u4e0d\u5b58\u5728");
+    throw new AppError("NOT_FOUND", "\u4efb\u52a1\u4e0d\u5b58\u5728", 404);
   }
 
   if (runningJobIds.has(job.id)) {
-    throw new Error("\u5f53\u524d\u8fdb\u7a0b\u6b63\u5728\u6267\u884c\u8be5\u4efb\u52a1\uff0c\u8bf7\u7a0d\u540e\u518d\u5904\u7406\u3002");
+    throw new AppError("CONFLICT", "\u5f53\u524d\u8fdb\u7a0b\u6b63\u5728\u6267\u884c\u8be5\u4efb\u52a1\uff0c\u8bf7\u7a0d\u540e\u518d\u5904\u7406\u3002", 409);
   }
 
   if (job.status === "COMPLETED") {
-    throw new Error("\u5df2\u5b8c\u6210\u4efb\u52a1\u4e0d\u80fd\u6807\u8bb0\u5931\u8d25");
+    throw new AppError("CONFLICT", "\u5df2\u5b8c\u6210\u4efb\u52a1\u4e0d\u80fd\u6807\u8bb0\u5931\u8d25", 409);
   }
 
   if (job.status === "FAILED" || job.status === "CANCELED") {

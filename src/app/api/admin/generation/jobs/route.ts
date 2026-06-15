@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { jsonError } from "@/lib/app-error";
 import { getAdminSession } from "@/lib/auth";
 import { listAdminGenerationJobsFiltered } from "@/lib/generation-jobs";
 
@@ -20,9 +21,6 @@ export async function GET(request: Request) {
     });
     return NextResponse.json({ ok: true, jobs });
   } catch (error) {
-    return NextResponse.json(
-      { ok: false, error: error instanceof Error ? error.message : "读取生成任务失败。" },
-      { status: 500 },
-    );
+    return jsonError(error, "读取生成任务失败。");
   }
 }

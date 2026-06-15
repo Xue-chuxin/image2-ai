@@ -1,6 +1,7 @@
 import { randomBytes } from "crypto";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
+import sharp from "sharp";
 
 import { getStorageRuntimeConfig, type StorageProviderName, type StorageRuntimeConfig } from "@/lib/settings";
 
@@ -25,6 +26,8 @@ export interface StorageService {
   provider: StorageProviderName;
   save(input: StorageSaveInput): Promise<StoredImage>;
 }
+
+const THUMBNAIL_MAX_SIZE = 360;
 
 function extensionFromMime(mimeType: string) {
   if (mimeType.includes("jpeg") || mimeType.includes("jpg")) {
@@ -79,6 +82,37 @@ function assertLocalStorage(config: StorageRuntimeConfig) {
   }
 }
 
+async function inspectImage(buffer: Buffer) {
+  try {
+    const metadata = await sharp(buffer, { failOn: "none" }).metadata();
+    return {
+      width: metadata.width,
+      height: metadata.height,
+    };
+  } catch {
+    return {
+      width: undefined,
+      height: undefined,
+    };
+  }
+}
+
+async function createThumbnail(buffer: Buffer) {
+  try {
+    return await sharp(buffer, { failOn: "none" })
+      .rotate()
+      .resize({
+        width: THUMBNAIL_MAX_SIZE,
+        height: THUMBNAIL_MAX_SIZE,
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .toBuffer();
+  } catch {
+    return buffer;
+  }
+}
+
 export function createLocalStorageService(config: StorageRuntimeConfig): StorageService {
   return {
     provider: "local",
@@ -93,14 +127,18 @@ export function createLocalStorageService(config: StorageRuntimeConfig): Storage
       await mkdir(directory, { recursive: true });
       await writeFile(path.join(directory, filename), input.buffer);
 
+      const metadata = await inspectImage(input.buffer);
+
       if (input.namespace !== "payment-proof") {
         await mkdir(thumbnailDirectory, { recursive: true });
-        await writeFile(path.join(thumbnailDirectory, filename), input.buffer);
+        await writeFile(path.join(thumbnailDirectory, filename), await createThumbnail(input.buffer));
       }
 
       return {
         url: joinUrl(config.publicBaseUrl, namespacePrefix, filename),
         thumbnailUrl: input.namespace === "payment-proof" ? undefined : joinUrl(config.publicBaseUrl, namespacePrefix, "thumbs", filename),
+        width: metadata.width,
+        height: metadata.height,
         fileSize: input.buffer.byteLength,
         mimeType: input.mimeType,
       };
