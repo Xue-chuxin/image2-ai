@@ -5,6 +5,7 @@ import { Layout, Menu, Tag } from "tdesign-react";
 import {
   CheckCircleIcon,
   CloudUploadIcon,
+  DashboardIcon,
   ImageIcon,
   MoneyIcon,
   SettingIcon,
@@ -12,7 +13,7 @@ import {
   UserIcon,
 } from "tdesign-icons-react";
 
-type AdminTabKey = "users" | "jobs" | "images" | "uploads" | "billing" | "health" | "settings";
+type AdminTabKey = "dashboard" | "users" | "jobs" | "images" | "uploads" | "billing" | "health" | "settings";
 
 const { Header, Content, Aside } = Layout;
 const { HeadMenu, MenuGroup, MenuItem } = Menu;
@@ -24,6 +25,7 @@ const adminTabs: Array<{
   description: string;
   icon: ReactElement;
 }> = [
+  { key: "dashboard", href: "/admin", label: "仪表盘", description: "运营总览", icon: <DashboardIcon /> },
   { key: "users", href: "/admin/users", label: "用户", description: "账号与积分", icon: <UserIcon /> },
   { key: "jobs", href: "/admin/jobs", label: "任务", description: "生图队列", icon: <TaskIcon /> },
   { key: "images", href: "/admin/images", label: "作品", description: "公开图库", icon: <ImageIcon /> },
@@ -36,7 +38,7 @@ const adminTabs: Array<{
 const adminMenuGroups = [
   {
     title: "运营管理",
-    items: adminTabs.filter((tab) => ["users", "jobs", "images", "uploads"].includes(tab.key)),
+    items: adminTabs.filter((tab) => ["dashboard", "users", "jobs", "images", "uploads"].includes(tab.key)),
   },
   {
     title: "商业与系统",
@@ -51,6 +53,7 @@ export function AdminPageShell({
   title,
   description,
   children,
+  wide = false,
 }: {
   active: AdminTabKey;
   email?: string | null;
@@ -58,6 +61,7 @@ export function AdminPageShell({
   title: string;
   description: string;
   children: ReactNode;
+  wide?: boolean;
 }) {
   return (
     <Layout className="admin-td-shell">
@@ -101,7 +105,7 @@ export function AdminPageShell({
             ))}
           </HeadMenu>
         </Header>
-        <Content className="admin-td-content">{children}</Content>
+        <Content className={wide ? "admin-td-content admin-td-content--wide" : "admin-td-content"}>{children}</Content>
       </Layout>
     </Layout>
   );

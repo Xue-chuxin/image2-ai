@@ -61,10 +61,12 @@ export function AdminBillingDashboard({
   initialPackages,
   initialOrders,
   initialPaymentSettings,
+  diagnosticsPanel,
 }: {
   initialPackages: CreditPackageView[];
   initialOrders: RechargeOrderView[];
   initialPaymentSettings: BillingPaymentSettings;
+  diagnosticsPanel?: ReactNode;
 }) {
   const [packages, setPackages] = useState(initialPackages);
   const [orders, setOrders] = useState(initialOrders);
@@ -298,10 +300,11 @@ export function AdminBillingDashboard({
 
       {message ? <Alert theme="info" message={message} /> : null}
 
-      <Card className="admin-td-card">
+      <section className="admin-td-tabs-surface">
         <Tabs defaultValue="providers">
           <Tabs.TabPanel value="providers" label="支付渠道">
-            <div className="admin-td-two-col-grid">
+            <div className="admin-td-tab-panel">
+              <div className="admin-td-two-col-grid">
               <PaymentProviderCard
                 title="易支付"
                 enabled={paymentForm.epay.enabled}
@@ -352,10 +355,13 @@ export function AdminBillingDashboard({
                 <SettingInput label="Client ID" value={paymentForm.paypal.clientId} onChange={(value) => patchPayment("paypal.clientId", value)} />
                 <SettingInput label={`Secret${paymentForm.paypal.secretConfigured ? "（已配置）" : ""}`} value={paymentForm.paypal.secret || ""} onChange={(value) => patchPayment("paypal.secret", value)} placeholder="留空不修改" />
               </PaymentProviderCard>
+              </div>
+              <div className="admin-td-form-footer">
+                <Button theme="primary" loading={pending === "save-payment"} onClick={() => void savePaymentSettings()}>
+                  保存支付渠道配置
+                </Button>
+              </div>
             </div>
-            <Button className="admin-td-form-section" theme="primary" loading={pending === "save-payment"} onClick={() => void savePaymentSettings()}>
-              保存支付渠道配置
-            </Button>
           </Tabs.TabPanel>
 
           <Tabs.TabPanel value="packages" label="积分套餐">
@@ -438,8 +444,13 @@ export function AdminBillingDashboard({
               />
             </div>
           </Tabs.TabPanel>
+          {diagnosticsPanel ? (
+            <Tabs.TabPanel value="diagnostics" label="联调诊断">
+              <div className="admin-td-tab-panel">{diagnosticsPanel}</div>
+            </Tabs.TabPanel>
+          ) : null}
         </Tabs>
-      </Card>
+      </section>
     </section>
   );
 }

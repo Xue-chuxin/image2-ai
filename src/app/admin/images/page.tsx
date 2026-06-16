@@ -17,6 +17,7 @@ export default async function AdminImagesPage() {
       eyebrow="Admin Images"
       title="作品资产管理"
       description="查看用户生成图片、公开状态和运营精选作品，并对公开内容进行人工下架。"
+      wide
     >
       <AdminImagesDashboard initialImages={images} initialCuratedImages={curatedImages} />
     </AdminPageShell>

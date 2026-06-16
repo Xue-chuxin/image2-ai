@@ -22,21 +22,28 @@ export default async function AdminBillingPage() {
       eyebrow="Admin Billing"
       title="套餐与在线支付"
       description="配置易支付、支付宝当面付、微信支付和 PayPal。人工审核充值已关闭。"
+      wide
     >
-      <AdminPaymentDiagnostics
-        diagnostics={diagnostics}
-        events={events.map((event) => ({
-          id: event.id,
-          provider: event.provider,
-          eventType: event.eventType,
-          status: event.status,
-          orderNo: event.orderNo,
-          providerTradeNo: event.providerTradeNo,
-          message: event.message,
-          createdAt: event.createdAt.toISOString(),
-        }))}
+      <AdminBillingDashboard
+        initialPackages={packages}
+        initialOrders={orders}
+        initialPaymentSettings={paymentSettings}
+        diagnosticsPanel={
+          <AdminPaymentDiagnostics
+            diagnostics={diagnostics}
+            events={events.map((event) => ({
+              id: event.id,
+              provider: event.provider,
+              eventType: event.eventType,
+              status: event.status,
+              orderNo: event.orderNo,
+              providerTradeNo: event.providerTradeNo,
+              message: event.message,
+              createdAt: event.createdAt.toISOString(),
+            }))}
+          />
+        }
       />
-      <AdminBillingDashboard initialPackages={packages} initialOrders={orders} initialPaymentSettings={paymentSettings} />
     </AdminPageShell>
   );
 }

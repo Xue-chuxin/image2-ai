@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Alert, Button, Card, Form, Input, InputNumber, Select, Switch, Tag, Textarea } from "tdesign-react";
+import { Alert, Button, Card, Form, Input, InputNumber, Select, Switch, Tabs, Tag, Textarea } from "tdesign-react";
 import type { AdminAppSettings, AdminDiagnosticStatus, GenerationProviderName, OpenAICompatibleChannelSetting, StorageProviderName } from "@/lib/settings";
 
 type SettingsResponse = {
@@ -276,194 +276,216 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
       {message ? <Alert theme="success" message={message} /> : null}
       {error ? <Alert theme="error" message={error} /> : null}
 
-      <div className="admin-td-settings-layout">
-        <section className="admin-td-grid">
-          <Card className="admin-td-card" title="站点显示">
-            <Form labelAlign="top">
-              <SettingInput label="浏览器标题" value={settings.browserTitle} onChange={(value) => update("browserTitle", value)} />
-              <SettingInput label="网站标题" value={settings.siteTitle} onChange={(value) => update("siteTitle", value)} />
-              <SettingInput label="网站副标题" value={settings.siteSubtitle} onChange={(value) => update("siteSubtitle", value)} />
-            </Form>
-          </Card>
-
-          <Card className="admin-td-card" title="生图配置">
-            <Form labelAlign="top">
-              <Form.FormItem label="默认生图 Provider">
-                <Select
-                  value={settings.defaultGenerationProvider}
-                  options={[
-                    { value: "chatgpt_web", label: "ChatGPT Web 本机浏览器" },
-                    { value: "openai", label: "OpenAI 官方 API" },
-                    { value: "stability_ai", label: "Stability AI（支持参考图）" },
-                  ]}
-                  onChange={(value) => update("defaultGenerationProvider", String(value) as GenerationProviderName)}
-                />
-              </Form.FormItem>
-              <SettingInput label="OpenAI 图像模型" value={settings.openaiImageModel} onChange={(value) => update("openaiImageModel", value)} />
-              <SettingInput
-                label="旧版 OpenAI API Key"
-                value={openaiApiKey}
-                onChange={setOpenaiApiKey}
-                placeholder={settings.legacyOpenaiApiKeyConfigured ? "已配置，留空表示不修改" : "未配置"}
-                type="password"
-              />
-              <p className="admin-td-form-hint">未配置兼容通道列表时，会自动使用这里的旧版单通道配置。</p>
-            </Form>
-
-            <Card className="admin-td-card admin-td-subcard" bordered title="OpenAI 兼容中转通道" actions={<Button variant="outline" onClick={addOpenAIChannel}>新增通道</Button>}>
-              <div className="admin-td-grid">
-                {openaiChannels.map((channel, index) => (
-                  <Card key={channel.id} className="admin-td-card admin-td-channel-card" bordered title={`${index + 1}. ${channel.name}`}>
-                    <div className="admin-td-channel-toolbar">
-                      <div className="admin-td-channel-state">
-                        <Switch value={channel.enabled} onChange={(value) => updateOpenAIChannel(channel.id, "enabled", Boolean(value))} />
-                        <span>{channel.enabled ? "已启用" : "已停用"}</span>
-                      </div>
-                      <div className="admin-td-action-row">
-                        <Button
-                          size="small"
-                          variant="outline"
-                          loading={checkingOpenAIChannelId === channel.id}
-                          disabled={!channel.enabled || !channel.apiKeyConfigured}
-                          onClick={() => void checkOpenAIChannel(channel.id)}
-                        >
-                          检测
-                        </Button>
-                        <Button size="small" variant="outline" disabled={index === 0} onClick={() => moveOpenAIChannel(channel.id, -1)}>上移</Button>
-                        <Button size="small" variant="outline" disabled={index === openaiChannels.length - 1} onClick={() => moveOpenAIChannel(channel.id, 1)}>下移</Button>
-                        <Button size="small" theme="danger" variant="outline" onClick={() => removeOpenAIChannel(channel.id)}>删除</Button>
-                      </div>
-                    </div>
-                    <Form labelAlign="top">
-                      <SettingInput label="名称" value={channel.name} onChange={(value) => updateOpenAIChannel(channel.id, "name", value)} />
-                      <SettingInput label="模型" value={channel.model} onChange={(value) => updateOpenAIChannel(channel.id, "model", value)} />
-                      <SettingInput label="Base URL" value={channel.baseUrl} onChange={(value) => updateOpenAIChannel(channel.id, "baseUrl", value)} placeholder="https://example.com/v1" />
-                      <SettingInput
-                        label="API Key"
-                        value={channel.apiKey}
-                        onChange={(value) => updateOpenAIChannel(channel.id, "apiKey", value)}
-                        placeholder={channel.apiKeyConfigured ? "已配置，留空表示不修改" : "未配置"}
-                        type="password"
-                      />
-                      <Form.FormItem label="超时秒数">
-                        <InputNumber value={channel.timeoutSeconds} min={30} max={900} onChange={(value) => updateOpenAIChannel(channel.id, "timeoutSeconds", Number(value || 120))} />
-                      </Form.FormItem>
-                    </Form>
-                  </Card>
-                ))}
-                {openaiChannelCheckMessage ? <Alert theme="success" message={openaiChannelCheckMessage} /> : null}
-                {openaiChannelCheckError ? <Alert theme="error" message={openaiChannelCheckError} /> : null}
-              </div>
-            </Card>
-
-            <Form className="admin-td-form-section" labelAlign="top">
-              <SettingInput label="Stability AI 模型" value={settings.stabilityAiModel} onChange={(value) => update("stabilityAiModel", value)} />
-              <SettingInput
-                label="Stability AI API Key"
-                value={stabilityAiApiKey}
-                onChange={setStabilityAiApiKey}
-                placeholder={settings.stabilityAiApiKeyConfigured ? "已配置，留空表示不修改" : "未配置"}
-                type="password"
-              />
-            </Form>
-          </Card>
-
-          <Card className="admin-td-card" title="内容安全">
-            <Form labelAlign="top">
-              <Form.FormItem label="启用违禁词拦截">
-                <Switch value={settings.moderationEnabled} onChange={(value) => update("moderationEnabled", Boolean(value))} />
-              </Form.FormItem>
-              <SettingInput label="违禁词词库" value={settings.moderationForbiddenWords} onChange={(value) => update("moderationForbiddenWords", value)} textarea minRows={8} />
-              <SettingInput label="拦截提示文案" value={settings.moderationBlockMessage} onChange={(value) => update("moderationBlockMessage", value)} />
-            </Form>
-          </Card>
-
-          <Card className="admin-td-card" title="图片存储">
-            <Form labelAlign="top">
-              <Form.FormItem label="存储类型">
-                <Select
-                  value={settings.storageProvider}
-                  options={[
-                    { value: "local", label: "Local 本地存储" },
-                    { value: "oss", label: "阿里云 OSS（预留）" },
-                    { value: "cos", label: "腾讯云 COS（预留）" },
-                    { value: "s3", label: "S3 兼容存储（预留）" },
-                  ]}
-                  onChange={(value) => update("storageProvider", String(value) as StorageProviderName)}
-                />
-              </Form.FormItem>
-              <SettingInput label="本地根目录" value={settings.storageLocalBaseDir} onChange={(value) => update("storageLocalBaseDir", value)} placeholder="public" />
-              <SettingInput label="公开访问域名" value={settings.storagePublicBaseUrl} onChange={(value) => update("storagePublicBaseUrl", value)} placeholder="留空使用当前站点相对路径" />
-              <SettingInput label="生成图前缀" value={settings.storageGeneratedPrefix} onChange={(value) => update("storageGeneratedPrefix", value)} />
-              <SettingInput label="上传图前缀" value={settings.storageUploadsPrefix} onChange={(value) => update("storageUploadsPrefix", value)} />
-              <SettingInput label="Endpoint" value={settings.storageEndpoint} onChange={(value) => update("storageEndpoint", value)} placeholder="预留" />
-              <SettingInput label="Bucket" value={settings.storageBucket} onChange={(value) => update("storageBucket", value)} placeholder="预留" />
-              <SettingInput label="Region" value={settings.storageRegion} onChange={(value) => update("storageRegion", value)} placeholder="预留" />
-            </Form>
-          </Card>
-
-          <Card className="admin-td-card" title="网页版 ChatGPT">
-            <Form labelAlign="top">
-              <Form.FormItem label="启用 ChatGPT Web">
-                <Switch value={settings.chatgptWebEnabled} onChange={(value) => update("chatgptWebEnabled", Boolean(value))} />
-              </Form.FormItem>
-              <SettingInput label="浏览器 Profile 路径" value={settings.chatgptWebUserDataDir} onChange={(value) => update("chatgptWebUserDataDir", value)} />
-              <Form.FormItem label="无头模式">
-                <Switch value={settings.chatgptWebHeadless} onChange={(value) => update("chatgptWebHeadless", Boolean(value))} />
-              </Form.FormItem>
-              <Form.FormItem label="超时时间（秒）">
-                <InputNumber value={settings.chatgptWebTimeoutSeconds} min={30} max={900} onChange={(value) => update("chatgptWebTimeoutSeconds", Number(value || 120))} />
-              </Form.FormItem>
-              <div className="admin-td-action-row">
-                <Button variant="outline" loading={isOpeningChatGPT} onClick={() => void openChatGPTLoginBrowser()}>打开登录浏览器</Button>
-                <Button theme="primary" loading={isCheckingChatGPT} onClick={() => void checkChatGPTStatus()}>检测登录状态</Button>
-              </div>
-            </Form>
-            {chatgptMessage ? <Alert className="admin-td-form-section" theme="success" message={chatgptMessage} /> : null}
-            {chatgptError ? <Alert className="admin-td-form-section" theme="error" message={chatgptError} /> : null}
-          </Card>
-        </section>
-
-        <aside className="admin-td-grid">
-          <Card className="admin-td-card" title="配置检测" actions={<Button variant="outline" loading={isLoggingOut} onClick={() => void logout()}>退出</Button>}>
-            <div className="admin-td-diagnostic-list">
-              {settings.diagnostics.map((item) => (
-                <Alert
-                  key={item.key}
-                  theme={diagnosticAlertTheme(item.status)}
-                  message={
-                    <div>
-                      <div className="mb-1 flex items-center gap-2">
-                        <Tag theme={diagnosticTheme(item.status)} variant="light">{item.status}</Tag>
-                        <strong>{item.label}</strong>
-                      </div>
-                      <p className="admin-td-cell-sub">{item.message}</p>
-                    </div>
-                  }
-                />
-              ))}
+      <section className="admin-td-tabs-surface">
+        <Tabs defaultValue="site" placement="top">
+          <Tabs.TabPanel value="site" label="站点显示">
+            <div className="admin-td-tab-panel">
+              <Card className="admin-td-card" bordered title="站点显示">
+                <Form labelAlign="top">
+                  <SettingInput label="浏览器标题" value={settings.browserTitle} onChange={(value) => update("browserTitle", value)} />
+                  <SettingInput label="网站标题" value={settings.siteTitle} onChange={(value) => update("siteTitle", value)} />
+                  <SettingInput label="网站副标题" value={settings.siteSubtitle} onChange={(value) => update("siteSubtitle", value)} />
+                </Form>
+              </Card>
             </div>
-          </Card>
+          </Tabs.TabPanel>
 
-          <Card className="admin-td-card" title="DeepSeek 润色接口">
-            <Form labelAlign="top">
-              <SettingInput label="Base URL" value={settings.deepseekBaseUrl} onChange={(value) => update("deepseekBaseUrl", value)} />
-              <SettingInput label="模型" value={settings.deepseekModel} onChange={(value) => update("deepseekModel", value)} />
-              <SettingInput
-                label="DeepSeek API Key"
-                value={deepseekApiKey}
-                onChange={setDeepseekApiKey}
-                placeholder={settings.deepseekApiKeyConfigured ? "已配置，留空表示不修改" : "未配置"}
-                type="password"
-              />
-              <SettingInput label="润色系统提示词" value={settings.deepseekPolishPrompt} onChange={(value) => update("deepseekPolishPrompt", value)} textarea minRows={9} />
-            </Form>
-          </Card>
+          <Tabs.TabPanel value="generation" label="生图通道">
+            <div className="admin-td-tab-panel">
+              <Card className="admin-td-card" bordered title="基础生图配置">
+                <Form labelAlign="top">
+                  <Form.FormItem label="默认生图 Provider">
+                    <Select
+                      value={settings.defaultGenerationProvider}
+                      options={[
+                        { value: "chatgpt_web", label: "ChatGPT Web 本机浏览器" },
+                        { value: "openai", label: "OpenAI 官方 API" },
+                        { value: "stability_ai", label: "Stability AI（支持参考图）" },
+                      ]}
+                      onChange={(value) => update("defaultGenerationProvider", String(value) as GenerationProviderName)}
+                    />
+                  </Form.FormItem>
+                  <SettingInput label="OpenAI 图像模型" value={settings.openaiImageModel} onChange={(value) => update("openaiImageModel", value)} />
+                  <SettingInput
+                    label="旧版 OpenAI API Key"
+                    value={openaiApiKey}
+                    onChange={setOpenaiApiKey}
+                    placeholder={settings.legacyOpenaiApiKeyConfigured ? "已配置，留空表示不修改" : "未配置"}
+                    type="password"
+                  />
+                  <p className="admin-td-form-hint">未配置兼容通道列表时，会自动使用这里的旧版单通道配置。</p>
+                </Form>
+              </Card>
 
-          <Button theme="primary" size="large" type="submit" loading={isSaving} block>
-            {isSaving ? "保存中" : "保存配置"}
-          </Button>
-        </aside>
+              <Card className="admin-td-card" bordered title="OpenAI 兼容中转通道" actions={<Button variant="outline" onClick={addOpenAIChannel}>新增通道</Button>}>
+                <div className="admin-td-tab-panel-grid">
+                  {openaiChannels.map((channel, index) => (
+                    <Card key={channel.id} className="admin-td-card admin-td-channel-card" bordered title={`${index + 1}. ${channel.name}`}>
+                      <div className="admin-td-channel-toolbar">
+                        <div className="admin-td-channel-state">
+                          <Switch value={channel.enabled} onChange={(value) => updateOpenAIChannel(channel.id, "enabled", Boolean(value))} />
+                          <span>{channel.enabled ? "已启用" : "已停用"}</span>
+                        </div>
+                        <div className="admin-td-action-row">
+                          <Button
+                            size="small"
+                            variant="outline"
+                            loading={checkingOpenAIChannelId === channel.id}
+                            disabled={!channel.enabled || !channel.apiKeyConfigured}
+                            onClick={() => void checkOpenAIChannel(channel.id)}
+                          >
+                            检测
+                          </Button>
+                          <Button size="small" variant="outline" disabled={index === 0} onClick={() => moveOpenAIChannel(channel.id, -1)}>上移</Button>
+                          <Button size="small" variant="outline" disabled={index === openaiChannels.length - 1} onClick={() => moveOpenAIChannel(channel.id, 1)}>下移</Button>
+                          <Button size="small" theme="danger" variant="outline" onClick={() => removeOpenAIChannel(channel.id)}>删除</Button>
+                        </div>
+                      </div>
+                      <Form labelAlign="top">
+                        <SettingInput label="名称" value={channel.name} onChange={(value) => updateOpenAIChannel(channel.id, "name", value)} />
+                        <SettingInput label="模型" value={channel.model} onChange={(value) => updateOpenAIChannel(channel.id, "model", value)} />
+                        <SettingInput label="Base URL" value={channel.baseUrl} onChange={(value) => updateOpenAIChannel(channel.id, "baseUrl", value)} placeholder="https://example.com/v1" />
+                        <SettingInput
+                          label="API Key"
+                          value={channel.apiKey}
+                          onChange={(value) => updateOpenAIChannel(channel.id, "apiKey", value)}
+                          placeholder={channel.apiKeyConfigured ? "已配置，留空表示不修改" : "未配置"}
+                          type="password"
+                        />
+                        <Form.FormItem label="超时秒数">
+                          <InputNumber value={channel.timeoutSeconds} min={30} max={900} onChange={(value) => updateOpenAIChannel(channel.id, "timeoutSeconds", Number(value || 120))} />
+                        </Form.FormItem>
+                      </Form>
+                    </Card>
+                  ))}
+                </div>
+                {openaiChannelCheckMessage ? <Alert className="admin-td-form-section" theme="success" message={openaiChannelCheckMessage} /> : null}
+                {openaiChannelCheckError ? <Alert className="admin-td-form-section" theme="error" message={openaiChannelCheckError} /> : null}
+              </Card>
+
+              <Card className="admin-td-card" bordered title="Stability AI">
+                <Form labelAlign="top">
+                  <SettingInput label="Stability AI 模型" value={settings.stabilityAiModel} onChange={(value) => update("stabilityAiModel", value)} />
+                  <SettingInput
+                    label="Stability AI API Key"
+                    value={stabilityAiApiKey}
+                    onChange={setStabilityAiApiKey}
+                    placeholder={settings.stabilityAiApiKeyConfigured ? "已配置，留空表示不修改" : "未配置"}
+                    type="password"
+                  />
+                </Form>
+              </Card>
+            </div>
+          </Tabs.TabPanel>
+
+          <Tabs.TabPanel value="safety" label="安全与存储">
+            <div className="admin-td-tab-panel-grid">
+              <Card className="admin-td-card" bordered title="内容安全">
+                <Form labelAlign="top">
+                  <Form.FormItem label="启用违禁词拦截">
+                    <Switch value={settings.moderationEnabled} onChange={(value) => update("moderationEnabled", Boolean(value))} />
+                  </Form.FormItem>
+                  <SettingInput label="违禁词词库" value={settings.moderationForbiddenWords} onChange={(value) => update("moderationForbiddenWords", value)} textarea minRows={8} />
+                  <SettingInput label="拦截提示文案" value={settings.moderationBlockMessage} onChange={(value) => update("moderationBlockMessage", value)} />
+                </Form>
+              </Card>
+
+              <Card className="admin-td-card" bordered title="图片存储">
+                <Form labelAlign="top">
+                  <Form.FormItem label="存储类型">
+                    <Select
+                      value={settings.storageProvider}
+                      options={[
+                        { value: "local", label: "Local 本地存储" },
+                        { value: "oss", label: "阿里云 OSS（预留）" },
+                        { value: "cos", label: "腾讯云 COS（预留）" },
+                        { value: "s3", label: "S3 兼容存储（预留）" },
+                      ]}
+                      onChange={(value) => update("storageProvider", String(value) as StorageProviderName)}
+                    />
+                  </Form.FormItem>
+                  <SettingInput label="本地根目录" value={settings.storageLocalBaseDir} onChange={(value) => update("storageLocalBaseDir", value)} placeholder="public" />
+                  <SettingInput label="公开访问域名" value={settings.storagePublicBaseUrl} onChange={(value) => update("storagePublicBaseUrl", value)} placeholder="留空使用当前站点相对路径" />
+                  <SettingInput label="生成图前缀" value={settings.storageGeneratedPrefix} onChange={(value) => update("storageGeneratedPrefix", value)} />
+                  <SettingInput label="上传图前缀" value={settings.storageUploadsPrefix} onChange={(value) => update("storageUploadsPrefix", value)} />
+                  <SettingInput label="Endpoint" value={settings.storageEndpoint} onChange={(value) => update("storageEndpoint", value)} placeholder="预留" />
+                  <SettingInput label="Bucket" value={settings.storageBucket} onChange={(value) => update("storageBucket", value)} placeholder="预留" />
+                  <SettingInput label="Region" value={settings.storageRegion} onChange={(value) => update("storageRegion", value)} placeholder="预留" />
+                </Form>
+              </Card>
+            </div>
+          </Tabs.TabPanel>
+
+          <Tabs.TabPanel value="polish" label="润色与浏览器">
+            <div className="admin-td-tab-panel-grid">
+              <Card className="admin-td-card" bordered title="DeepSeek 润色接口">
+                <Form labelAlign="top">
+                  <SettingInput label="Base URL" value={settings.deepseekBaseUrl} onChange={(value) => update("deepseekBaseUrl", value)} />
+                  <SettingInput label="模型" value={settings.deepseekModel} onChange={(value) => update("deepseekModel", value)} />
+                  <SettingInput
+                    label="DeepSeek API Key"
+                    value={deepseekApiKey}
+                    onChange={setDeepseekApiKey}
+                    placeholder={settings.deepseekApiKeyConfigured ? "已配置，留空表示不修改" : "未配置"}
+                    type="password"
+                  />
+                  <SettingInput label="润色系统提示词" value={settings.deepseekPolishPrompt} onChange={(value) => update("deepseekPolishPrompt", value)} textarea minRows={9} />
+                </Form>
+              </Card>
+
+              <Card className="admin-td-card" bordered title="网页版 ChatGPT">
+                <Form labelAlign="top">
+                  <Form.FormItem label="启用 ChatGPT Web">
+                    <Switch value={settings.chatgptWebEnabled} onChange={(value) => update("chatgptWebEnabled", Boolean(value))} />
+                  </Form.FormItem>
+                  <SettingInput label="浏览器 Profile 路径" value={settings.chatgptWebUserDataDir} onChange={(value) => update("chatgptWebUserDataDir", value)} />
+                  <Form.FormItem label="无头模式">
+                    <Switch value={settings.chatgptWebHeadless} onChange={(value) => update("chatgptWebHeadless", Boolean(value))} />
+                  </Form.FormItem>
+                  <Form.FormItem label="超时时间（秒）">
+                    <InputNumber value={settings.chatgptWebTimeoutSeconds} min={30} max={900} onChange={(value) => update("chatgptWebTimeoutSeconds", Number(value || 120))} />
+                  </Form.FormItem>
+                  <div className="admin-td-action-row">
+                    <Button variant="outline" loading={isOpeningChatGPT} onClick={() => void openChatGPTLoginBrowser()}>打开登录浏览器</Button>
+                    <Button theme="primary" loading={isCheckingChatGPT} onClick={() => void checkChatGPTStatus()}>检测登录状态</Button>
+                  </div>
+                </Form>
+                {chatgptMessage ? <Alert className="admin-td-form-section" theme="success" message={chatgptMessage} /> : null}
+                {chatgptError ? <Alert className="admin-td-form-section" theme="error" message={chatgptError} /> : null}
+              </Card>
+            </div>
+          </Tabs.TabPanel>
+
+          <Tabs.TabPanel value="diagnostics" label="配置检测">
+            <div className="admin-td-tab-panel">
+              <Card className="admin-td-card" bordered title="配置检测" actions={<Button variant="outline" loading={isLoggingOut} onClick={() => void logout()}>退出登录</Button>}>
+                <div className="admin-td-diagnostic-list">
+                  {settings.diagnostics.map((item) => (
+                    <Alert
+                      key={item.key}
+                      theme={diagnosticAlertTheme(item.status)}
+                      message={
+                        <div>
+                          <div className="mb-1 flex items-center gap-2">
+                            <Tag theme={diagnosticTheme(item.status)} variant="light">{item.status}</Tag>
+                            <strong>{item.label}</strong>
+                          </div>
+                          <p className="admin-td-cell-sub">{item.message}</p>
+                        </div>
+                      }
+                    />
+                  ))}
+                </div>
+              </Card>
+            </div>
+          </Tabs.TabPanel>
+        </Tabs>
+      </section>
+
+      <div className="admin-td-form-footer">
+        <Button theme="primary" size="large" type="submit" loading={isSaving}>
+          {isSaving ? "保存中" : "保存配置"}
+        </Button>
       </div>
     </form>
   );

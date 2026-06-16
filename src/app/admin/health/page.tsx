@@ -14,6 +14,7 @@ export default async function AdminHealthPage() {
       eyebrow="Launch Check"
       title="上线自检"
       description="检查数据库、会话密钥、生图通道、任务状态、支付回调和本地存储风险，不展示任何密钥明文。"
+      wide
     >
       <AdminHealthDashboard report={report} />
     </AdminPageShell>

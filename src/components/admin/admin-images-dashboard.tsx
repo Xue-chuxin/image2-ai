@@ -431,7 +431,7 @@ export function AdminImagesDashboard({
                 <Button theme="primary" loading={pending === "refresh"} onClick={() => void loadImages(status, query)}>搜索</Button>
               </Form.FormItem>
             </Form>
-            <div className="admin-td-table-scroll">
+            <div className="admin-td-table-scroll admin-td-table-scroll--lg">
               <Table
                 rowKey="id"
                 data={images}
@@ -440,7 +440,7 @@ export function AdminImagesDashboard({
                 stripe
                 bordered
                 tableLayout="fixed"
-                tableContentWidth="1180px"
+                tableContentWidth="1480px"
                 verticalAlign="top"
                 empty="暂无作品记录"
               />
@@ -505,7 +505,7 @@ export function AdminImagesDashboard({
                   </div>
                 </Form>
               </Card>
-              <div className="admin-td-table-scroll admin-td-table-scroll--sm">
+              <div className="admin-td-table-scroll admin-td-table-scroll--md">
                 <Table
                   rowKey="id"
                   data={curatedImages}
@@ -514,7 +514,7 @@ export function AdminImagesDashboard({
                   stripe
                   bordered
                   tableLayout="fixed"
-                  tableContentWidth="980px"
+                  tableContentWidth="1280px"
                   verticalAlign="top"
                   empty="暂无运营精选作品"
                 />

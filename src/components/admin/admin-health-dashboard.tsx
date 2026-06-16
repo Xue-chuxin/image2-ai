@@ -1,6 +1,6 @@
 "use client";
 
-import { Alert, Button, Card, Descriptions, Space, Statistic, Table, Tag } from "tdesign-react";
+import { Alert, Button, Card, Descriptions, Space, Statistic, Table, Tabs, Tag } from "tdesign-react";
 import type { AdminHealthReport, AdminHealthStatus } from "@/lib/admin-health";
 
 const statusLabel: Record<AdminHealthStatus, string> = {
@@ -128,50 +128,53 @@ export function AdminHealthDashboard({ report }: { report: AdminHealthReport }) 
         <Alert theme="success" title="自检正常" message="当前核心运行项未发现异常。" />
       )}
 
-      <Card
-        className="admin-td-card"
-        bordered
-        title="系统检查"
-        headerBordered
-        actions={
-          <Button href="/api/admin/health" target="_blank" rel="noreferrer" variant="outline">
-            查看 JSON
-          </Button>
-        }
-      >
-        <div className="admin-td-table-scroll">
-          <Table
-            rowKey="id"
-            data={report.items}
-            columns={healthColumns}
-            hover
-            stripe
-            tableLayout="fixed"
-            tableContentWidth="1180px"
-            verticalAlign="top"
-          />
-        </div>
-      </Card>
+      <section className="admin-td-tabs-surface">
+        <Tabs defaultValue="system">
+          <Tabs.TabPanel value="system" label="系统检查">
+            <div className="admin-td-tab-panel">
+              <div className="admin-td-form-footer">
+                <Button href="/api/admin/health" target="_blank" rel="noreferrer" variant="outline">
+                  查看 JSON
+                </Button>
+              </div>
+              <div className="admin-td-table-scroll admin-td-table-scroll--md">
+                <Table
+                  rowKey="id"
+                  data={report.items}
+                  columns={healthColumns}
+                  hover
+                  stripe
+                  tableLayout="fixed"
+                  tableContentWidth="1280px"
+                  verticalAlign="top"
+                />
+              </div>
+            </div>
+          </Tabs.TabPanel>
 
-      <Card className="admin-td-card" bordered title="支付渠道状态" headerBordered>
-        <Descriptions layout="vertical" bordered column={3} className="admin-td-descriptions-block">
-          <Descriptions.DescriptionsItem label="生成时间">{new Date(report.generatedAt).toLocaleString("zh-CN")}</Descriptions.DescriptionsItem>
-          <Descriptions.DescriptionsItem label="启用渠道">{report.paymentDiagnostics.filter((item) => item.enabled).length}</Descriptions.DescriptionsItem>
-          <Descriptions.DescriptionsItem label="配置完整">{report.paymentDiagnostics.filter((item) => item.configured).length}</Descriptions.DescriptionsItem>
-        </Descriptions>
-        <div className="admin-td-table-scroll">
-          <Table
-            rowKey="provider"
-            data={report.paymentDiagnostics}
-            columns={paymentColumns}
-            hover
-            stripe
-            tableLayout="fixed"
-            tableContentWidth="1180px"
-            verticalAlign="top"
-          />
-        </div>
-      </Card>
+          <Tabs.TabPanel value="payments" label="支付回调">
+            <div className="admin-td-tab-panel">
+              <Descriptions layout="vertical" bordered column={3} className="admin-td-descriptions-block">
+                <Descriptions.DescriptionsItem label="生成时间">{new Date(report.generatedAt).toLocaleString("zh-CN")}</Descriptions.DescriptionsItem>
+                <Descriptions.DescriptionsItem label="启用渠道">{report.paymentDiagnostics.filter((item) => item.enabled).length}</Descriptions.DescriptionsItem>
+                <Descriptions.DescriptionsItem label="配置完整">{report.paymentDiagnostics.filter((item) => item.configured).length}</Descriptions.DescriptionsItem>
+              </Descriptions>
+              <div className="admin-td-table-scroll admin-td-table-scroll--md">
+                <Table
+                  rowKey="provider"
+                  data={report.paymentDiagnostics}
+                  columns={paymentColumns}
+                  hover
+                  stripe
+                  tableLayout="fixed"
+                  tableContentWidth="1280px"
+                  verticalAlign="top"
+                />
+              </div>
+            </div>
+          </Tabs.TabPanel>
+        </Tabs>
+      </section>
     </div>
   );
 }
