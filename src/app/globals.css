@@ -880,8 +880,9 @@ textarea {
 
 .option-grid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 16px;
+  grid-template-columns: minmax(220px, 1fr) max-content max-content;
+  gap: 14px clamp(18px, 3vw, 32px);
+  align-items: start;
 }
 
 .option-group {
@@ -1405,6 +1406,14 @@ textarea {
 
   .composer-head {
     display: grid;
+  }
+
+  .option-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .option-grid .option-group:first-child {
+    grid-column: 1 / -1;
   }
 
   .composer-actions {
