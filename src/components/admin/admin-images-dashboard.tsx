@@ -284,17 +284,17 @@ export function AdminImagesDashboard({
       colKey: "preview",
       title: "预览",
       width: 120,
-      cell: ({ row }: { row: AdminGalleryImageView }) => <Image src={row.thumbnailUrl || row.url} fit="cover" style={{ width: 82, height: 82, borderRadius: 8 }} />,
+      cell: ({ row }: { row: AdminGalleryImageView }) => <Image className="admin-td-preview-image" src={row.thumbnailUrl || row.url} fit="cover" />,
     },
     {
       colKey: "promptZh",
       title: "作品",
       minWidth: 360,
       cell: ({ row }: { row: AdminGalleryImageView }) => (
-        <div>
-          <p className="line-clamp-2 font-black text-slate-900">{row.promptZh}</p>
-          <p className="mt-1 text-xs text-slate-500">{row.authorEmail || row.authorName} · {row.jobStatus} · {row.creditCost} 积分</p>
-          {row.takenDownReason ? <p className="mt-1 text-xs text-red-500">下架原因：{row.takenDownReason}</p> : null}
+        <div className="admin-td-cell-stack">
+          <p className="admin-td-cell-main admin-td-line-clamp-2">{row.promptZh}</p>
+          <p className="admin-td-cell-sub">{row.authorEmail || row.authorName} · {row.jobStatus} · {row.creditCost} 积分</p>
+          {row.takenDownReason ? <p className="admin-td-cell-error">下架原因：{row.takenDownReason}</p> : null}
         </div>
       ),
     },
@@ -309,7 +309,7 @@ export function AdminImagesDashboard({
       title: "元数据",
       width: 210,
       cell: ({ row }: { row: AdminGalleryImageView }) => (
-        <div className="text-xs leading-5 text-slate-500">
+        <div className="admin-td-cell-meta">
           <p>{row.provider} · {row.ratio} · {row.category}</p>
           <p>{row.mimeType || "未知 MIME"} · {formatSize(row.fileSize)}</p>
         </div>
@@ -319,7 +319,7 @@ export function AdminImagesDashboard({
       colKey: "publishedAt",
       title: "发布时间",
       width: 190,
-      cell: ({ row }: { row: AdminGalleryImageView }) => <span className="text-xs text-slate-500">{row.publishedAt ? new Date(row.publishedAt).toLocaleString("zh-CN") : "未发布"}</span>,
+      cell: ({ row }: { row: AdminGalleryImageView }) => <span className="admin-td-cell-sub">{row.publishedAt ? new Date(row.publishedAt).toLocaleString("zh-CN") : "未发布"}</span>,
     },
     {
       colKey: "action",
@@ -344,17 +344,17 @@ export function AdminImagesDashboard({
       colKey: "preview",
       title: "预览",
       width: 120,
-      cell: ({ row }: { row: AdminCuratedGalleryImageView }) => <Image src={row.thumbnailUrl || row.url} fit="cover" style={{ width: 82, height: 82, borderRadius: 8 }} />,
+      cell: ({ row }: { row: AdminCuratedGalleryImageView }) => <Image className="admin-td-preview-image" src={row.thumbnailUrl || row.url} fit="cover" />,
     },
     {
       colKey: "title",
       title: "精选作品",
       minWidth: 320,
       cell: ({ row }: { row: AdminCuratedGalleryImageView }) => (
-        <div>
-          <p className="font-black text-slate-900">{row.title}</p>
-          <p className="mt-1 line-clamp-2 text-xs text-slate-500">{row.summary}</p>
-          {row.takenDownReason ? <p className="mt-1 text-xs text-red-500">下架原因：{row.takenDownReason}</p> : null}
+        <div className="admin-td-cell-stack">
+          <p className="admin-td-cell-main">{row.title}</p>
+          <p className="admin-td-cell-sub admin-td-line-clamp-2">{row.summary}</p>
+          {row.takenDownReason ? <p className="admin-td-cell-error">下架原因：{row.takenDownReason}</p> : null}
         </div>
       ),
     },
@@ -368,7 +368,7 @@ export function AdminImagesDashboard({
       colKey: "meta",
       title: "分类",
       width: 170,
-      cell: ({ row }: { row: AdminCuratedGalleryImageView }) => <span className="text-xs text-slate-500">{row.category} · {row.ratio} · 排序 {row.sortOrder}</span>,
+      cell: ({ row }: { row: AdminCuratedGalleryImageView }) => <span className="admin-td-cell-sub">{row.category} · {row.ratio} · 排序 {row.sortOrder}</span>,
     },
     {
       colKey: "action",

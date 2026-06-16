@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Alert, Button, Card, Input, InputNumber, Statistic, Table, Tag } from "tdesign-react";
+import { Alert, Button, Card, Form, Input, InputNumber, Statistic, Table, Tag } from "tdesign-react";
 import type { AdminUserView } from "@/lib/admin-users";
 
 type UsersResponse = {
@@ -118,9 +118,9 @@ export function AdminUsersDashboard({ initialUsers }: { initialUsers: AdminUserV
       title: "用户",
       width: 300,
       cell: ({ row }: { row: AdminUserView }) => (
-        <div className="min-w-0">
-          <p className="truncate font-black text-slate-900">{row.email || row.displayName || row.id}</p>
-          <p className="mt-1 break-all text-xs text-slate-400">{row.id}</p>
+        <div className="admin-td-cell-stack">
+          <p className="admin-td-cell-main">{row.email || row.displayName || row.id}</p>
+          <p className="admin-td-cell-sub admin-td-cell-id">{row.id}</p>
         </div>
       ),
     },
@@ -143,7 +143,7 @@ export function AdminUsersDashboard({ initialUsers }: { initialUsers: AdminUserV
       title: "时间",
       width: 240,
       cell: ({ row }: { row: AdminUserView }) => (
-        <div className="text-xs leading-5 text-slate-500">
+        <div className="admin-td-cell-meta">
           <p>注册：{formatTime(row.createdAt)}</p>
           <p>最近登录：{formatTime(row.lastLoginAt)}</p>
         </div>
@@ -163,13 +163,11 @@ export function AdminUsersDashboard({ initialUsers }: { initialUsers: AdminUserV
             <InputNumber
               value={amounts[row.id]}
               placeholder="100 / -20"
-              style={{ width: 112 }}
               onChange={(value) => setAmounts((current) => ({ ...current, [row.id]: Number(value || 0) }))}
             />
             <Input
               value={reasons[row.id] || ""}
               placeholder="原因"
-              style={{ width: 170 }}
               onChange={(value) => setReasons((current) => ({ ...current, [row.id]: String(value) }))}
             />
             <Button theme="primary" loading={pending === `credits:${row.id}`} onClick={() => void adjustCredits(row.id)}>
@@ -198,22 +196,22 @@ export function AdminUsersDashboard({ initialUsers }: { initialUsers: AdminUserV
       </div>
 
       <Card className="admin-td-card" title="用户运营">
-        <div className="admin-users-toolbar">
-          <label className="admin-users-search">
-            <span>搜索</span>
+        <Form layout="inline" className="admin-td-filter-form">
+          <Form.FormItem label="搜索">
             <Input
               value={query}
               placeholder="邮箱、昵称或用户 ID"
               clearable
-              style={{ width: 320 }}
               onChange={(value) => setQuery(String(value))}
               onEnter={() => void refreshUsers()}
             />
-          </label>
-          <Button theme="primary" loading={pending === "search"} onClick={() => void refreshUsers()}>
-            刷新
-          </Button>
-        </div>
+          </Form.FormItem>
+          <Form.FormItem>
+            <Button theme="primary" loading={pending === "search"} onClick={() => void refreshUsers()}>
+              刷新
+            </Button>
+          </Form.FormItem>
+        </Form>
 
         {message ? <Alert className="mb-3" theme="success" message={message} /> : null}
         {error ? <Alert className="mb-3" theme="error" message={error} /> : null}

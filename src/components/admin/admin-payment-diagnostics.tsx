@@ -36,9 +36,9 @@ export function AdminPaymentDiagnostics({
       title: "渠道",
       width: 160,
       cell: ({ row }: { row: PaymentDiagnosticItem }) => (
-        <div>
-          <strong>{row.label}</strong>
-          <p className="mt-1 text-xs uppercase tracking-[0.12em] text-slate-400">{row.provider}</p>
+        <div className="admin-td-cell-stack">
+          <p className="admin-td-cell-main">{row.label}</p>
+          <p className="admin-td-cell-code">{row.provider}</p>
         </div>
       ),
     },
@@ -61,9 +61,9 @@ export function AdminPaymentDiagnostics({
       colKey: "urls",
       title: "联调地址",
       cell: ({ row }: { row: PaymentDiagnosticItem }) => (
-        <div className="space-y-1 text-xs text-slate-500">
-          <p className="break-all">Notify: {row.notifyUrl}</p>
-          <p className="break-all">Return: {row.returnUrl}</p>
+        <div className="admin-td-cell-meta">
+          <p className="admin-td-cell-id">Notify: {row.notifyUrl}</p>
+          <p className="admin-td-cell-id">Return: {row.returnUrl}</p>
         </div>
       ),
     },
@@ -107,13 +107,13 @@ export function AdminPaymentDiagnostics({
       colKey: "eventType",
       title: "事件",
       width: 150,
-      cell: ({ row }: { row: AdminPaymentEventView }) => <span className="font-bold">{row.eventType}</span>,
+      cell: ({ row }: { row: AdminPaymentEventView }) => <span className="admin-td-cell-main">{row.eventType}</span>,
     },
     {
       colKey: "orderNo",
       title: "订单与流水",
       cell: ({ row }: { row: AdminPaymentEventView }) => (
-        <div className="space-y-1 text-xs text-slate-500">
+        <div className="admin-td-cell-meta">
           <p>订单：{row.orderNo || "未识别"}</p>
           <p>渠道流水：{row.providerTradeNo || "暂无"}</p>
           <p>原因：{row.message || "无"}</p>
@@ -129,7 +129,7 @@ export function AdminPaymentDiagnostics({
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="admin-td-grid">
       {issueCount > 0 ? (
         <Alert theme="warning" title="支付配置存在提示" message={`当前诊断发现 ${issueCount} 条提示，线上联调前请确认回调域名与商户密钥。`} />
       ) : (

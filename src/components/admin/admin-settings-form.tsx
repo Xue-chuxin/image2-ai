@@ -307,7 +307,7 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
                 placeholder={settings.legacyOpenaiApiKeyConfigured ? "已配置，留空表示不修改" : "未配置"}
                 type="password"
               />
-              <p className="mb-4 text-xs font-bold leading-5 text-slate-400">未配置兼容通道列表时，会自动使用这里的旧版单通道配置。</p>
+              <p className="admin-td-form-hint">未配置兼容通道列表时，会自动使用这里的旧版单通道配置。</p>
             </Form>
 
             <Card bordered title="OpenAI 兼容中转通道" actions={<Button variant="outline" onClick={addOpenAIChannel}>新增通道</Button>}>
@@ -433,7 +433,7 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
                         <Tag theme={diagnosticTheme(item.status)} variant="light">{item.status}</Tag>
                         <strong>{item.label}</strong>
                       </div>
-                      <p className="text-xs leading-5">{item.message}</p>
+                      <p className="admin-td-cell-sub">{item.message}</p>
                     </div>
                   }
                 />

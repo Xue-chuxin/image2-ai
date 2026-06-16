@@ -888,6 +888,114 @@ textarea {
   word-break: break-word;
 }
 
+.admin-td-cell-stack {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin-td-cell-main,
+.admin-td-cell-body,
+.admin-td-cell-sub,
+.admin-td-cell-code,
+.admin-td-cell-error {
+  margin: 0;
+}
+
+.admin-td-cell-main {
+  color: var(--td-text-color-primary, rgba(0, 0, 0, 0.9));
+  font: var(--td-font-body-medium);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.admin-td-cell-body {
+  color: var(--td-text-color-primary, rgba(0, 0, 0, 0.9));
+  font: var(--td-font-body-medium);
+  overflow-wrap: anywhere;
+}
+
+.admin-td-cell-sub,
+.admin-td-cell-meta {
+  color: var(--td-text-color-secondary, rgba(0, 0, 0, 0.6));
+  font: var(--td-font-body-small);
+}
+
+.admin-td-cell-meta {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.admin-td-cell-meta p {
+  margin: 0;
+}
+
+.admin-td-cell-id {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.admin-td-cell-code {
+  color: var(--td-text-color-placeholder, rgba(0, 0, 0, 0.4));
+  font: var(--td-font-mark-small);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.admin-td-cell-error {
+  color: var(--td-error-color, #d54941);
+  font: var(--td-font-body-small);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.admin-td-cell-placeholder {
+  color: var(--td-text-color-placeholder, rgba(0, 0, 0, 0.4));
+  font: var(--td-font-body-small);
+}
+
+.admin-td-line-clamp-2 {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.admin-td-thumb-list {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+}
+
+.admin-td-thumb {
+  flex: 0 0 auto;
+  border-radius: var(--td-radius-small, 3px);
+  object-fit: cover;
+}
+
+.admin-td-thumb-small {
+  width: 48px;
+  height: 48px;
+}
+
+.admin-td-preview-image {
+  width: 82px !important;
+  height: 82px !important;
+  overflow: hidden;
+  border-radius: var(--td-radius-medium, 6px);
+}
+
+.admin-td-preview-image img,
+.admin-td-preview-image .t-image__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .admin-td-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -913,25 +1021,20 @@ textarea {
   font-weight: 500;
 }
 
-.admin-td-filter-form .t-input,
+.admin-td-filter-form .t-input {
+  min-width: min(300px, 100%);
+  max-width: 100%;
+}
+
 .admin-td-filter-form .t-select {
   max-width: 100%;
 }
 
-.admin-users-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.admin-users-search {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--td-text-color-secondary, #4b5563);
-  font-size: 14px;
-  font-weight: 500;
+.admin-td-form-hint {
+  margin: 0 0 16px;
+  color: var(--td-text-color-placeholder, rgba(0, 0, 0, 0.4));
+  font: var(--td-font-body-small);
+  font-weight: 600;
 }
 
 .admin-user-credit-actions {
@@ -979,16 +1082,6 @@ textarea {
   .admin-td-card .t-card__body {
     padding-left: 16px;
     padding-right: 16px;
-  }
-
-  .admin-users-toolbar,
-  .admin-users-search {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .admin-users-search .t-input {
-    width: 100% !important;
   }
 
   .admin-td-filter-form,

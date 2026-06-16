@@ -27,7 +27,7 @@ export function AdminHealthDashboard({ report }: { report: AdminHealthReport }) 
       colKey: "label",
       title: "检查项",
       width: 190,
-      cell: ({ row }: { row: AdminHealthReport["items"][number] }) => <strong>{row.label}</strong>,
+      cell: ({ row }: { row: AdminHealthReport["items"][number] }) => <span className="admin-td-cell-main">{row.label}</span>,
     },
     {
       colKey: "status",
@@ -43,9 +43,9 @@ export function AdminHealthDashboard({ report }: { report: AdminHealthReport }) 
       colKey: "description",
       title: "说明",
       cell: ({ row }: { row: AdminHealthReport["items"][number] }) => (
-        <div className="space-y-1">
-          <p className="text-sm text-slate-700">{row.description}</p>
-          {row.detail ? <p className="break-all text-xs text-slate-400">{row.detail}</p> : null}
+        <div className="admin-td-cell-stack">
+          <p className="admin-td-cell-body">{row.description}</p>
+          {row.detail ? <p className="admin-td-cell-sub admin-td-cell-id">{row.detail}</p> : null}
         </div>
       ),
     },
@@ -57,9 +57,9 @@ export function AdminHealthDashboard({ report }: { report: AdminHealthReport }) 
       title: "渠道",
       width: 160,
       cell: ({ row }: { row: AdminHealthReport["paymentDiagnostics"][number] }) => (
-        <div>
-          <strong>{row.label}</strong>
-          <p className="mt-1 text-xs uppercase tracking-[0.12em] text-slate-400">{row.provider}</p>
+        <div className="admin-td-cell-stack">
+          <p className="admin-td-cell-main">{row.label}</p>
+          <p className="admin-td-cell-code">{row.provider}</p>
         </div>
       ),
     },
@@ -82,9 +82,9 @@ export function AdminHealthDashboard({ report }: { report: AdminHealthReport }) 
       colKey: "notifyUrl",
       title: "回调地址",
       cell: ({ row }: { row: AdminHealthReport["paymentDiagnostics"][number] }) => (
-        <div className="space-y-1 text-xs text-slate-500">
-          <p className="break-all">Notify: {row.notifyUrl}</p>
-          <p className="break-all">Return: {row.returnUrl}</p>
+        <div className="admin-td-cell-meta">
+          <p className="admin-td-cell-id">Notify: {row.notifyUrl}</p>
+          <p className="admin-td-cell-id">Return: {row.returnUrl}</p>
         </div>
       ),
     },
@@ -108,7 +108,7 @@ export function AdminHealthDashboard({ report }: { report: AdminHealthReport }) 
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="admin-td-grid">
       <div className="admin-td-stat-grid">
         {summaryItems.map((item) => (
           <Card key={item.label} bordered hoverShadow className="admin-td-card">

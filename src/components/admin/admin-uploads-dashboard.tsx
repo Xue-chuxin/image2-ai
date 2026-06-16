@@ -57,16 +57,16 @@ export function AdminUploadsDashboard({ initialImages }: { initialImages: AdminU
       colKey: "preview",
       title: "预览",
       width: 120,
-      cell: ({ row }: { row: AdminUploadedImageView }) => <Image src={row.thumbnailUrl || row.url} fit="cover" style={{ width: 82, height: 82, borderRadius: 8 }} />,
+      cell: ({ row }: { row: AdminUploadedImageView }) => <Image className="admin-td-preview-image" src={row.thumbnailUrl || row.url} fit="cover" />,
     },
     {
       colKey: "id",
       title: "资源",
       minWidth: 280,
       cell: ({ row }: { row: AdminUploadedImageView }) => (
-        <div>
-          <p className="break-all font-black text-slate-900">{row.id}</p>
-          <p className="mt-1 break-all text-xs text-slate-400">{row.url}</p>
+        <div className="admin-td-cell-stack">
+          <p className="admin-td-cell-main admin-td-cell-id">{row.id}</p>
+          <p className="admin-td-cell-sub admin-td-cell-id">{row.url}</p>
         </div>
       ),
     },
@@ -83,7 +83,7 @@ export function AdminUploadsDashboard({ initialImages }: { initialImages: AdminU
       cell: ({ row }: { row: AdminUploadedImageView }) => (
         <Space direction="vertical" size={4}>
           <Tag>{row.mimeType}</Tag>
-          <span className="text-xs text-slate-500">{formatSize(row.fileSize)}</span>
+          <span className="admin-td-cell-sub">{formatSize(row.fileSize)}</span>
         </Space>
       ),
     },
@@ -91,7 +91,7 @@ export function AdminUploadsDashboard({ initialImages }: { initialImages: AdminU
       colKey: "createdAt",
       title: "上传时间",
       width: 190,
-      cell: ({ row }: { row: AdminUploadedImageView }) => <span className="text-xs text-slate-500">{new Date(row.createdAt).toLocaleString("zh-CN")}</span>,
+      cell: ({ row }: { row: AdminUploadedImageView }) => <span className="admin-td-cell-sub">{new Date(row.createdAt).toLocaleString("zh-CN")}</span>,
     },
     {
       colKey: "action",

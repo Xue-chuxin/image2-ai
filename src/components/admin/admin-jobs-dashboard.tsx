@@ -190,7 +190,7 @@ export function AdminJobsDashboard({ initialJobs }: { initialJobs: AdminGenerati
               疑似卡住
             </Tag>
           ) : null}
-          {queueText(row) ? <span className="text-xs text-slate-500">{queueText(row)}</span> : null}
+          {queueText(row) ? <span className="admin-td-cell-sub">{queueText(row)}</span> : null}
         </Space>
       ),
     },
@@ -199,10 +199,10 @@ export function AdminJobsDashboard({ initialJobs }: { initialJobs: AdminGenerati
       title: "任务",
       minWidth: 360,
       cell: ({ row }: { row: AdminGenerationJobView }) => (
-        <div>
-          <p className="font-black text-slate-900">{summarizePrompt(row.promptZh)}</p>
-          <p className="mt-1 break-all text-xs text-slate-400">{row.id}</p>
-          {row.errorMessage ? <p className="mt-2 text-xs font-bold text-red-500">{row.errorMessage}</p> : null}
+        <div className="admin-td-cell-stack">
+          <p className="admin-td-cell-main">{summarizePrompt(row.promptZh)}</p>
+          <p className="admin-td-cell-sub admin-td-cell-id">{row.id}</p>
+          {row.errorMessage ? <p className="admin-td-cell-error">{row.errorMessage}</p> : null}
         </div>
       ),
     },
@@ -213,7 +213,7 @@ export function AdminJobsDashboard({ initialJobs }: { initialJobs: AdminGenerati
       cell: ({ row }: { row: AdminGenerationJobView }) => (
         <Space direction="vertical" size={4}>
           <Tag>{row.provider}</Tag>
-          <span className="text-xs text-slate-500">{row.model || "未返回模型"}</span>
+          <span className="admin-td-cell-sub">{row.model || "未返回模型"}</span>
         </Space>
       ),
     },
@@ -222,7 +222,7 @@ export function AdminJobsDashboard({ initialJobs }: { initialJobs: AdminGenerati
       title: "参数",
       width: 170,
       cell: ({ row }: { row: AdminGenerationJobView }) => (
-        <div className="text-xs leading-5 text-slate-500">
+        <div className="admin-td-cell-meta">
           <p>{row.ratio} · {row.quality}</p>
           <p>{row.imageCount} 张 · {row.creditCost} 积分</p>
         </div>
@@ -233,11 +233,11 @@ export function AdminJobsDashboard({ initialJobs }: { initialJobs: AdminGenerati
       title: "图片",
       width: 150,
       cell: ({ row }: { row: AdminGenerationJobView }) => (
-        <div className="flex gap-1">
+        <div className="admin-td-thumb-list">
           {row.images.slice(0, 3).map((image) => (
-            <img key={image.id} src={image.url} alt={row.promptZh} className="h-12 w-12 rounded object-cover" />
+            <img key={image.id} src={image.url} alt={row.promptZh} className="admin-td-thumb admin-td-thumb-small" />
           ))}
-          {!row.images.length ? <span className="text-xs text-slate-400">暂无</span> : null}
+          {!row.images.length ? <span className="admin-td-cell-placeholder">暂无</span> : null}
         </div>
       ),
     },
@@ -245,7 +245,7 @@ export function AdminJobsDashboard({ initialJobs }: { initialJobs: AdminGenerati
       colKey: "createdAt",
       title: "时间",
       width: 190,
-      cell: ({ row }: { row: AdminGenerationJobView }) => <span className="text-xs text-slate-500">{formatDate(row.createdAt)}</span>,
+      cell: ({ row }: { row: AdminGenerationJobView }) => <span className="admin-td-cell-sub">{formatDate(row.createdAt)}</span>,
     },
     {
       colKey: "actions",

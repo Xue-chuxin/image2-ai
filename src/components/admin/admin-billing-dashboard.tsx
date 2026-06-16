@@ -204,9 +204,9 @@ export function AdminBillingDashboard({
       title: "套餐",
       minWidth: 260,
       cell: ({ row }: { row: CreditPackageView }) => (
-        <div>
-          <p className="font-black text-slate-900">{row.name}</p>
-          <p className="mt-1 text-xs text-slate-500">{row.description || "无描述"}</p>
+        <div className="admin-td-cell-stack">
+          <p className="admin-td-cell-main">{row.name}</p>
+          <p className="admin-td-cell-sub">{row.description || "无描述"}</p>
         </div>
       ),
     },
@@ -243,9 +243,9 @@ export function AdminBillingDashboard({
       title: "订单",
       minWidth: 280,
       cell: ({ row }: { row: RechargeOrderView }) => (
-        <div>
-          <p className="break-all font-black text-slate-900">{row.orderNo}</p>
-          <p className="mt-1 text-xs text-slate-500">{row.userEmail || row.userId}</p>
+        <div className="admin-td-cell-stack">
+          <p className="admin-td-cell-main admin-td-cell-id">{row.orderNo}</p>
+          <p className="admin-td-cell-sub">{row.userEmail || row.userId}</p>
         </div>
       ),
     },
