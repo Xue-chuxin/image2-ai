@@ -30,42 +30,39 @@ export default async function HomePage() {
 
   return (
     <main className="space-y-8 pb-28">
-      <section className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr] lg:items-stretch">
-        <GlassSurface className="order-2 px-6 py-7 text-slate-950 md:px-8 md:py-9 lg:order-1">
+      <section className="grid gap-5 lg:grid-cols-[0.86fr_1.14fr] lg:items-stretch">
+        <GlassSurface className="order-2 px-6 py-7 text-slate-950 md:px-8 md:py-8 lg:order-1 lg:h-full">
           <div className="absolute -right-24 top-10 h-72 w-72 rounded-full bg-sky-100/80 blur-3xl" />
           <div className="relative flex h-full flex-col gap-5">
             <div className="space-y-4">
               <AnimatedContent className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/72 px-3 py-1.5 text-xs font-bold text-slate-500 backdrop-blur">
                 <BookOpen className="h-3.5 w-3.5" />
-                图片工作台 · 作品灵感
+                图片工作台 · 灵感预览
               </AnimatedContent>
               <div className="space-y-4">
                 <BlurText
                   as="h1"
-                  text="把描述整理成一张能用的图"
-                  className="max-w-2xl font-serif text-4xl font-black leading-[1.02] text-slate-950 md:text-6xl"
+                  text="从作品灵感开始"
+                  className="max-w-xl font-serif text-4xl font-black leading-[1.02] text-slate-950 md:text-5xl"
                   by="letters"
                   delay={0.012}
                 />
                 <SplitText
                   as="p"
-                  text="写描述、整理提示词、生成图片、管理历史。让在线生图更像一个安静但有生命力的创作 App。"
+                  text="先看构图、氛围和光感，再把想法交给右侧工作台。输入一句描述，就能整理提示词、提交生成并保存历史。"
                   className="max-w-xl text-base leading-7 text-slate-500"
                   delay={0.006}
                 />
-                <p className="max-w-xl text-base leading-7 text-slate-500">
-                  一个更像 App 的在线图片工作台：写描述、整理提示词、生成图片、管理历史。页面尽量保持安静，把注意力留给画面本身。
-                </p>
               </div>
             </div>
 
-            <SpotlightCard className="min-h-[25rem] flex-1 p-4" spotlightColor="rgba(56, 189, 248, 0.22)">
+            <SpotlightCard className="min-h-[18.5rem] flex-1 p-4" spotlightColor="rgba(56, 189, 248, 0.22)">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_12%,rgba(255,255,255,0.98),transparent_26%),radial-gradient(circle_at_86%_78%,rgba(176,201,220,0.65),transparent_40%)]" />
 
-              <div className="relative z-[1] flex h-full min-h-[24rem] flex-col gap-3">
+              <div className="relative z-[1] flex h-full min-h-[17.5rem] flex-col gap-3">
                 <div className="flex items-center justify-between gap-3">
                   <span className="rounded-full border border-white/80 bg-white/68 px-3 py-1 text-[0.64rem] font-black uppercase tracking-[0.28em] text-slate-500 shadow-sm backdrop-blur">
-                    Selected works
+                    近期作品
                   </span>
                   <span className="font-mono text-[0.68rem] font-black text-slate-400">
                     {heroCounter}
@@ -73,7 +70,7 @@ export default async function HomePage() {
                 </div>
 
                 <div className="grid flex-1 gap-3 sm:grid-cols-[1.34fr_0.86fr]">
-                  <figure className="relative min-h-[18rem] overflow-hidden rounded-[1.75rem] border border-white/85 bg-slate-200 shadow-[0_24px_62px_rgba(31,52,76,0.18)]">
+                  <figure className="relative min-h-[13.5rem] overflow-hidden rounded-[1.75rem] border border-white/85 bg-slate-200 shadow-[0_24px_62px_rgba(31,52,76,0.18)]">
                     {primaryHeroWork?.url ? (
                       <img
                         src={primaryHeroWork.thumbnailUrl || primaryHeroWork.url}
@@ -86,9 +83,9 @@ export default async function HomePage() {
                     <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),transparent_42%,rgba(5,13,25,0.58))]" />
                     <figcaption className="absolute bottom-5 left-5 max-w-[15rem] text-white">
                       <p className="text-[0.64rem] font-black uppercase tracking-[0.32em] text-white/68">
-                        Gallery 01
+                        作品 01
                       </p>
-                      <p className="mt-2 text-3xl font-black tracking-[-0.06em]">
+                      <p className="mt-2 text-2xl font-black tracking-[-0.04em]">
                         {primaryHeroWork?.title || "等待第一张作品"}
                       </p>
                       <p className="mt-2 max-w-[12rem] text-xs font-semibold leading-5 text-white/70">
@@ -103,10 +100,10 @@ export default async function HomePage() {
                         <img
                           src={secondaryHeroWork.thumbnailUrl || secondaryHeroWork.url}
                           alt={secondaryHeroWork.title || "公开作品预览"}
-                          className="h-40 w-full rounded-[1.25rem] object-cover grayscale-[10%] saturate-[0.78] sm:h-full"
+                          className="h-32 w-full rounded-[1.25rem] object-cover grayscale-[10%] saturate-[0.78] sm:h-full"
                         />
                       ) : (
-                        <div className="h-40 w-full rounded-[1.25rem] bg-[linear-gradient(135deg,#eff6ff,#ffffff,#e0f2fe)] sm:h-full" />
+                        <div className="h-32 w-full rounded-[1.25rem] bg-[linear-gradient(135deg,#eff6ff,#ffffff,#e0f2fe)] sm:h-full" />
                       )}
                     </figure>
 
@@ -115,10 +112,10 @@ export default async function HomePage() {
                         <img
                           src={tertiaryHeroWork.thumbnailUrl || tertiaryHeroWork.url}
                           alt={tertiaryHeroWork.title || "公开作品预览"}
-                          className="h-28 w-full rounded-[1.25rem] object-cover grayscale-[8%] saturate-[0.78]"
+                          className="h-24 w-full rounded-[1.25rem] object-cover grayscale-[8%] saturate-[0.78]"
                         />
                       ) : (
-                        <div className="h-28 w-full rounded-[1.25rem] bg-[radial-gradient(circle_at_70%_20%,#ffffff,transparent_28%),linear-gradient(135deg,#e2e8f0,#f8fafc,#dbeafe)]" />
+                        <div className="h-24 w-full rounded-[1.25rem] bg-[radial-gradient(circle_at_70%_20%,#ffffff,transparent_28%),linear-gradient(135deg,#e2e8f0,#f8fafc,#dbeafe)]" />
                       )}
                       <figcaption className="flex items-center justify-between px-3 py-2 text-xs font-bold text-slate-600">
                         <span>{tertiaryHeroWork?.title || "公开作品"}</span>
