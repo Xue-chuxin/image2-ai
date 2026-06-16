@@ -113,29 +113,43 @@ function buildMessage(config: EmailRuntimeConfig, recipients: string[], payload:
 
 function connectSocket(config: EmailRuntimeConfig): Promise<SmtpSocket> {
   return new Promise((resolve, reject) => {
-    const onError = (error: Error) => reject(error);
-    const socket = config.secure
-      ? tls.connect({
-          host: config.host,
-          port: config.port,
-          servername: config.host,
-          timeout: SMTP_TIMEOUT_MS,
-        })
-      : net.connect({
-          host: config.host,
-          port: config.port,
-          timeout: SMTP_TIMEOUT_MS,
-        });
-
-    socket.once("error", onError);
-    socket.once("timeout", () => {
+    let settled = false;
+    const fail = (socket: SmtpSocket, error: Error) => {
+      if (settled) return;
+      settled = true;
       socket.destroy();
-      reject(new Error("SMTP 连接超时。"));
-    });
-    socket.once(config.secure ? "secureConnect" : "connect", () => {
-      socket.off("error", onError);
+      reject(error);
+    };
+    const succeed = (socket: SmtpSocket, errorListener: (error: Error) => void) => {
+      if (settled) return;
+      settled = true;
+      socket.off("error", errorListener);
       resolve(socket);
+    };
+
+    if (config.secure) {
+      const socket = tls.connect({
+        host: config.host,
+        port: config.port,
+        servername: config.host,
+        timeout: SMTP_TIMEOUT_MS,
+      });
+      const onError = (error: Error) => fail(socket, error);
+      socket.once("error", onError);
+      socket.once("timeout", () => fail(socket, new Error("SMTP 连接超时。")));
+      socket.once("secureConnect", () => succeed(socket, onError));
+      return;
+    }
+
+    const socket = net.connect({
+      host: config.host,
+      port: config.port,
+      timeout: SMTP_TIMEOUT_MS,
     });
+    const onNetError = (error: Error) => fail(socket, error);
+    socket.once("error", onNetError);
+    socket.once("timeout", () => fail(socket, new Error("SMTP 连接超时。")));
+    socket.once("connect", () => succeed(socket, onNetError));
   });
 }
 
