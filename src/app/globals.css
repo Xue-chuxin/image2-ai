@@ -725,11 +725,25 @@ textarea {
   padding: 12px 8px;
 }
 
+.admin-td-menu .t-menu-group__title {
+  padding: 14px 16px 8px;
+  color: var(--td-text-color-placeholder, rgba(0, 0, 0, 0.4));
+  font: var(--td-font-mark-small);
+}
+
 .admin-td-menu .t-menu__item {
-  height: 42px;
+  height: 54px;
   margin: 2px 0;
+  padding-right: 12px;
   border-radius: var(--td-radius-medium, 6px);
   font: var(--td-font-body-medium);
+  line-height: normal;
+}
+
+.admin-td-menu .t-menu__item-link,
+.admin-td-menu .t-menu__content {
+  min-width: 0;
+  flex: 1;
 }
 
 .admin-td-menu .t-menu__item .t-icon {
@@ -740,6 +754,75 @@ textarea {
   background: var(--td-brand-color-light, #e8f1ff);
   color: var(--td-brand-color, #0052d9);
   font-weight: 600;
+}
+
+.admin-td-nav-content {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.admin-td-nav-label,
+.admin-td-nav-description {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-td-nav-label {
+  color: inherit;
+  font: var(--td-font-body-medium);
+  font-weight: 600;
+}
+
+.admin-td-nav-description {
+  color: var(--td-text-color-placeholder, rgba(0, 0, 0, 0.4));
+  font: var(--td-font-body-small);
+}
+
+.admin-td-menu .t-menu__item.t-is-active .admin-td-nav-description {
+  color: var(--td-brand-color, #0052d9);
+  opacity: 0.78;
+}
+
+.admin-td-menu .t-menu__operations {
+  padding: 14px 16px 16px;
+}
+
+.admin-td-menu-operations {
+  min-width: 0;
+}
+
+.admin-td-session-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--td-success-color, #2ba471);
+  font: var(--td-font-body-small);
+  font-weight: 600;
+}
+
+.admin-td-session-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--td-success-color, #2ba471);
+}
+
+.admin-td-session-label {
+  margin: 10px 0 0;
+  color: var(--td-text-color-placeholder, rgba(0, 0, 0, 0.4));
+  font: var(--td-font-body-small);
+}
+
+.admin-td-session-email {
+  margin: 2px 0 0;
+  overflow: hidden;
+  color: var(--td-text-color-primary, rgba(0, 0, 0, 0.9));
+  font: var(--td-font-body-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .admin-td-header {

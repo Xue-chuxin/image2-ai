@@ -15,7 +15,7 @@ import {
 type AdminTabKey = "users" | "jobs" | "images" | "uploads" | "billing" | "health" | "settings";
 
 const { Header, Content, Aside } = Layout;
-const { HeadMenu, MenuItem } = Menu;
+const { HeadMenu, MenuGroup, MenuItem } = Menu;
 
 const adminTabs: Array<{
   key: AdminTabKey;
@@ -51,12 +51,24 @@ export function AdminPageShell({
   return (
     <Layout className="admin-td-shell">
       <Aside className="admin-td-sider hidden md:block" width="236px">
-        <Menu value={active} className="admin-td-menu" theme="light" width="236px" logo={<AdminBrand />}>
-          {adminTabs.map((tab) => (
-            <MenuItem key={tab.key} value={tab.key} href={tab.href} icon={tab.icon}>
-              {tab.label}
-            </MenuItem>
-          ))}
+        <Menu
+          value={active}
+          className="admin-td-menu"
+          theme="light"
+          width="236px"
+          logo={<AdminBrand />}
+          operations={<AdminMenuOperations email={email} />}
+        >
+          <MenuGroup title="运营管理">
+            {adminTabs.map((tab) => (
+              <MenuItem key={tab.key} value={tab.key} href={tab.href} icon={tab.icon}>
+                <span className="admin-td-nav-content">
+                  <span className="admin-td-nav-label">{tab.label}</span>
+                  <span className="admin-td-nav-description">{tab.description}</span>
+                </span>
+              </MenuItem>
+            ))}
+          </MenuGroup>
         </Menu>
       </Aside>
       <Layout>
@@ -93,6 +105,19 @@ function AdminBrand() {
         <p className="admin-td-brand-title">造图台</p>
         <p className="admin-td-brand-subtitle">运营管理后台</p>
       </div>
+    </div>
+  );
+}
+
+function AdminMenuOperations({ email }: { email?: string | null }) {
+  return (
+    <div className="admin-td-menu-operations">
+      <div className="admin-td-session-status">
+        <span className="admin-td-session-dot" />
+        <span>已登录</span>
+      </div>
+      <p className="admin-td-session-label">当前管理员</p>
+      <p className="admin-td-session-email">{email || "admin"}</p>
     </div>
   );
 }
