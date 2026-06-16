@@ -234,17 +234,26 @@ export async function requireAdmin() {
 export async function ensureInitialAdmin() {
   assertDatabaseConfigured();
 
+  const { prisma } = await import("@/lib/db");
   const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
   const password = process.env.ADMIN_PASSWORD;
 
   if (!isUsableAdminEmail(email) || !isUsableAdminPassword(password)) {
+    const adminCount = await prisma.user.count({
+      where: {
+        role: "ADMIN",
+      },
+    });
+    if (adminCount > 0) {
+      return;
+    }
+
     if (process.env.NODE_ENV === "production") {
       throw new Error("ADMIN_EMAIL 或 ADMIN_PASSWORD 缺失或仍为示例值，生产环境不能初始化默认管理员。");
     }
     return;
   }
 
-  const { prisma } = await import("@/lib/db");
   const passwordHash = hashPassword(password!);
   const existingUser = await prisma.user.findUnique({
     where: {
