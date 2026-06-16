@@ -1,6 +1,7 @@
 import path from "path";
 import { randomBytes } from "crypto";
 
+import { AppError } from "@/lib/app-error";
 import { decryptSecret, encryptSecret, hasSettingsEncryptionKey } from "@/lib/app-crypto";
 
 export type GenerationProviderName = "openai" | "chatgpt_web" | "stability_ai";
@@ -253,6 +254,23 @@ function normalizeEmailAddress(value: unknown, fallback = "") {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean) ? clean : fallback;
 }
 
+function normalizeSubmittedEmailAddress(value: unknown, fallback: string, label: string) {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+
+  const clean = value.trim().toLowerCase().slice(0, 254);
+  if (!clean) {
+    return "";
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)) {
+    throw new AppError("BAD_REQUEST", `${label}格式不正确。`, 400);
+  }
+
+  return clean;
+}
+
 function normalizeForbiddenWords(value: unknown) {
   if (typeof value !== "string") {
     return "";
@@ -346,7 +364,7 @@ function normalizeBaseUrl(value: unknown, fallback = DEFAULT_OPENAI_BASE_URL) {
     }
     return url.toString().replace(/\/+$/, "");
   } catch {
-    throw new Error("OpenAI 兼容通道 Base URL 必须是合法的 http 或 https 地址。");
+    throw new AppError("BAD_REQUEST", "OpenAI 兼容通道 Base URL 必须是合法的 http 或 https 地址。", 400);
   }
 }
 
@@ -832,10 +850,10 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
   const emailSmtpPort = normalizePort(input.emailSmtpPort, currentEmailSettings.emailSmtpPort);
   const emailSmtpSecure = normalizeBoolean(input.emailSmtpSecure, currentEmailSettings.emailSmtpSecure);
   const emailSmtpUser = normalizeOptionalText(input.emailSmtpUser, currentEmailSettings.emailSmtpUser, 254);
-  const emailFromEmail = normalizeEmailAddress(input.emailFromEmail, currentEmailSettings.emailFromEmail);
+  const emailFromEmail = normalizeSubmittedEmailAddress(input.emailFromEmail, currentEmailSettings.emailFromEmail, "发件邮箱");
   const emailFromName = normalizeText(input.emailFromName, currentEmailSettings.emailFromName, 80);
-  const emailReplyTo = normalizeEmailAddress(input.emailReplyTo, currentEmailSettings.emailReplyTo);
-  const emailTestRecipient = normalizeEmailAddress(input.emailTestRecipient, currentEmailSettings.emailTestRecipient);
+  const emailReplyTo = normalizeSubmittedEmailAddress(input.emailReplyTo, currentEmailSettings.emailReplyTo, "回复邮箱");
+  const emailTestRecipient = normalizeSubmittedEmailAddress(input.emailTestRecipient, currentEmailSettings.emailTestRecipient, "测试收件邮箱");
   const shouldSaveOpenAICompatibleChannels = shouldPersistSubmittedOpenAIChannels(input.openaiCompatibleChannels, settingsMap, openaiImageModel);
   const openaiCompatibleChannels = shouldSaveOpenAICompatibleChannels
     ? normalizeSubmittedOpenAIChannels(

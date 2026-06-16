@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/lib/app-error";
 import { getAdminSession } from "@/lib/auth";
 import { getAdminAppSettings, saveAdminAppSettings } from "@/lib/settings";
 
@@ -28,9 +29,6 @@ export async function POST(request: Request) {
     await saveAdminAppSettings(payload);
     return NextResponse.json({ ok: true, settings: await getAdminAppSettings() });
   } catch (error) {
-    return NextResponse.json(
-      { ok: false, error: error instanceof Error ? error.message : "保存配置失败。" },
-      { status: 500 }
-    );
+    return jsonError(error, "保存配置失败。", 500);
   }
 }
