@@ -15,7 +15,7 @@ import {
 type AdminTabKey = "users" | "jobs" | "images" | "uploads" | "billing" | "health" | "settings";
 
 const { Header, Content, Aside } = Layout;
-const { MenuItem } = Menu;
+const { HeadMenu, MenuItem } = Menu;
 
 const adminTabs: Array<{
   key: AdminTabKey;
@@ -51,14 +51,7 @@ export function AdminPageShell({
   return (
     <Layout className="admin-td-shell">
       <Aside className="admin-td-sider hidden md:block" width="236px">
-        <div className="admin-td-brand">
-          <div className="admin-td-brand-mark">造</div>
-          <div className="min-w-0">
-            <p className="truncate text-base font-semibold text-slate-950">造图台</p>
-            <p className="mt-0.5 truncate text-xs text-slate-500">运营管理后台</p>
-          </div>
-        </div>
-        <Menu value={active} className="admin-td-menu" theme="light">
+        <Menu value={active} className="admin-td-menu" theme="light" width="236px" logo={<AdminBrand />}>
           {adminTabs.map((tab) => (
             <MenuItem key={tab.key} value={tab.key} href={tab.href} icon={tab.icon}>
               {tab.label}
@@ -78,20 +71,28 @@ export function AdminPageShell({
               {email || "admin"}
             </Tag>
           </div>
-          <div className="admin-td-mobile-menu md:hidden">
+          <HeadMenu value={active} className="admin-td-mobile-menu md:hidden" theme="light">
             {adminTabs.map((tab) => (
-              <a
-                key={tab.key}
-                href={tab.href}
-                className={`admin-td-mobile-menu-item ${tab.key === active ? "admin-td-mobile-menu-item-active" : ""}`}
-              >
+              <MenuItem key={tab.key} value={tab.key} href={tab.href}>
                 {tab.label}
-              </a>
+              </MenuItem>
             ))}
-          </div>
+          </HeadMenu>
         </Header>
         <Content className="admin-td-content">{children}</Content>
       </Layout>
     </Layout>
+  );
+}
+
+function AdminBrand() {
+  return (
+    <div className="admin-td-brand">
+      <div className="admin-td-brand-mark">造</div>
+      <div className="min-w-0">
+        <p className="truncate text-base font-semibold text-slate-950">造图台</p>
+        <p className="mt-0.5 truncate text-xs text-slate-500">运营管理后台</p>
+      </div>
+    </div>
   );
 }
