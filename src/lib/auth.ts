@@ -69,6 +69,41 @@ function createSessionValue(payload: Omit<BaseSession, "exp">) {
   return `${encodedPayload}.${signPayload(encodedPayload)}`;
 }
 
+function shouldUseSecureSessionCookie(request?: Request) {
+  const configuredValue = process.env.AUTH_COOKIE_SECURE?.trim().toLowerCase();
+  if (configuredValue === "true") {
+    return true;
+  }
+  if (configuredValue === "false") {
+    return false;
+  }
+
+  const forwardedProto = request?.headers.get("x-forwarded-proto")?.split(",")[0]?.trim().toLowerCase();
+  if (forwardedProto) {
+    return forwardedProto === "https";
+  }
+
+  if (request) {
+    try {
+      return new URL(request.url).protocol === "https:";
+    } catch {
+      return process.env.NODE_ENV === "production";
+    }
+  }
+
+  return process.env.NODE_ENV === "production";
+}
+
+function getSessionCookieOptions(request: Request | undefined, maxAge: number) {
+  return {
+    httpOnly: true,
+    sameSite: "lax" as const,
+    secure: shouldUseSecureSessionCookie(request),
+    path: "/",
+    maxAge,
+  };
+}
+
 function parseSession(value: string | undefined, expectedRole: SessionRole) {
   if (!value) {
     return null;
@@ -146,44 +181,36 @@ export function createUserSessionValue(user: { id: string; email: string }) {
   });
 }
 
-export function setAdminSessionCookie(response: NextResponse, user: { id: string; email: string }) {
-  response.cookies.set(ADMIN_SESSION_COOKIE, createAdminSessionValue(user), {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: SESSION_TTL_SECONDS,
-  });
+export function setAdminSessionCookie(
+  response: NextResponse,
+  user: { id: string; email: string },
+  request?: Request,
+) {
+  response.cookies.set(
+    ADMIN_SESSION_COOKIE,
+    createAdminSessionValue(user),
+    getSessionCookieOptions(request, SESSION_TTL_SECONDS),
+  );
 }
 
-export function setUserSessionCookie(response: NextResponse, user: { id: string; email: string }) {
-  response.cookies.set(USER_SESSION_COOKIE, createUserSessionValue(user), {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: SESSION_TTL_SECONDS,
-  });
+export function setUserSessionCookie(
+  response: NextResponse,
+  user: { id: string; email: string },
+  request?: Request,
+) {
+  response.cookies.set(
+    USER_SESSION_COOKIE,
+    createUserSessionValue(user),
+    getSessionCookieOptions(request, SESSION_TTL_SECONDS),
+  );
 }
 
-export function clearAdminSessionCookie(response: NextResponse) {
-  response.cookies.set(ADMIN_SESSION_COOKIE, "", {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 0,
-  });
+export function clearAdminSessionCookie(response: NextResponse, request?: Request) {
+  response.cookies.set(ADMIN_SESSION_COOKIE, "", getSessionCookieOptions(request, 0));
 }
 
-export function clearUserSessionCookie(response: NextResponse) {
-  response.cookies.set(USER_SESSION_COOKIE, "", {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 0,
-  });
+export function clearUserSessionCookie(response: NextResponse, request?: Request) {
+  response.cookies.set(USER_SESSION_COOKIE, "", getSessionCookieOptions(request, 0));
 }
 
 export async function getAdminSession(): Promise<AdminSession | null> {

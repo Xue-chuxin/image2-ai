@@ -40,7 +40,7 @@ export async function POST(request: Request) {
       credits,
     });
 
-    setUserSessionCookie(response, { id: user.id, email: user.email || email });
+    setUserSessionCookie(response, { id: user.id, email: user.email || email }, request);
     return response;
   } catch (error) {
     return jsonError(error, "登录失败，请检查邮箱和密码。");

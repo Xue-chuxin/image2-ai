@@ -34,7 +34,7 @@ export async function POST(request: Request) {
 
     await markAdminLoggedIn(user.id);
     const response = NextResponse.json({ ok: true });
-    setAdminSessionCookie(response, { id: user.id, email: user.email });
+    setAdminSessionCookie(response, { id: user.id, email: user.email }, request);
     return response;
   } catch (error) {
     return NextResponse.json(
