@@ -86,10 +86,10 @@ export default async function HomePage() {
               />
             </div>
 
-            <SpotlightCard className="h-[28rem] p-4 md:h-[30rem]" spotlightColor="rgba(56, 189, 248, 0.22)">
+            <SpotlightCard className="p-4" spotlightColor="rgba(56, 189, 248, 0.22)">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_12%,rgba(255,255,255,0.98),transparent_26%),radial-gradient(circle_at_86%_78%,rgba(176,201,220,0.65),transparent_40%)]" />
 
-              <div className="relative z-[1] flex h-full min-h-0 flex-col gap-3">
+              <div className="relative z-[1] flex flex-col gap-3">
                 <div className="flex items-center justify-between gap-3">
                   <span className="rounded-full border border-white/80 bg-white/68 px-3 py-1 text-[0.64rem] font-black uppercase tracking-[0.28em] text-slate-500 shadow-sm backdrop-blur">
                     近期作品
@@ -99,39 +99,25 @@ export default async function HomePage() {
                   </span>
                 </div>
 
-                <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_7.4rem] gap-3">
-                  <figure className="grid min-h-0 grid-rows-[minmax(0,1fr)_auto] overflow-hidden rounded-[1.75rem] border border-white/85 bg-white/70 p-2 shadow-[0_24px_62px_rgba(31,52,76,0.16)] backdrop-blur">
-                    <ArtworkPreviewImage work={primaryHeroWork} alt="公开作品预览" />
-                    <figcaption className="flex items-end justify-between gap-4 px-2 pb-1 pt-2">
-                      <div className="min-w-0">
-                        <p className="text-[0.62rem] font-black uppercase tracking-[0.26em] text-slate-400">作品 01</p>
-                        <p className="mt-1 truncate text-lg font-black tracking-[-0.03em] text-slate-950">
-                          {primaryHeroWork?.title || "等待第一张作品"}
-                        </p>
-                      </div>
-                      <p className="max-w-[12rem] text-right text-xs font-semibold leading-5 text-slate-500">
-                        {primaryHeroWork?.summary || "公开作品会自动成为首页的视觉焦点。"}
-                      </p>
-                    </figcaption>
-                  </figure>
-
-                  <div className="grid min-h-0 grid-cols-2 gap-3">
-                    <figure className="grid min-h-0 grid-rows-[minmax(0,1fr)_auto] overflow-hidden rounded-[1.45rem] border border-white/85 bg-white/72 p-1.5 shadow-[0_18px_44px_rgba(31,52,76,0.1)] backdrop-blur">
-                      <ArtworkPreviewImage work={secondaryHeroWork} alt="公开作品预览" className="rounded-[1.15rem]" />
-                      <figcaption className="flex items-center justify-between px-2 py-1.5 text-xs font-bold text-slate-600">
-                        <span className="truncate">{secondaryHeroWork?.title || "公开作品"}</span>
-                        <span className="font-mono text-slate-400">{secondaryHeroWork?.ratio || "1:1"}</span>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {[
+                    { work: primaryHeroWork, index: "01", ratio: primaryHeroWork?.ratio || "1:1" },
+                    { work: secondaryHeroWork, index: "02", ratio: secondaryHeroWork?.ratio || "1:1" },
+                    { work: tertiaryHeroWork, index: "03", ratio: tertiaryHeroWork?.ratio || "3:4" },
+                  ].map((item) => (
+                    <figure
+                      key={item.index}
+                      className="grid min-w-0 grid-rows-[auto_auto] overflow-hidden rounded-[1.45rem] border border-white/85 bg-white/74 p-1.5 shadow-[0_18px_44px_rgba(31,52,76,0.1)] backdrop-blur"
+                    >
+                      <ArtworkPreviewImage work={item.work} alt="公开作品预览" className="aspect-[4/3] rounded-[1.15rem]" />
+                      <figcaption className="flex items-center justify-between gap-2 px-2 py-2 text-xs font-bold text-slate-600">
+                        <span className="truncate">
+                          {item.index}. {item.work?.title || "公开作品"}
+                        </span>
+                        <span className="shrink-0 font-mono text-slate-400">{item.ratio}</span>
                       </figcaption>
                     </figure>
-
-                    <figure className="grid min-h-0 grid-rows-[minmax(0,1fr)_auto] overflow-hidden rounded-[1.45rem] border border-white/85 bg-white/76 p-1.5 shadow-[0_18px_44px_rgba(31,52,76,0.1)] backdrop-blur">
-                      <ArtworkPreviewImage work={tertiaryHeroWork} alt="公开作品预览" className="rounded-[1.15rem]" />
-                      <figcaption className="flex items-center justify-between px-2 py-1.5 text-xs font-bold text-slate-600">
-                        <span className="truncate">{tertiaryHeroWork?.title || "公开作品"}</span>
-                        <span className="font-mono text-slate-400">{tertiaryHeroWork?.ratio || "3:4"}</span>
-                      </figcaption>
-                    </figure>
-                  </div>
+                  ))}
                 </div>
               </div>
             </SpotlightCard>
