@@ -880,8 +880,8 @@ textarea {
 
 .option-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: 1fr;
+  gap: 16px;
 }
 
 .option-group {
@@ -1369,10 +1369,6 @@ textarea {
 
   .preview-panel {
     position: static;
-  }
-
-  .option-grid {
-    grid-template-columns: 1fr;
   }
 
   .history-card-layout {
