@@ -138,7 +138,9 @@ export function AdminHealthDashboard({ report }: { report: AdminHealthReport }) 
           </Button>
         }
       >
-        <Table rowKey="id" data={report.items} columns={healthColumns} hover stripe />
+        <div className="admin-td-table-scroll">
+          <Table rowKey="id" data={report.items} columns={healthColumns} hover stripe tableLayout="fixed" />
+        </div>
       </Card>
 
       <Card bordered title="支付渠道状态" headerBordered>
@@ -147,7 +149,9 @@ export function AdminHealthDashboard({ report }: { report: AdminHealthReport }) 
           <Descriptions.DescriptionsItem label="启用渠道">{report.paymentDiagnostics.filter((item) => item.enabled).length}</Descriptions.DescriptionsItem>
           <Descriptions.DescriptionsItem label="配置完整">{report.paymentDiagnostics.filter((item) => item.configured).length}</Descriptions.DescriptionsItem>
         </Descriptions>
-        <Table rowKey="provider" data={report.paymentDiagnostics} columns={paymentColumns} hover stripe />
+        <div className="admin-td-table-scroll">
+          <Table rowKey="provider" data={report.paymentDiagnostics} columns={paymentColumns} hover stripe tableLayout="fixed" />
+        </div>
       </Card>
     </div>
   );

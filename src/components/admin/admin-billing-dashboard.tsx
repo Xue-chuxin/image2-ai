@@ -385,7 +385,9 @@ export function AdminBillingDashboard({
                   </Space>
                 </Form>
               </Card>
-              <Table rowKey="id" data={packages} columns={packageColumns} hover stripe bordered tableLayout="auto" empty="暂无套餐" />
+              <div className="admin-td-table-scroll">
+                <Table rowKey="id" data={packages} columns={packageColumns} hover stripe bordered tableLayout="fixed" empty="暂无套餐" />
+              </div>
             </div>
           </Tabs.TabPanel>
 
@@ -410,7 +412,9 @@ export function AdminBillingDashboard({
                 <Button theme="primary" loading={pending === "load-orders"} onClick={() => void loadOrders(status, query)}>搜索</Button>
               </Form.FormItem>
             </Form>
-            <Table rowKey="id" data={orders} columns={orderColumns} hover stripe bordered tableLayout="auto" empty="暂无订单" />
+            <div className="admin-td-table-scroll">
+              <Table rowKey="id" data={orders} columns={orderColumns} hover stripe bordered tableLayout="fixed" empty="暂无订单" />
+            </div>
           </Tabs.TabPanel>
         </Tabs>
       </Card>

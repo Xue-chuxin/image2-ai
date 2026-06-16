@@ -315,7 +315,9 @@ export function AdminJobsDashboard({ initialJobs }: { initialJobs: AdminGenerati
         {message ? <Alert className="mb-3" theme="success" message={message} /> : null}
         {error ? <Alert className="mb-3" theme="error" message={error} /> : null}
 
-        <Table rowKey="id" data={jobs} columns={columns} hover stripe bordered tableLayout="auto" empty="暂无任务" />
+        <div className="admin-td-table-scroll">
+          <Table rowKey="id" data={jobs} columns={columns} hover stripe bordered tableLayout="fixed" empty="暂无任务" />
+        </div>
       </Card>
     </section>
   );

@@ -133,7 +133,9 @@ export function AdminUploadsDashboard({ initialImages }: { initialImages: AdminU
         </Form>
 
         {message ? <Alert className="mb-3" theme="info" message={message} /> : null}
-        <Table rowKey="id" data={images} columns={columns} hover stripe bordered tableLayout="auto" empty="暂无上传图" />
+        <div className="admin-td-table-scroll">
+          <Table rowKey="id" data={images} columns={columns} hover stripe bordered tableLayout="fixed" empty="暂无上传图" />
+        </div>
       </Card>
     </section>
   );

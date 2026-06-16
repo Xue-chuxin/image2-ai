@@ -147,7 +147,9 @@ export function AdminPaymentDiagnostics({
             </Button>
           }
         >
-          <Table rowKey="provider" data={diagnostics} columns={diagnosticColumns} hover stripe />
+          <div className="admin-td-table-scroll">
+            <Table rowKey="provider" data={diagnostics} columns={diagnosticColumns} hover stripe tableLayout="fixed" />
+          </div>
         </Card>
 
         <Card
@@ -160,14 +162,17 @@ export function AdminPaymentDiagnostics({
             </Button>
           }
         >
-          <Table
-            rowKey="id"
-            data={events}
-            columns={eventColumns}
-            hover
-            stripe
-            empty="暂无支付事件，完成一次支付回调后会出现在这里。"
-          />
+          <div className="admin-td-table-scroll">
+            <Table
+              rowKey="id"
+              data={events}
+              columns={eventColumns}
+              hover
+              stripe
+              tableLayout="fixed"
+              empty="暂无支付事件，完成一次支付回调后会出现在这里。"
+            />
+          </div>
         </Card>
       </div>
     </div>

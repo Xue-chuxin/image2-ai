@@ -821,8 +821,11 @@ textarea {
   min-width: 1180px;
 }
 
+.admin-td-table-scroll .t-table th,
 .admin-td-table-scroll .t-table td {
   vertical-align: middle;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .admin-td-toolbar {

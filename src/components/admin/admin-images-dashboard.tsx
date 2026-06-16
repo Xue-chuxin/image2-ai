@@ -431,7 +431,9 @@ export function AdminImagesDashboard({
                 <Button theme="primary" loading={pending === "refresh"} onClick={() => void loadImages(status, query)}>搜索</Button>
               </Form.FormItem>
             </Form>
-            <Table rowKey="id" data={images} columns={imageColumns} hover stripe bordered tableLayout="auto" empty="暂无作品记录" />
+            <div className="admin-td-table-scroll">
+              <Table rowKey="id" data={images} columns={imageColumns} hover stripe bordered tableLayout="fixed" empty="暂无作品记录" />
+            </div>
           </Tabs.TabPanel>
 
           <Tabs.TabPanel value="curated" label="运营精选">
@@ -492,7 +494,9 @@ export function AdminImagesDashboard({
                   </Space>
                 </Form>
               </Card>
-              <Table rowKey="id" data={curatedImages} columns={curatedColumns} hover stripe bordered tableLayout="auto" empty="暂无运营精选作品" />
+              <div className="admin-td-table-scroll">
+                <Table rowKey="id" data={curatedImages} columns={curatedColumns} hover stripe bordered tableLayout="fixed" empty="暂无运营精选作品" />
+              </div>
             </div>
           </Tabs.TabPanel>
         </Tabs>
