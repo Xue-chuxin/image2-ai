@@ -12,6 +12,41 @@ const steps = [
   ["03", "生成并归档", "提交任务后到记录里查看结果。满意的作品可以公开展示，方便之后复用。"],
 ];
 
+function ArtworkPreviewImage({
+  work,
+  alt,
+  className,
+}: {
+  work?: GalleryImageView;
+  alt: string;
+  className?: string;
+}) {
+  const imageUrl = work?.thumbnailUrl || work?.url;
+
+  return (
+    <div className={`relative min-h-0 overflow-hidden rounded-[1.35rem] bg-slate-100 ${className || ""}`}>
+      {imageUrl ? (
+        <>
+          <img
+            src={imageUrl}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 h-full w-full scale-110 object-cover opacity-30 blur-xl saturate-[0.78]"
+          />
+          <div className="absolute inset-0 bg-white/38" />
+          <img
+            src={imageUrl}
+            alt={work?.title || alt}
+            className="relative z-[1] h-full w-full object-contain p-1.5"
+          />
+        </>
+      ) : (
+        <div className="h-full w-full bg-[radial-gradient(circle_at_28%_24%,rgba(255,255,255,0.92),transparent_24%),linear-gradient(135deg,#dbeafe,#f8fafc_52%,#e2e8f0)]" />
+      )}
+    </div>
+  );
+}
+
 export default async function HomePage() {
   let publicWorks: GalleryImageView[] = [];
   let galleryError: string | null = null;
@@ -51,7 +86,7 @@ export default async function HomePage() {
               />
             </div>
 
-            <SpotlightCard className="h-[25rem] p-4 md:h-[27rem]" spotlightColor="rgba(56, 189, 248, 0.22)">
+            <SpotlightCard className="h-[28rem] p-4 md:h-[30rem]" spotlightColor="rgba(56, 189, 248, 0.22)">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_12%,rgba(255,255,255,0.98),transparent_26%),radial-gradient(circle_at_86%_78%,rgba(176,201,220,0.65),transparent_40%)]" />
 
               <div className="relative z-[1] flex h-full min-h-0 flex-col gap-3">
@@ -64,56 +99,35 @@ export default async function HomePage() {
                   </span>
                 </div>
 
-                <div className="grid min-h-0 flex-1 items-stretch gap-3 sm:grid-cols-[1.34fr_0.86fr]">
-                  <figure className="relative h-full min-h-0 overflow-hidden rounded-[1.75rem] border border-white/85 bg-slate-100 shadow-[0_24px_62px_rgba(31,52,76,0.18)]">
-                    {primaryHeroWork?.url ? (
-                      <img
-                        src={primaryHeroWork.thumbnailUrl || primaryHeroWork.url}
-                        alt={primaryHeroWork.title || "公开作品预览"}
-                        className="h-full w-full object-cover object-center grayscale-[12%] saturate-[0.82] contrast-[0.98]"
-                      />
-                    ) : (
-                      <div className="h-full w-full bg-[radial-gradient(circle_at_28%_24%,rgba(255,255,255,0.92),transparent_24%),linear-gradient(135deg,#dbeafe,#f8fafc_52%,#e2e8f0)]" />
-                    )}
-                    <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),transparent_42%,rgba(5,13,25,0.58))]" />
-                    <figcaption className="absolute bottom-5 left-5 max-w-[15rem] text-white">
-                      <p className="text-[0.64rem] font-black uppercase tracking-[0.32em] text-white/68">
-                        作品 01
-                      </p>
-                      <p className="mt-2 text-2xl font-black tracking-[-0.04em]">
-                        {primaryHeroWork?.title || "等待第一张作品"}
-                      </p>
-                      <p className="mt-2 max-w-[12rem] text-xs font-semibold leading-5 text-white/70">
+                <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_7.4rem] gap-3">
+                  <figure className="grid min-h-0 grid-rows-[minmax(0,1fr)_auto] overflow-hidden rounded-[1.75rem] border border-white/85 bg-white/70 p-2 shadow-[0_24px_62px_rgba(31,52,76,0.16)] backdrop-blur">
+                    <ArtworkPreviewImage work={primaryHeroWork} alt="公开作品预览" />
+                    <figcaption className="flex items-end justify-between gap-4 px-2 pb-1 pt-2">
+                      <div className="min-w-0">
+                        <p className="text-[0.62rem] font-black uppercase tracking-[0.26em] text-slate-400">作品 01</p>
+                        <p className="mt-1 truncate text-lg font-black tracking-[-0.03em] text-slate-950">
+                          {primaryHeroWork?.title || "等待第一张作品"}
+                        </p>
+                      </div>
+                      <p className="max-w-[12rem] text-right text-xs font-semibold leading-5 text-slate-500">
                         {primaryHeroWork?.summary || "公开作品会自动成为首页的视觉焦点。"}
                       </p>
                     </figcaption>
                   </figure>
 
-                  <div className="grid min-h-0 gap-3 sm:grid-rows-[1fr_0.92fr]">
-                    <figure className="h-full min-h-0 overflow-hidden rounded-[1.55rem] border border-white/85 bg-white/72 p-1.5 shadow-[0_18px_44px_rgba(31,52,76,0.12)] backdrop-blur">
-                      {secondaryHeroWork?.url ? (
-                        <img
-                          src={secondaryHeroWork.thumbnailUrl || secondaryHeroWork.url}
-                          alt={secondaryHeroWork.title || "公开作品预览"}
-                          className="h-full min-h-0 w-full rounded-[1.25rem] object-cover object-center grayscale-[10%] saturate-[0.78]"
-                        />
-                      ) : (
-                        <div className="h-32 w-full rounded-[1.25rem] bg-[linear-gradient(135deg,#eff6ff,#ffffff,#e0f2fe)] sm:h-full" />
-                      )}
+                  <div className="grid min-h-0 grid-cols-2 gap-3">
+                    <figure className="grid min-h-0 grid-rows-[minmax(0,1fr)_auto] overflow-hidden rounded-[1.45rem] border border-white/85 bg-white/72 p-1.5 shadow-[0_18px_44px_rgba(31,52,76,0.1)] backdrop-blur">
+                      <ArtworkPreviewImage work={secondaryHeroWork} alt="公开作品预览" className="rounded-[1.15rem]" />
+                      <figcaption className="flex items-center justify-between px-2 py-1.5 text-xs font-bold text-slate-600">
+                        <span className="truncate">{secondaryHeroWork?.title || "公开作品"}</span>
+                        <span className="font-mono text-slate-400">{secondaryHeroWork?.ratio || "1:1"}</span>
+                      </figcaption>
                     </figure>
 
-                    <figure className="grid h-full min-h-0 grid-rows-[minmax(0,1fr)_auto] overflow-hidden rounded-[1.55rem] border border-white/85 bg-white/76 p-1.5 shadow-[0_18px_44px_rgba(31,52,76,0.12)] backdrop-blur">
-                      {tertiaryHeroWork?.url ? (
-                        <img
-                          src={tertiaryHeroWork.thumbnailUrl || tertiaryHeroWork.url}
-                          alt={tertiaryHeroWork.title || "公开作品预览"}
-                          className="h-full min-h-0 w-full rounded-[1.25rem] object-cover object-center grayscale-[8%] saturate-[0.78]"
-                        />
-                      ) : (
-                        <div className="h-24 w-full rounded-[1.25rem] bg-[radial-gradient(circle_at_70%_20%,#ffffff,transparent_28%),linear-gradient(135deg,#e2e8f0,#f8fafc,#dbeafe)]" />
-                      )}
-                      <figcaption className="flex items-center justify-between px-3 py-2 text-xs font-bold text-slate-600">
-                        <span>{tertiaryHeroWork?.title || "公开作品"}</span>
+                    <figure className="grid min-h-0 grid-rows-[minmax(0,1fr)_auto] overflow-hidden rounded-[1.45rem] border border-white/85 bg-white/76 p-1.5 shadow-[0_18px_44px_rgba(31,52,76,0.1)] backdrop-blur">
+                      <ArtworkPreviewImage work={tertiaryHeroWork} alt="公开作品预览" className="rounded-[1.15rem]" />
+                      <figcaption className="flex items-center justify-between px-2 py-1.5 text-xs font-bold text-slate-600">
+                        <span className="truncate">{tertiaryHeroWork?.title || "公开作品"}</span>
                         <span className="font-mono text-slate-400">{tertiaryHeroWork?.ratio || "3:4"}</span>
                       </figcaption>
                     </figure>
