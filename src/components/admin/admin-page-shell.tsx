@@ -62,10 +62,10 @@ export function AdminPageShell({
       <Layout>
         <Header className="admin-td-header">
           <div className="admin-td-header-inner">
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">{eyebrow}</p>
-              <h2 className="mt-1 text-2xl font-black leading-tight text-slate-950">{title}</h2>
-              <p className="mt-2 max-w-4xl text-sm font-medium leading-6 text-slate-500">{description}</p>
+            <div className="admin-td-page-heading">
+              <p className="admin-td-page-eyebrow">{eyebrow}</p>
+              <h2 className="admin-td-page-title">{title}</h2>
+              <p className="admin-td-page-description">{description}</p>
             </div>
             <Tag className="admin-td-account-tag" theme="primary" variant="light">
               {email || "admin"}
@@ -89,9 +89,9 @@ function AdminBrand() {
   return (
     <div className="admin-td-brand">
       <div className="admin-td-brand-mark">造</div>
-      <div className="min-w-0">
-        <p className="truncate text-base font-semibold text-slate-950">造图台</p>
-        <p className="mt-0.5 truncate text-xs text-slate-500">运营管理后台</p>
+      <div className="admin-td-brand-copy">
+        <p className="admin-td-brand-title">造图台</p>
+        <p className="admin-td-brand-subtitle">运营管理后台</p>
       </div>
     </div>
   );

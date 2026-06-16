@@ -680,6 +680,29 @@ textarea {
   min-width: 0;
 }
 
+.admin-td-brand-copy {
+  min-width: 0;
+}
+
+.admin-td-brand-title,
+.admin-td-brand-subtitle {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-td-brand-title {
+  color: var(--td-text-color-primary, rgba(0, 0, 0, 0.9));
+  font: var(--td-font-title-medium);
+}
+
+.admin-td-brand-subtitle {
+  margin-top: 2px;
+  color: var(--td-text-color-secondary, rgba(0, 0, 0, 0.6));
+  font: var(--td-font-body-small);
+}
+
 .admin-td-brand-mark {
   display: inline-flex;
   width: 34px;
@@ -706,8 +729,7 @@ textarea {
   height: 42px;
   margin: 2px 0;
   border-radius: var(--td-radius-medium, 6px);
-  font-size: 14px;
-  font-weight: 500;
+  font: var(--td-font-body-medium);
 }
 
 .admin-td-menu .t-menu__item .t-icon {
@@ -728,17 +750,52 @@ textarea {
 
 .admin-td-header-inner {
   display: flex;
-  min-height: 112px;
+  min-height: 116px;
   align-items: flex-start;
   justify-content: space-between;
   gap: 24px;
   padding: 22px 28px 24px;
 }
 
+.admin-td-page-heading {
+  min-width: 0;
+  flex: 1;
+}
+
+.admin-td-page-eyebrow,
+.admin-td-page-title,
+.admin-td-page-description {
+  margin: 0;
+  text-wrap: pretty;
+}
+
+.admin-td-page-eyebrow {
+  color: var(--td-text-color-placeholder, rgba(0, 0, 0, 0.4));
+  font: var(--td-font-mark-small);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.admin-td-page-title {
+  margin-top: 4px;
+  color: var(--td-text-color-primary, rgba(0, 0, 0, 0.9));
+  font: var(--td-font-headline-small);
+}
+
+.admin-td-page-description {
+  max-width: 960px;
+  margin-top: 8px;
+  color: var(--td-text-color-secondary, rgba(0, 0, 0, 0.6));
+  font: var(--td-font-body-medium);
+  line-height: 22px;
+}
+
 .admin-td-account-tag {
   flex-shrink: 0;
   margin-top: 4px;
   max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .admin-td-mobile-menu {
@@ -881,11 +938,21 @@ textarea {
   display: flex;
   width: 100%;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
 .admin-user-credit-actions .t-button {
   flex-shrink: 0;
+}
+
+.admin-user-credit-actions .t-input-number {
+  flex: 0 0 112px;
+}
+
+.admin-user-credit-actions .t-input {
+  flex: 1 1 150px;
+  min-width: 120px;
 }
 
 @media (max-width: 768px) {
@@ -894,6 +961,10 @@ textarea {
     flex-direction: column;
     gap: 12px;
     padding: 18px 16px;
+  }
+
+  .admin-td-page-title {
+    font: var(--td-font-title-extraLarge);
   }
 
   .admin-td-content {
