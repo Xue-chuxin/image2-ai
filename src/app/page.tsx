@@ -51,7 +51,7 @@ export default async function HomePage() {
               />
             </div>
 
-            <SpotlightCard className="h-[20rem] p-4 md:h-[21rem]" spotlightColor="rgba(56, 189, 248, 0.22)">
+            <SpotlightCard className="h-[25rem] p-4 md:h-[27rem]" spotlightColor="rgba(56, 189, 248, 0.22)">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_12%,rgba(255,255,255,0.98),transparent_26%),radial-gradient(circle_at_86%_78%,rgba(176,201,220,0.65),transparent_40%)]" />
 
               <div className="relative z-[1] flex h-full min-h-0 flex-col gap-3">
@@ -70,7 +70,7 @@ export default async function HomePage() {
                       <img
                         src={primaryHeroWork.thumbnailUrl || primaryHeroWork.url}
                         alt={primaryHeroWork.title || "公开作品预览"}
-                        className="h-full w-full object-contain grayscale-[12%] saturate-[0.82] contrast-[0.98]"
+                        className="h-full w-full object-cover object-center grayscale-[12%] saturate-[0.82] contrast-[0.98]"
                       />
                     ) : (
                       <div className="h-full w-full bg-[radial-gradient(circle_at_28%_24%,rgba(255,255,255,0.92),transparent_24%),linear-gradient(135deg,#dbeafe,#f8fafc_52%,#e2e8f0)]" />
@@ -95,7 +95,7 @@ export default async function HomePage() {
                         <img
                           src={secondaryHeroWork.thumbnailUrl || secondaryHeroWork.url}
                           alt={secondaryHeroWork.title || "公开作品预览"}
-                          className="h-full min-h-0 w-full rounded-[1.25rem] object-contain grayscale-[10%] saturate-[0.78]"
+                          className="h-full min-h-0 w-full rounded-[1.25rem] object-cover object-center grayscale-[10%] saturate-[0.78]"
                         />
                       ) : (
                         <div className="h-32 w-full rounded-[1.25rem] bg-[linear-gradient(135deg,#eff6ff,#ffffff,#e0f2fe)] sm:h-full" />
@@ -107,7 +107,7 @@ export default async function HomePage() {
                         <img
                           src={tertiaryHeroWork.thumbnailUrl || tertiaryHeroWork.url}
                           alt={tertiaryHeroWork.title || "公开作品预览"}
-                          className="h-full min-h-0 w-full rounded-[1.25rem] object-contain grayscale-[8%] saturate-[0.78]"
+                          className="h-full min-h-0 w-full rounded-[1.25rem] object-cover object-center grayscale-[8%] saturate-[0.78]"
                         />
                       ) : (
                         <div className="h-24 w-full rounded-[1.25rem] bg-[radial-gradient(circle_at_70%_20%,#ffffff,transparent_28%),linear-gradient(135deg,#e2e8f0,#f8fafc,#dbeafe)]" />
