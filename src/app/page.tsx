@@ -64,13 +64,13 @@ export default async function HomePage() {
                   </span>
                 </div>
 
-                <div className="grid min-h-0 flex-1 gap-3 sm:grid-cols-[1.34fr_0.86fr]">
-                  <figure className="relative min-h-0 overflow-hidden rounded-[1.75rem] border border-white/85 bg-slate-200 shadow-[0_24px_62px_rgba(31,52,76,0.18)]">
+                <div className="grid min-h-0 flex-1 items-stretch gap-3 sm:grid-cols-[1.34fr_0.86fr]">
+                  <figure className="relative h-full min-h-0 overflow-hidden rounded-[1.75rem] border border-white/85 bg-slate-100 shadow-[0_24px_62px_rgba(31,52,76,0.18)]">
                     {primaryHeroWork?.url ? (
                       <img
                         src={primaryHeroWork.thumbnailUrl || primaryHeroWork.url}
                         alt={primaryHeroWork.title || "公开作品预览"}
-                        className="h-full w-full object-cover grayscale-[12%] saturate-[0.82] contrast-[0.98]"
+                        className="h-full w-full object-contain grayscale-[12%] saturate-[0.82] contrast-[0.98]"
                       />
                     ) : (
                       <div className="h-full w-full bg-[radial-gradient(circle_at_28%_24%,rgba(255,255,255,0.92),transparent_24%),linear-gradient(135deg,#dbeafe,#f8fafc_52%,#e2e8f0)]" />
@@ -90,24 +90,24 @@ export default async function HomePage() {
                   </figure>
 
                   <div className="grid min-h-0 gap-3 sm:grid-rows-[1fr_0.92fr]">
-                    <figure className="overflow-hidden rounded-[1.55rem] border border-white/85 bg-white/72 p-1.5 shadow-[0_18px_44px_rgba(31,52,76,0.12)] backdrop-blur">
+                    <figure className="h-full min-h-0 overflow-hidden rounded-[1.55rem] border border-white/85 bg-white/72 p-1.5 shadow-[0_18px_44px_rgba(31,52,76,0.12)] backdrop-blur">
                       {secondaryHeroWork?.url ? (
                         <img
                           src={secondaryHeroWork.thumbnailUrl || secondaryHeroWork.url}
                           alt={secondaryHeroWork.title || "公开作品预览"}
-                          className="h-32 w-full rounded-[1.25rem] object-cover grayscale-[10%] saturate-[0.78] sm:h-full"
+                          className="h-full min-h-0 w-full rounded-[1.25rem] object-contain grayscale-[10%] saturate-[0.78]"
                         />
                       ) : (
                         <div className="h-32 w-full rounded-[1.25rem] bg-[linear-gradient(135deg,#eff6ff,#ffffff,#e0f2fe)] sm:h-full" />
                       )}
                     </figure>
 
-                    <figure className="overflow-hidden rounded-[1.55rem] border border-white/85 bg-white/76 p-1.5 shadow-[0_18px_44px_rgba(31,52,76,0.12)] backdrop-blur">
+                    <figure className="grid h-full min-h-0 grid-rows-[minmax(0,1fr)_auto] overflow-hidden rounded-[1.55rem] border border-white/85 bg-white/76 p-1.5 shadow-[0_18px_44px_rgba(31,52,76,0.12)] backdrop-blur">
                       {tertiaryHeroWork?.url ? (
                         <img
                           src={tertiaryHeroWork.thumbnailUrl || tertiaryHeroWork.url}
                           alt={tertiaryHeroWork.title || "公开作品预览"}
-                          className="h-24 w-full rounded-[1.25rem] object-cover grayscale-[8%] saturate-[0.78]"
+                          className="h-full min-h-0 w-full rounded-[1.25rem] object-contain grayscale-[8%] saturate-[0.78]"
                         />
                       ) : (
                         <div className="h-24 w-full rounded-[1.25rem] bg-[radial-gradient(circle_at_70%_20%,#ffffff,transparent_28%),linear-gradient(135deg,#e2e8f0,#f8fafc,#dbeafe)]" />
