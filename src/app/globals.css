@@ -722,21 +722,22 @@ textarea {
 }
 
 .admin-td-menu .t-menu {
-  padding: 12px 8px;
+  padding: 10px 8px 12px;
 }
 
 .admin-td-menu .t-menu-group__title {
-  padding: 14px 16px 8px;
+  padding: 16px 16px 8px;
   color: var(--td-text-color-placeholder, rgba(0, 0, 0, 0.4));
   font: var(--td-font-mark-small);
 }
 
 .admin-td-menu .t-menu__item {
-  height: 54px;
+  height: 42px;
   margin: 2px 0;
   padding-right: 12px;
   border-radius: var(--td-radius-medium, 6px);
   font: var(--td-font-body-medium);
+  font-weight: 500;
   line-height: normal;
 }
 
@@ -753,15 +754,16 @@ textarea {
   align-items: center;
   flex: 1;
   overflow: hidden;
-  line-height: normal;
-  white-space: normal;
+  line-height: 22px;
+  white-space: nowrap;
 }
 
 .admin-td-menu .t-menu__content {
   display: block;
   overflow: hidden;
-  line-height: normal;
-  white-space: normal;
+  line-height: 22px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .admin-td-menu .t-menu__item .t-icon {
@@ -772,36 +774,6 @@ textarea {
   background: var(--td-brand-color-light, #e8f1ff);
   color: var(--td-brand-color, #0052d9);
   font-weight: 600;
-}
-
-.admin-td-nav-content {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.admin-td-nav-label,
-.admin-td-nav-description {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.admin-td-nav-label {
-  color: inherit;
-  font: var(--td-font-body-medium);
-  font-weight: 600;
-}
-
-.admin-td-nav-description {
-  color: var(--td-text-color-placeholder, rgba(0, 0, 0, 0.4));
-  font: var(--td-font-body-small);
-}
-
-.admin-td-menu .t-menu__item.t-is-active .admin-td-nav-description {
-  color: var(--td-brand-color, #0052d9);
-  opacity: 0.78;
 }
 
 .admin-td-menu .t-menu__operations {
@@ -993,6 +965,13 @@ textarea {
 .admin-td-table-scroll .t-table th,
 .admin-td-table-scroll .t-table td {
   vertical-align: middle;
+}
+
+.admin-td-table-scroll .t-table th {
+  white-space: nowrap;
+}
+
+.admin-td-table-scroll .t-table td {
   overflow-wrap: anywhere;
   word-break: break-word;
 }

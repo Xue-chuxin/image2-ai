@@ -33,6 +33,17 @@ const adminTabs: Array<{
   { key: "settings", href: "/admin/settings", label: "配置", description: "站点与模型", icon: <SettingIcon /> },
 ];
 
+const adminMenuGroups = [
+  {
+    title: "运营管理",
+    items: adminTabs.filter((tab) => ["users", "jobs", "images", "uploads"].includes(tab.key)),
+  },
+  {
+    title: "商业与系统",
+    items: adminTabs.filter((tab) => ["billing", "health", "settings"].includes(tab.key)),
+  },
+];
+
 export function AdminPageShell({
   active,
   email,
@@ -59,16 +70,15 @@ export function AdminPageShell({
           logo={<AdminBrand />}
           operations={<AdminMenuOperations email={email} />}
         >
-          <MenuGroup title="运营管理">
-            {adminTabs.map((tab) => (
-              <MenuItem key={tab.key} value={tab.key} href={tab.href} icon={tab.icon}>
-                <span className="admin-td-nav-content">
-                  <span className="admin-td-nav-label">{tab.label}</span>
-                  <span className="admin-td-nav-description">{tab.description}</span>
-                </span>
-              </MenuItem>
-            ))}
-          </MenuGroup>
+          {adminMenuGroups.map((group) => (
+            <MenuGroup key={group.title} title={group.title}>
+              {group.items.map((tab) => (
+                <MenuItem key={tab.key} value={tab.key} href={tab.href} icon={tab.icon}>
+                  {tab.label}
+                </MenuItem>
+              ))}
+            </MenuGroup>
+          ))}
         </Menu>
       </Aside>
       <Layout>
