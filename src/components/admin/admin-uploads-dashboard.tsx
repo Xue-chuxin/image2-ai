@@ -120,7 +120,7 @@ export function AdminUploadsDashboard({ initialImages }: { initialImages: AdminU
               value={query}
               clearable
               placeholder="用户邮箱、上传图 ID、URL"
-              style={{ width: 360 }}
+              className="admin-td-filter-control-lg"
               onChange={(value) => setQuery(String(value))}
               onEnter={() => void loadImages()}
             />
@@ -134,7 +134,18 @@ export function AdminUploadsDashboard({ initialImages }: { initialImages: AdminU
 
         {message ? <Alert className="mb-3" theme="info" message={message} /> : null}
         <div className="admin-td-table-scroll">
-          <Table rowKey="id" data={images} columns={columns} hover stripe bordered tableLayout="fixed" empty="暂无上传图" />
+          <Table
+            rowKey="id"
+            data={images}
+            columns={columns}
+            hover
+            stripe
+            bordered
+            tableLayout="fixed"
+            tableContentWidth="1180px"
+            verticalAlign="top"
+            empty="暂无上传图"
+          />
         </div>
       </Card>
     </section>

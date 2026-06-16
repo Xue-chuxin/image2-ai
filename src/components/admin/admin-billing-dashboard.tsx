@@ -229,10 +229,10 @@ export function AdminBillingDashboard({
       title: "操作",
       width: 180,
       cell: ({ row }: { row: CreditPackageView }) => (
-        <Space>
+        <div className="admin-td-action-row">
           <Button variant="outline" size="small" onClick={() => editPackage(row)}>编辑</Button>
           <Button theme="primary" size="small" onClick={() => void togglePackage(row)}>{row.isActive ? "下架" : "上架"}</Button>
-        </Space>
+        </div>
       ),
     },
   ];
@@ -386,7 +386,18 @@ export function AdminBillingDashboard({
                 </Form>
               </Card>
               <div className="admin-td-table-scroll">
-                <Table rowKey="id" data={packages} columns={packageColumns} hover stripe bordered tableLayout="fixed" empty="暂无套餐" />
+                <Table
+                  rowKey="id"
+                  data={packages}
+                  columns={packageColumns}
+                  hover
+                  stripe
+                  bordered
+                  tableLayout="fixed"
+                  tableContentWidth="980px"
+                  verticalAlign="top"
+                  empty="暂无套餐"
+                />
               </div>
             </div>
           </Tabs.TabPanel>
@@ -397,7 +408,7 @@ export function AdminBillingDashboard({
                 <Select
                   value={status}
                   options={statusOptions}
-                  style={{ width: 160 }}
+                  className="admin-td-filter-control-sm"
                   onChange={(value) => {
                     const nextStatus = String(value);
                     setStatus(nextStatus);
@@ -406,14 +417,25 @@ export function AdminBillingDashboard({
                 />
               </Form.FormItem>
               <Form.FormItem label="搜索">
-                <Input value={query} clearable placeholder="订单号、邮箱、套餐、渠道" style={{ width: 340 }} onChange={(value) => setQuery(String(value))} onEnter={() => void loadOrders(status, query)} />
+                <Input value={query} clearable placeholder="订单号、邮箱、套餐、渠道" className="admin-td-filter-control-md" onChange={(value) => setQuery(String(value))} onEnter={() => void loadOrders(status, query)} />
               </Form.FormItem>
               <Form.FormItem>
                 <Button theme="primary" loading={pending === "load-orders"} onClick={() => void loadOrders(status, query)}>搜索</Button>
               </Form.FormItem>
             </Form>
             <div className="admin-td-table-scroll admin-td-table-scroll--md">
-              <Table rowKey="id" data={orders} columns={orderColumns} hover stripe bordered tableLayout="fixed" empty="暂无订单" />
+              <Table
+                rowKey="id"
+                data={orders}
+                columns={orderColumns}
+                hover
+                stripe
+                bordered
+                tableLayout="fixed"
+                tableContentWidth="1280px"
+                verticalAlign="top"
+                empty="暂无订单"
+              />
             </div>
           </Tabs.TabPanel>
         </Tabs>

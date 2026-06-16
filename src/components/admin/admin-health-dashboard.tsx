@@ -139,7 +139,16 @@ export function AdminHealthDashboard({ report }: { report: AdminHealthReport }) 
         }
       >
         <div className="admin-td-table-scroll">
-          <Table rowKey="id" data={report.items} columns={healthColumns} hover stripe tableLayout="fixed" />
+          <Table
+            rowKey="id"
+            data={report.items}
+            columns={healthColumns}
+            hover
+            stripe
+            tableLayout="fixed"
+            tableContentWidth="1180px"
+            verticalAlign="top"
+          />
         </div>
       </Card>
 
@@ -150,7 +159,16 @@ export function AdminHealthDashboard({ report }: { report: AdminHealthReport }) 
           <Descriptions.DescriptionsItem label="配置完整">{report.paymentDiagnostics.filter((item) => item.configured).length}</Descriptions.DescriptionsItem>
         </Descriptions>
         <div className="admin-td-table-scroll">
-          <Table rowKey="provider" data={report.paymentDiagnostics} columns={paymentColumns} hover stripe tableLayout="fixed" />
+          <Table
+            rowKey="provider"
+            data={report.paymentDiagnostics}
+            columns={paymentColumns}
+            hover
+            stripe
+            tableLayout="fixed"
+            tableContentWidth="1180px"
+            verticalAlign="top"
+          />
         </div>
       </Card>
     </div>

@@ -253,7 +253,7 @@ export function AdminJobsDashboard({ initialJobs }: { initialJobs: AdminGenerati
       fixed: "right" as const,
       width: 230,
       cell: ({ row }: { row: AdminGenerationJobView }) => (
-        <Space size="small">
+        <div className="admin-td-action-row">
           <Button variant="outline" size="small" loading={busyJobId === row.id} onClick={() => void refreshSingleJob(row.id)}>
             刷新
           </Button>
@@ -267,7 +267,7 @@ export function AdminJobsDashboard({ initialJobs }: { initialJobs: AdminGenerati
               标失败
             </Button>
           ) : null}
-        </Space>
+        </div>
       ),
     },
   ];
@@ -287,7 +287,7 @@ export function AdminJobsDashboard({ initialJobs }: { initialJobs: AdminGenerati
             <Select
               value={status}
               options={statusOptions}
-              style={{ width: 180 }}
+              className="admin-td-filter-control-sm"
               onChange={(value) => {
                 const nextStatus = String(value);
                 setStatus(nextStatus);
@@ -300,7 +300,7 @@ export function AdminJobsDashboard({ initialJobs }: { initialJobs: AdminGenerati
               value={query}
               clearable
               placeholder="任务 ID、用户邮箱、提示词"
-              style={{ width: 320 }}
+              className="admin-td-filter-control-md"
               onChange={(value) => setQuery(String(value))}
               onEnter={() => void refreshJobs()}
             />
@@ -316,7 +316,18 @@ export function AdminJobsDashboard({ initialJobs }: { initialJobs: AdminGenerati
         {error ? <Alert className="mb-3" theme="error" message={error} /> : null}
 
         <div className="admin-td-table-scroll admin-td-table-scroll--lg">
-          <Table rowKey="id" data={jobs} columns={columns} hover stripe bordered tableLayout="fixed" empty="暂无任务" />
+          <Table
+            rowKey="id"
+            data={jobs}
+            columns={columns}
+            hover
+            stripe
+            bordered
+            tableLayout="fixed"
+            tableContentWidth="1480px"
+            verticalAlign="top"
+            empty="暂无任务"
+          />
         </div>
       </Card>
     </section>

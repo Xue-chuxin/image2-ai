@@ -162,12 +162,12 @@ export function AdminUsersDashboard({ initialUsers }: { initialUsers: AdminUserV
           <div className="admin-user-credit-actions">
             <InputNumber
               value={amounts[row.id]}
-              placeholder="100 / -20"
+              placeholder="+100"
               onChange={(value) => setAmounts((current) => ({ ...current, [row.id]: Number(value || 0) }))}
             />
             <Input
               value={reasons[row.id] || ""}
-              placeholder="原因"
+              placeholder="调整原因"
               onChange={(value) => setReasons((current) => ({ ...current, [row.id]: String(value) }))}
             />
             <Button theme="primary" loading={pending === `credits:${row.id}`} onClick={() => void adjustCredits(row.id)}>
@@ -217,7 +217,18 @@ export function AdminUsersDashboard({ initialUsers }: { initialUsers: AdminUserV
         {error ? <Alert className="mb-3" theme="error" message={error} /> : null}
 
         <div className="admin-td-table-scroll admin-td-table-scroll--lg">
-          <Table rowKey="id" data={users} columns={columns} hover stripe bordered tableLayout="fixed" empty="没有找到匹配用户" />
+          <Table
+            rowKey="id"
+            data={users}
+            columns={columns}
+            hover
+            stripe
+            bordered
+            tableLayout="fixed"
+            tableContentWidth="1480px"
+            verticalAlign="top"
+            empty="没有找到匹配用户"
+          />
         </div>
       </Card>
     </section>

@@ -327,14 +327,14 @@ export function AdminImagesDashboard({
       width: 180,
       fixed: "right" as const,
       cell: ({ row }: { row: AdminGalleryImageView }) => (
-        <Space size="small">
+        <div className="admin-td-action-row">
           <Button variant="outline" size="small" href={row.url} target="_blank" rel="noreferrer">打开</Button>
           {!row.isDeleted && !row.takenDownAt ? (
             <Button theme="danger" variant="outline" size="small" loading={pending === `take-down:${row.id}`} onClick={() => void takeDown(row.id)}>
               下架
             </Button>
           ) : null}
-        </Space>
+        </div>
       ),
     },
   ];
@@ -376,7 +376,7 @@ export function AdminImagesDashboard({
       width: 240,
       fixed: "right" as const,
       cell: ({ row }: { row: AdminCuratedGalleryImageView }) => (
-        <Space size="small">
+        <div className="admin-td-action-row">
           <Button variant="outline" size="small" onClick={() => editCuratedImage(row)}>编辑</Button>
           {!row.isDeleted && !row.takenDownAt && row.isActive ? (
             <Button theme="warning" variant="outline" size="small" loading={pending === `curated-take-down:${row.id}`} onClick={() => void takeDownCuratedImage(row.id)}>下架</Button>
@@ -384,7 +384,7 @@ export function AdminImagesDashboard({
           {!row.isDeleted ? (
             <Button theme="danger" variant="outline" size="small" loading={pending === `curated-delete:${row.id}`} onClick={() => void deleteCuratedImage(row.id)}>删除</Button>
           ) : null}
-        </Space>
+        </div>
       ),
     },
   ];
@@ -409,7 +409,7 @@ export function AdminImagesDashboard({
                 <Select
                   value={status}
                   options={statusOptions}
-                  style={{ width: 160 }}
+                  className="admin-td-filter-control-sm"
                   onChange={(value) => {
                     const nextStatus = String(value);
                     setStatus(nextStatus);
@@ -422,7 +422,7 @@ export function AdminImagesDashboard({
                   value={query}
                   clearable
                   placeholder="邮箱、任务 ID、提示词"
-                  style={{ width: 340 }}
+                  className="admin-td-filter-control-md"
                   onChange={(value) => setQuery(String(value))}
                   onEnter={() => void loadImages(status, query)}
                 />
@@ -432,7 +432,18 @@ export function AdminImagesDashboard({
               </Form.FormItem>
             </Form>
             <div className="admin-td-table-scroll">
-              <Table rowKey="id" data={images} columns={imageColumns} hover stripe bordered tableLayout="fixed" empty="暂无作品记录" />
+              <Table
+                rowKey="id"
+                data={images}
+                columns={imageColumns}
+                hover
+                stripe
+                bordered
+                tableLayout="fixed"
+                tableContentWidth="1180px"
+                verticalAlign="top"
+                empty="暂无作品记录"
+              />
             </div>
           </Tabs.TabPanel>
 
@@ -451,13 +462,13 @@ export function AdminImagesDashboard({
                   </Form.FormItem>
                   <Space breakLine size="small">
                     <Form.FormItem label="分类">
-                      <Select value={curatedForm.category} options={categoryOptions} style={{ width: 120 }} onChange={(value) => patchCuratedForm("category", String(value))} />
+                      <Select value={curatedForm.category} options={categoryOptions} className="admin-td-inline-control-sm" onChange={(value) => patchCuratedForm("category", String(value))} />
                     </Form.FormItem>
                     <Form.FormItem label="比例">
-                      <Select value={curatedForm.ratio} options={ratioOptions} style={{ width: 120 }} onChange={(value) => patchCuratedForm("ratio", String(value))} />
+                      <Select value={curatedForm.ratio} options={ratioOptions} className="admin-td-inline-control-sm" onChange={(value) => patchCuratedForm("ratio", String(value))} />
                     </Form.FormItem>
                     <Form.FormItem label="排序">
-                      <Input value={curatedForm.sortOrder} style={{ width: 120 }} onChange={(value) => patchCuratedForm("sortOrder", String(value))} />
+                      <Input value={curatedForm.sortOrder} className="admin-td-inline-control-sm" onChange={(value) => patchCuratedForm("sortOrder", String(value))} />
                     </Form.FormItem>
                   </Space>
                   <Form.FormItem label="简介">
@@ -494,8 +505,19 @@ export function AdminImagesDashboard({
                   </Space>
                 </Form>
               </Card>
-              <div className="admin-td-table-scroll">
-                <Table rowKey="id" data={curatedImages} columns={curatedColumns} hover stripe bordered tableLayout="fixed" empty="暂无运营精选作品" />
+              <div className="admin-td-table-scroll admin-td-table-scroll--sm">
+                <Table
+                  rowKey="id"
+                  data={curatedImages}
+                  columns={curatedColumns}
+                  hover
+                  stripe
+                  bordered
+                  tableLayout="fixed"
+                  tableContentWidth="980px"
+                  verticalAlign="top"
+                  empty="暂无运营精选作品"
+                />
               </div>
             </div>
           </Tabs.TabPanel>
