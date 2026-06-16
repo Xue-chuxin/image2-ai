@@ -282,7 +282,7 @@ export function AdminJobsDashboard({ initialJobs }: { initialJobs: AdminGenerati
       </div>
 
       <Card className="admin-td-card" title="最近生成任务">
-        <Form layout="inline" className="mb-4">
+        <Form layout="inline" className="admin-td-filter-form">
           <Form.FormItem label="状态">
             <Select
               value={status}

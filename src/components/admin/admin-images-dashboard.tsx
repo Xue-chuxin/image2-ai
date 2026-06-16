@@ -404,7 +404,7 @@ export function AdminImagesDashboard({
       <Card className="admin-td-card">
         <Tabs defaultValue="generated">
           <Tabs.TabPanel value="generated" label="生成作品">
-            <Form layout="inline" className="mb-4">
+            <Form layout="inline" className="admin-td-filter-form">
               <Form.FormItem label="状态">
                 <Select
                   value={status}

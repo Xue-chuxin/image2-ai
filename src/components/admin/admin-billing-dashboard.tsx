@@ -392,7 +392,7 @@ export function AdminBillingDashboard({
           </Tabs.TabPanel>
 
           <Tabs.TabPanel value="orders" label="充值订单">
-            <Form layout="inline" className="mb-4">
+            <Form layout="inline" className="admin-td-filter-form">
               <Form.FormItem label="状态">
                 <Select
                   value={status}

@@ -114,7 +114,7 @@ export function AdminUploadsDashboard({ initialImages }: { initialImages: AdminU
       </div>
 
       <Card className="admin-td-card" title="上传资源">
-        <Form layout="inline" className="mb-4">
+        <Form layout="inline" className="admin-td-filter-form">
           <Form.FormItem label="搜索">
             <Input
               value={query}
