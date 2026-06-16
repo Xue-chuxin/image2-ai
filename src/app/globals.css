@@ -167,36 +167,59 @@ textarea {
   position: relative;
 }
 
-.front-mobile-nav-item-primary {
-  border: 1px solid transparent;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.54), rgba(255, 255, 255, 0.2)) padding-box,
-    linear-gradient(135deg, rgba(14, 116, 144, 0.72), rgba(125, 211, 252, 0.92) 48%, rgba(37, 99, 235, 0.5)) border-box;
-  box-shadow:
-    0 12px 30px rgba(37, 76, 115, 0.14),
-    0 0 0 4px rgba(186, 230, 253, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.78);
+@property --front-mobile-nav-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
 }
 
-.front-mobile-nav-item-primary::after {
+.front-mobile-nav-item-primary {
+  overflow: hidden;
+  border: 1px solid transparent;
+  background: transparent;
+  box-shadow:
+    0 10px 28px rgba(37, 76, 115, 0.1),
+    0 0 0 4px rgba(186, 230, 253, 0.12);
+}
+
+.front-mobile-nav-item-primary::before {
   content: "";
   position: absolute;
-  inset: 4px 10px auto;
-  height: 1px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, transparent, rgba(14, 116, 144, 0.5), transparent);
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: conic-gradient(
+    from var(--front-mobile-nav-angle, 0deg),
+    rgba(14, 116, 144, 0.18),
+    rgba(56, 189, 248, 0.98),
+    rgba(255, 255, 255, 0.86),
+    rgba(37, 99, 235, 0.72),
+    rgba(14, 116, 144, 0.18)
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: front-mobile-nav-border-spin 3.8s linear infinite;
   pointer-events: none;
 }
 
 .front-mobile-nav-item-primary:hover,
 .front-mobile-nav-item-primary-active {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.68), rgba(255, 255, 255, 0.28)) padding-box,
-    linear-gradient(135deg, rgba(14, 116, 144, 0.86), rgba(125, 211, 252, 1) 48%, rgba(37, 99, 235, 0.66)) border-box;
+  background: transparent;
   box-shadow:
-    0 14px 34px rgba(37, 76, 115, 0.2),
-    0 0 0 5px rgba(186, 230, 253, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    0 14px 34px rgba(37, 76, 115, 0.16),
+    0 0 0 5px rgba(186, 230, 253, 0.16);
+}
+
+@keyframes front-mobile-nav-border-spin {
+  to {
+    --front-mobile-nav-angle: 360deg;
+  }
 }
 
 .front-stage {
