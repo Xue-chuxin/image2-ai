@@ -132,8 +132,7 @@ textarea {
 }
 
 .front-logo-mark,
-.front-login-button,
-.front-status-strip {
+.front-login-button {
   border: 1px solid rgba(203, 213, 225, 0.74);
   background: rgba(255, 255, 255, 0.76);
   box-shadow: 0 18px 48px rgba(31, 49, 70, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9);
@@ -167,10 +166,6 @@ textarea {
 .front-stage {
   min-height: calc(100dvh - 8rem);
   border-radius: 34px;
-}
-
-.front-status-strip {
-  border-radius: 24px;
 }
 
 .rb-glass-surface {

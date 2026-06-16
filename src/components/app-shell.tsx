@@ -89,16 +89,6 @@ export function AppShell({ children, settings }: { children: ReactNode; settings
       <div className="mx-auto flex min-h-[calc(100dvh-4.25rem)] max-w-[1440px] flex-col px-3 pb-10 pt-4 md:px-6 md:pb-8">
         <GlassSurface className="front-stage flex-1 p-3 md:p-5">
           <div className="relative">
-            <div className="front-status-strip mb-4 hidden items-center justify-between px-4 py-3 md:flex">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Studio desk</p>
-                <p className="mt-1 text-sm font-black text-slate-950">一个安静的图片创作工作台</p>
-              </div>
-              <div className="flex items-center gap-2 text-xs font-black text-slate-500">
-                <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                本地保存
-              </div>
-            </div>
             {children}
           </div>
         </GlassSurface>
