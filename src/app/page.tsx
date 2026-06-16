@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { ArrowRight, CheckCircle2, ImageDown, PenLine, WandSparkles } from "lucide-react";
 import { GenerateComposer } from "@/components/generate-composer";
 import { BlurText, GlassSurface, SpotlightCard, SplitText } from "@/components/front/react-bits";
 import { HomeWorksShowcase } from "@/components/home-works-showcase";
@@ -12,40 +12,23 @@ const steps = [
   ["03", "生成并归档", "提交任务后到记录里查看结果。满意的作品可以公开展示，方便之后复用。"],
 ];
 
-function ArtworkPreviewImage({
-  work,
-  alt,
-  className,
-}: {
-  work?: GalleryImageView;
-  alt: string;
-  className?: string;
-}) {
-  const imageUrl = work?.thumbnailUrl || work?.url;
-
-  return (
-    <div className={`relative min-h-0 overflow-hidden rounded-[1.35rem] bg-slate-100 ${className || ""}`}>
-      {imageUrl ? (
-        <>
-          <img
-            src={imageUrl}
-            alt=""
-            aria-hidden="true"
-            className="absolute inset-0 h-full w-full scale-110 object-cover opacity-30 blur-xl saturate-[0.78]"
-          />
-          <div className="absolute inset-0 bg-white/38" />
-          <img
-            src={imageUrl}
-            alt={work?.title || alt}
-            className="relative z-[1] h-full w-full object-contain p-1.5"
-          />
-        </>
-      ) : (
-        <div className="h-full w-full bg-[radial-gradient(circle_at_28%_24%,rgba(255,255,255,0.92),transparent_24%),linear-gradient(135deg,#dbeafe,#f8fafc_52%,#e2e8f0)]" />
-      )}
-    </div>
-  );
-}
+const flowSteps = [
+  {
+    title: "写下画面",
+    note: "把主体、场景、镜头和氛围先写出来，不需要一开始就很专业。",
+    Icon: PenLine,
+  },
+  {
+    title: "整理描述",
+    note: "需要时先润色提示词，让模型更容易理解你的画面意图。",
+    Icon: WandSparkles,
+  },
+  {
+    title: "生成保存",
+    note: "提交任务后自动归档到记录，后续可以复制提示词继续迭代。",
+    Icon: ImageDown,
+  },
+];
 
 export default async function HomePage() {
   let publicWorks: GalleryImageView[] = [];
@@ -57,70 +40,57 @@ export default async function HomePage() {
     galleryError = "作品库暂时不可用，请检查数据库服务。";
   }
 
-  const heroWorks = publicWorks.slice(0, 3);
-  const primaryHeroWork = heroWorks[0];
-  const secondaryHeroWork = heroWorks[1];
-  const tertiaryHeroWork = heroWorks[2];
-  const heroCounter = publicWorks.length > 0 ? `${Math.min(heroWorks.length, publicWorks.length).toString().padStart(2, "0")} / ${publicWorks.length.toString().padStart(2, "0")}` : "00 / 00";
-
   return (
     <main className="space-y-8 pb-28">
       <section className="grid gap-5 lg:grid-cols-[0.86fr_1.14fr] lg:items-stretch">
         <GlassSurface className="order-2 rounded-[28px] px-6 py-7 text-slate-950 md:px-8 md:py-8 lg:order-1 lg:h-full">
           <div className="absolute -right-24 top-10 h-72 w-72 rounded-full bg-sky-100/80 blur-3xl" />
-          <div className="relative flex h-full flex-col gap-5">
+          <div className="relative flex h-full flex-col gap-6">
             <div>
-              <span className="eyebrow">Inspiration</span>
+              <span className="eyebrow">Studio Flow</span>
               <BlurText
                 as="h1"
-                text="先看灵感再生成"
+                text="从一句描述开始创作"
                 className="max-w-xl font-serif text-4xl font-black leading-[1.02] text-slate-950 md:text-5xl"
                 by="letters"
                 delay={0.012}
               />
               <SplitText
                 as="p"
-                text="挑一张构图和氛围作参考，把想法放到右侧工作台。描述、整理、生成和保存都在同一屏完成。"
+                text="先把脑子里的画面写下来，右侧工作台会帮你完成整理、生成和保存。首页只保留创作路径，把注意力留给输入本身。"
                 className="max-w-xl text-base leading-7 text-slate-500"
                 delay={0.006}
               />
             </div>
 
-            <SpotlightCard className="p-4" spotlightColor="rgba(56, 189, 248, 0.22)">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_12%,rgba(255,255,255,0.98),transparent_26%),radial-gradient(circle_at_86%_78%,rgba(176,201,220,0.65),transparent_40%)]" />
-
-              <div className="relative z-[1] flex flex-col gap-3">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="rounded-full border border-white/80 bg-white/68 px-3 py-1 text-[0.64rem] font-black uppercase tracking-[0.28em] text-slate-500 shadow-sm backdrop-blur">
-                    近期作品
-                  </span>
-                  <span className="font-mono text-[0.68rem] font-black text-slate-400">
-                    {heroCounter}
-                  </span>
+            <div className="grid gap-3">
+              {flowSteps.map(({ title, note, Icon }, index) => (
+                <div key={title} className="group rounded-[22px] border border-white/85 bg-white/68 p-4 shadow-[0_16px_42px_rgba(31,52,76,0.08)] backdrop-blur transition duration-300 hover:-translate-y-0.5 hover:bg-white/82">
+                  <div className="flex items-start gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-sky-100 bg-sky-50/86 text-ocean-700 shadow-sm">
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs font-black text-slate-300">{String(index + 1).padStart(2, "0")}</span>
+                        <h2 className="text-base font-black text-slate-950">{title}</h2>
+                      </div>
+                      <p className="mt-1 text-sm font-semibold leading-6 text-slate-500">{note}</p>
+                    </div>
+                  </div>
                 </div>
+              ))}
+            </div>
 
-                <div className="grid gap-3 sm:grid-cols-3">
-                  {[
-                    { work: primaryHeroWork, index: "01", ratio: primaryHeroWork?.ratio || "1:1" },
-                    { work: secondaryHeroWork, index: "02", ratio: secondaryHeroWork?.ratio || "1:1" },
-                    { work: tertiaryHeroWork, index: "03", ratio: tertiaryHeroWork?.ratio || "3:4" },
-                  ].map((item) => (
-                    <figure
-                      key={item.index}
-                      className="grid min-w-0 grid-rows-[auto_auto] overflow-hidden rounded-[1.45rem] border border-white/85 bg-white/74 p-1.5 shadow-[0_18px_44px_rgba(31,52,76,0.1)] backdrop-blur"
-                    >
-                      <ArtworkPreviewImage work={item.work} alt="公开作品预览" className="aspect-[4/3] rounded-[1.15rem]" />
-                      <figcaption className="flex items-center justify-between gap-2 px-2 py-2 text-xs font-bold text-slate-600">
-                        <span className="truncate">
-                          {item.index}. {item.work?.title || "公开作品"}
-                        </span>
-                        <span className="shrink-0 font-mono text-slate-400">{item.ratio}</span>
-                      </figcaption>
-                    </figure>
-                  ))}
-                </div>
-              </div>
-            </SpotlightCard>
+            <div className="mt-auto flex flex-wrap gap-3 pt-1">
+              <Link href="/generate" className="inline-flex items-center gap-2 rounded-full border border-sky-100 bg-sky-50/90 px-5 py-3 text-sm font-black text-ocean-800 shadow-card backdrop-blur transition hover:-translate-y-0.5 hover:bg-white">
+                开始创作
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link href="/prompts" className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/78 px-5 py-3 text-sm font-black text-slate-700 shadow-card backdrop-blur transition hover:-translate-y-0.5 hover:bg-white">
+                浏览灵感
+              </Link>
+            </div>
 
           </div>
         </GlassSurface>
