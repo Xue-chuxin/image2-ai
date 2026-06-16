@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Alert, Button, Card, Form, Input, InputNumber, Space, Statistic, Table, Tag } from "tdesign-react";
+import { Alert, Button, Card, Input, InputNumber, Statistic, Table, Tag } from "tdesign-react";
 import type { AdminUserView } from "@/lib/admin-users";
 
 type UsersResponse = {
@@ -116,7 +116,7 @@ export function AdminUsersDashboard({ initialUsers }: { initialUsers: AdminUserV
     {
       colKey: "identity",
       title: "用户",
-      width: 280,
+      width: 300,
       cell: ({ row }: { row: AdminUserView }) => (
         <div className="min-w-0">
           <p className="truncate font-black text-slate-900">{row.email || row.displayName || row.id}</p>
@@ -141,7 +141,7 @@ export function AdminUsersDashboard({ initialUsers }: { initialUsers: AdminUserV
     {
       colKey: "activity",
       title: "时间",
-      width: 260,
+      width: 240,
       cell: ({ row }: { row: AdminUserView }) => (
         <div className="text-xs leading-5 text-slate-500">
           <p>注册：{formatTime(row.createdAt)}</p>
@@ -152,30 +152,30 @@ export function AdminUsersDashboard({ initialUsers }: { initialUsers: AdminUserV
     {
       colKey: "creditsAction",
       title: "手动调整积分",
-      width: 360,
+      width: 410,
       cell: ({ row }: { row: AdminUserView }) =>
         row.role !== "USER" ? (
           <Tag theme="warning" variant="light">
             管理员不可调整
           </Tag>
         ) : (
-          <Space breakLine size="small">
+          <div className="admin-user-credit-actions">
             <InputNumber
               value={amounts[row.id]}
               placeholder="100 / -20"
-              style={{ width: 120 }}
+              style={{ width: 112 }}
               onChange={(value) => setAmounts((current) => ({ ...current, [row.id]: Number(value || 0) }))}
             />
             <Input
               value={reasons[row.id] || ""}
               placeholder="原因"
-              style={{ width: 140 }}
+              style={{ width: 170 }}
               onChange={(value) => setReasons((current) => ({ ...current, [row.id]: String(value) }))}
             />
             <Button theme="primary" loading={pending === `credits:${row.id}`} onClick={() => void adjustCredits(row.id)}>
               确认
             </Button>
-          </Space>
+          </div>
         ),
     },
   ];
@@ -198,8 +198,9 @@ export function AdminUsersDashboard({ initialUsers }: { initialUsers: AdminUserV
       </div>
 
       <Card className="admin-td-card" title="用户运营">
-        <Form layout="inline" className="mb-4">
-          <Form.FormItem label="搜索">
+        <div className="admin-users-toolbar">
+          <label className="admin-users-search">
+            <span>搜索</span>
             <Input
               value={query}
               placeholder="邮箱、昵称或用户 ID"
@@ -208,19 +209,17 @@ export function AdminUsersDashboard({ initialUsers }: { initialUsers: AdminUserV
               onChange={(value) => setQuery(String(value))}
               onEnter={() => void refreshUsers()}
             />
-          </Form.FormItem>
-          <Form.FormItem>
-            <Button theme="primary" loading={pending === "search"} onClick={() => void refreshUsers()}>
-              刷新
-            </Button>
-          </Form.FormItem>
-        </Form>
+          </label>
+          <Button theme="primary" loading={pending === "search"} onClick={() => void refreshUsers()}>
+            刷新
+          </Button>
+        </div>
 
         {message ? <Alert className="mb-3" theme="success" message={message} /> : null}
         {error ? <Alert className="mb-3" theme="error" message={error} /> : null}
 
         <div className="admin-td-table-scroll">
-          <Table rowKey="id" data={users} columns={columns} hover stripe bordered tableLayout="auto" empty="没有找到匹配用户" />
+          <Table rowKey="id" data={users} columns={columns} hover stripe bordered tableLayout="fixed" empty="没有找到匹配用户" />
         </div>
       </Card>
     </section>

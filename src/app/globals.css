@@ -646,7 +646,7 @@ textarea {
 
 .admin-td-shell {
   min-height: 100dvh;
-  background: #f3f6fb;
+  background: #f5f7fa;
 }
 
 .admin-td-shell,
@@ -655,35 +655,138 @@ textarea {
 }
 
 .admin-td-sider {
+  position: sticky;
+  top: 0;
+  height: 100dvh;
   border-right: 1px solid #e7eaf0;
   background: #fff;
+  box-shadow: 1px 0 0 rgba(15, 23, 42, 0.02);
+}
+
+.admin-td-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 64px;
+  padding: 0 20px;
+  border-bottom: 1px solid #eef1f5;
+}
+
+.admin-td-brand-mark {
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #0052d9;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  box-shadow: 0 8px 18px rgba(0, 82, 217, 0.18);
+}
+
+.admin-td-menu {
+  padding: 12px 8px;
+  border-right: 0 !important;
+  background: transparent !important;
+}
+
+.admin-td-menu .t-menu__item {
+  height: 42px;
+  margin: 2px 0;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.admin-td-menu .t-menu__item .t-icon {
+  font-size: 18px;
+}
+
+.admin-td-menu .t-menu__item.t-is-active {
+  background: #e8f1ff;
+  color: #0052d9;
+  font-weight: 600;
 }
 
 .admin-td-header {
   height: auto;
   border-bottom: 1px solid #e7eaf0;
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  background: #fff;
+}
+
+.admin-td-header-inner {
+  display: flex;
+  min-height: 112px;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 22px 28px 24px;
+}
+
+.admin-td-account-tag {
+  flex-shrink: 0;
+  margin-top: 4px;
+  max-width: 260px;
+}
+
+.admin-td-mobile-menu {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 0 16px 14px;
+}
+
+.admin-td-mobile-menu-item {
+  flex-shrink: 0;
+  border-radius: 6px;
+  border: 1px solid #dcdfe6;
+  background: #fff;
+  padding: 8px 12px;
+  color: #4b5563;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.admin-td-mobile-menu-item-active {
+  border-color: #0052d9;
+  background: #e8f1ff;
+  color: #0052d9;
 }
 
 .admin-td-content {
   width: 100%;
   min-width: 0;
-  padding: 24px;
+  padding: 24px 28px 40px;
   overflow-x: hidden;
 }
 
 .admin-td-card {
   border-radius: 8px;
   border-color: #e7eaf0;
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.04);
+  box-shadow: none;
+}
+
+.admin-td-card .t-card__header {
+  min-height: 54px;
+  padding: 16px 24px 12px;
+}
+
+.admin-td-card .t-card__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.admin-td-card .t-card__body {
+  padding: 18px 24px 24px;
 }
 
 .admin-td-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 16px;
+  gap: 18px;
   align-items: start;
 }
 
@@ -696,13 +799,17 @@ textarea {
 
 .admin-td-stat-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   align-items: stretch;
 }
 
 .admin-td-stat-grid .admin-td-card {
-  min-height: 112px;
+  min-height: 110px;
+}
+
+.admin-td-stat-grid .t-card__body {
+  padding: 20px 24px;
 }
 
 .admin-td-table-scroll {
@@ -711,7 +818,11 @@ textarea {
 }
 
 .admin-td-table-scroll .t-table {
-  min-width: 980px;
+  min-width: 1180px;
+}
+
+.admin-td-table-scroll .t-table td {
+  vertical-align: middle;
 }
 
 .admin-td-toolbar {
@@ -722,9 +833,69 @@ textarea {
   justify-content: space-between;
 }
 
+.admin-users-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.admin-users-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #4b5563;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.admin-user-credit-actions {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-user-credit-actions .t-button {
+  flex-shrink: 0;
+}
+
+@media (max-width: 1280px) {
+  .admin-td-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 768px) {
+  .admin-td-header-inner {
+    min-height: auto;
+    flex-direction: column;
+    gap: 12px;
+    padding: 18px 16px;
+  }
+
   .admin-td-content {
     padding: 14px;
+  }
+
+  .admin-td-stat-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-td-card .t-card__header,
+  .admin-td-card .t-card__body {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .admin-users-toolbar,
+  .admin-users-search {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-users-search .t-input {
+    width: 100% !important;
   }
 }
 
