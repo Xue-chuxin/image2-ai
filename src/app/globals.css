@@ -982,6 +982,14 @@ textarea {
   min-width: 1180px;
 }
 
+.admin-td-table-scroll--md .t-table {
+  min-width: 1280px;
+}
+
+.admin-td-table-scroll--lg .t-table {
+  min-width: 1480px;
+}
+
 .admin-td-table-scroll .t-table th,
 .admin-td-table-scroll .t-table td {
   vertical-align: middle;

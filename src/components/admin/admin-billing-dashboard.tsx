@@ -412,7 +412,7 @@ export function AdminBillingDashboard({
                 <Button theme="primary" loading={pending === "load-orders"} onClick={() => void loadOrders(status, query)}>搜索</Button>
               </Form.FormItem>
             </Form>
-            <div className="admin-td-table-scroll">
+            <div className="admin-td-table-scroll admin-td-table-scroll--md">
               <Table rowKey="id" data={orders} columns={orderColumns} hover stripe bordered tableLayout="fixed" empty="暂无订单" />
             </div>
           </Tabs.TabPanel>

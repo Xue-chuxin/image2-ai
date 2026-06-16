@@ -216,7 +216,7 @@ export function AdminUsersDashboard({ initialUsers }: { initialUsers: AdminUserV
         {message ? <Alert className="mb-3" theme="success" message={message} /> : null}
         {error ? <Alert className="mb-3" theme="error" message={error} /> : null}
 
-        <div className="admin-td-table-scroll">
+        <div className="admin-td-table-scroll admin-td-table-scroll--lg">
           <Table rowKey="id" data={users} columns={columns} hover stripe bordered tableLayout="fixed" empty="没有找到匹配用户" />
         </div>
       </Card>
