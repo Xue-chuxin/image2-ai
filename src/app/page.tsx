@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { ArrowRight, BookOpen, CheckCircle2 } from "lucide-react";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { GenerateComposer } from "@/components/generate-composer";
-import { AnimatedContent, BlurText, FloatingActionBeam, GlassSurface, SpotlightCard, SplitText } from "@/components/front/react-bits";
+import { BlurText, GlassSurface, SpotlightCard, SplitText } from "@/components/front/react-bits";
 import { HomeWorksShowcase } from "@/components/home-works-showcase";
 import { GALLERY_CATEGORIES, listPublicGalleryImages, type GalleryImageView } from "@/lib/gallery";
 import { promptCards } from "@/lib/mock-data";
@@ -31,35 +31,30 @@ export default async function HomePage() {
   return (
     <main className="space-y-8 pb-28">
       <section className="grid gap-5 lg:grid-cols-[0.86fr_1.14fr] lg:items-stretch">
-        <GlassSurface className="order-2 px-6 py-7 text-slate-950 md:px-8 md:py-8 lg:order-1 lg:h-full">
+        <GlassSurface className="order-2 rounded-[28px] px-6 py-7 text-slate-950 md:px-8 md:py-8 lg:order-1 lg:h-full">
           <div className="absolute -right-24 top-10 h-72 w-72 rounded-full bg-sky-100/80 blur-3xl" />
           <div className="relative flex h-full flex-col gap-5">
-            <div className="space-y-4">
-              <AnimatedContent className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/72 px-3 py-1.5 text-xs font-bold text-slate-500 backdrop-blur">
-                <BookOpen className="h-3.5 w-3.5" />
-                图片工作台 · 灵感预览
-              </AnimatedContent>
-              <div className="space-y-4">
-                <BlurText
-                  as="h1"
-                  text="从作品灵感开始"
-                  className="max-w-xl font-serif text-4xl font-black leading-[1.02] text-slate-950 md:text-5xl"
-                  by="letters"
-                  delay={0.012}
-                />
-                <SplitText
-                  as="p"
-                  text="先看构图、氛围和光感，再把想法交给右侧工作台。输入一句描述，就能整理提示词、提交生成并保存历史。"
-                  className="max-w-xl text-base leading-7 text-slate-500"
-                  delay={0.006}
-                />
-              </div>
+            <div>
+              <span className="eyebrow">Inspiration</span>
+              <BlurText
+                as="h1"
+                text="先看灵感再生成"
+                className="max-w-xl font-serif text-4xl font-black leading-[1.02] text-slate-950 md:text-5xl"
+                by="letters"
+                delay={0.012}
+              />
+              <SplitText
+                as="p"
+                text="挑一张构图和氛围作参考，把想法放到右侧工作台。描述、整理、生成和保存都在同一屏完成。"
+                className="max-w-xl text-base leading-7 text-slate-500"
+                delay={0.006}
+              />
             </div>
 
-            <SpotlightCard className="min-h-[18.5rem] flex-1 p-4" spotlightColor="rgba(56, 189, 248, 0.22)">
+            <SpotlightCard className="h-[20rem] p-4 md:h-[21rem]" spotlightColor="rgba(56, 189, 248, 0.22)">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_12%,rgba(255,255,255,0.98),transparent_26%),radial-gradient(circle_at_86%_78%,rgba(176,201,220,0.65),transparent_40%)]" />
 
-              <div className="relative z-[1] flex h-full min-h-[17.5rem] flex-col gap-3">
+              <div className="relative z-[1] flex h-full min-h-0 flex-col gap-3">
                 <div className="flex items-center justify-between gap-3">
                   <span className="rounded-full border border-white/80 bg-white/68 px-3 py-1 text-[0.64rem] font-black uppercase tracking-[0.28em] text-slate-500 shadow-sm backdrop-blur">
                     近期作品
@@ -69,8 +64,8 @@ export default async function HomePage() {
                   </span>
                 </div>
 
-                <div className="grid flex-1 gap-3 sm:grid-cols-[1.34fr_0.86fr]">
-                  <figure className="relative min-h-[13.5rem] overflow-hidden rounded-[1.75rem] border border-white/85 bg-slate-200 shadow-[0_24px_62px_rgba(31,52,76,0.18)]">
+                <div className="grid min-h-0 flex-1 gap-3 sm:grid-cols-[1.34fr_0.86fr]">
+                  <figure className="relative min-h-0 overflow-hidden rounded-[1.75rem] border border-white/85 bg-slate-200 shadow-[0_24px_62px_rgba(31,52,76,0.18)]">
                     {primaryHeroWork?.url ? (
                       <img
                         src={primaryHeroWork.thumbnailUrl || primaryHeroWork.url}
@@ -94,7 +89,7 @@ export default async function HomePage() {
                     </figcaption>
                   </figure>
 
-                  <div className="grid gap-3 sm:grid-rows-[1fr_0.92fr]">
+                  <div className="grid min-h-0 gap-3 sm:grid-rows-[1fr_0.92fr]">
                     <figure className="overflow-hidden rounded-[1.55rem] border border-white/85 bg-white/72 p-1.5 shadow-[0_18px_44px_rgba(31,52,76,0.12)] backdrop-blur">
                       {secondaryHeroWork?.url ? (
                         <img
@@ -127,17 +122,6 @@ export default async function HomePage() {
               </div>
             </SpotlightCard>
 
-            <div className="flex flex-wrap gap-3">
-              <FloatingActionBeam>
-                <Link href="/generate" className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-card transition hover:-translate-y-0.5">
-                  开始创作
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </FloatingActionBeam>
-              <Link href="/prompts" className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/76 px-5 py-3 text-sm font-black text-slate-700 shadow-card backdrop-blur transition hover:-translate-y-0.5">
-                浏览灵感
-              </Link>
-            </div>
           </div>
         </GlassSurface>
 
