@@ -1425,38 +1425,64 @@ textarea {
   display: flex !important;
   flex-wrap: wrap;
   align-items: center !important;
-  gap: 12px;
+  column-gap: 12px;
+  row-gap: 10px;
   margin: 0 0 16px;
   min-height: 32px;
 }
 
+.admin-td-filter-form.t-form-inline {
+  row-gap: 10px;
+}
+
+.admin-td-filter-form.t-form-inline .t-form__item,
 .admin-td-filter-form .t-form__item {
   display: inline-flex !important;
   align-items: center !important;
+  flex: 0 0 auto;
   flex-wrap: nowrap;
   gap: 8px;
+  width: auto !important;
+  min-width: 0 !important;
   margin: 0 !important;
   min-height: 32px;
   padding: 0 !important;
 }
 
 .admin-td-filter-form .t-form__label {
+  float: none !important;
   display: inline-flex !important;
   flex: 0 0 auto;
   align-items: center;
+  width: auto !important;
+  min-width: 0 !important;
   height: 32px;
   margin: 0 !important;
   padding: 0 !important;
   color: var(--td-text-color-secondary, #4b5563);
   font-weight: 500;
   line-height: 32px;
+  text-align: left !important;
   white-space: nowrap;
 }
 
-.admin-td-filter-form .t-form__controls,
+.admin-td-filter-form .t-form__controls {
+  float: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  width: auto !important;
+  min-width: 0 !important;
+  min-height: 32px;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 32px;
+}
+
 .admin-td-filter-form .t-form__controls-content {
   display: inline-flex !important;
   align-items: center !important;
+  width: auto !important;
+  min-width: 0 !important;
   min-height: 32px;
   margin: 0 !important;
   padding: 0 !important;
@@ -1762,7 +1788,7 @@ textarea {
 
   .admin-td-filter-form .t-form__controls,
   .admin-td-filter-form .t-form__controls-content {
-    width: 100%;
+    width: 100% !important;
   }
 
   .admin-td-filter-form .t-input,
