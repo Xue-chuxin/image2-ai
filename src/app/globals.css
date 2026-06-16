@@ -664,6 +664,8 @@ textarea {
 }
 
 .admin-td-menu .t-menu__logo {
+  display: flex;
+  align-items: center;
   height: 64px;
   margin: 0;
   padding: 0 20px;
