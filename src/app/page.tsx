@@ -31,7 +31,7 @@ export default async function HomePage() {
   return (
     <main className="space-y-8 pb-28">
       <section className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr] lg:items-stretch">
-        <GlassSurface className="px-6 py-7 text-slate-950 md:px-8 md:py-9">
+        <GlassSurface className="order-2 px-6 py-7 text-slate-950 md:px-8 md:py-9 lg:order-1">
           <div className="absolute -right-24 top-10 h-72 w-72 rounded-full bg-sky-100/80 blur-3xl" />
           <div className="relative flex h-full flex-col gap-5">
             <div className="space-y-4">
@@ -144,7 +144,9 @@ export default async function HomePage() {
           </div>
         </GlassSurface>
 
-        <GenerateComposer compact />
+        <div className="order-1 lg:order-2">
+          <GenerateComposer compact />
+        </div>
       </section>
 
       <HomeWorksShowcase

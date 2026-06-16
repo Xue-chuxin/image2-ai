@@ -63,30 +63,10 @@ export function AppShell({ children, settings }: { children: ReactNode; settings
             </div>
           </div>
 
-          <nav className="mt-3 grid grid-cols-5 gap-1 rounded-[20px] border border-slate-200/80 bg-white/82 p-1 shadow-card backdrop-blur-xl md:hidden" aria-label="移动端主导航">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const active = isActivePath(pathname, item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={clsx(
-                    "flex min-h-12 flex-col items-center justify-center gap-1 rounded-[16px] px-1 py-2 text-[11px] font-bold transition duration-200 active:scale-[0.98]",
-                    active ? "border border-sky-100 bg-[#e9f4fc] text-[#254c73] shadow-card" : "text-slate-500 hover:bg-slate-50 hover:text-slate-950",
-                    item.primary && !active && "bg-[#edf4fa] text-[#254c73] hover:bg-[#e4edf6]",
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
         </div>
       </header>
 
-      <div className="mx-auto flex min-h-[calc(100dvh-4.25rem)] max-w-[1440px] flex-col px-3 pb-10 pt-4 md:px-6 md:pb-8">
+      <div className="mx-auto flex min-h-[calc(100dvh-4.25rem)] max-w-[1440px] flex-col px-3 pb-24 pt-4 md:px-6 md:pb-8">
         <GlassSurface className="front-stage flex-1 p-3 md:p-5">
           <div className="relative">
             {children}
@@ -94,6 +74,30 @@ export function AppShell({ children, settings }: { children: ReactNode; settings
         </GlassSurface>
 
       </div>
+
+      <nav
+        className="fixed inset-x-3 bottom-3 z-50 mx-auto grid max-w-md grid-cols-5 gap-1 rounded-[22px] border border-slate-200/80 bg-white/86 p-1.5 shadow-card backdrop-blur-xl md:hidden"
+        aria-label="移动端主导航"
+      >
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const active = isActivePath(pathname, item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={clsx(
+                "flex min-h-12 flex-col items-center justify-center gap-1 rounded-[17px] px-1 py-2 text-[11px] font-bold transition duration-200 active:scale-[0.98]",
+                active ? "border border-sky-100 bg-[#e9f4fc] text-[#254c73] shadow-card" : "text-slate-500 hover:bg-slate-50 hover:text-slate-950",
+                item.primary && !active && "bg-[#edf4fa] text-[#254c73] hover:bg-[#e4edf6]",
+              )}
+            >
+              <Icon className="h-4 w-4" />
+              {item.label}
+            </Link>
+          );
+        })}
+      </nav>
     </div>
   );
 }
