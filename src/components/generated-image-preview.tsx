@@ -10,15 +10,6 @@ type GeneratedPreviewImage = {
   thumbnailUrl?: string | null;
 };
 
-function withRetryToken(url: string, attempt: number) {
-  if (!attempt) {
-    return url;
-  }
-
-  const separator = url.includes("?") ? "&" : "?";
-  return `${url}${separator}retry=${attempt}`;
-}
-
 function isLoadedImageElement(image: HTMLImageElement | null) {
   return Boolean(image?.complete && image.naturalWidth > 0);
 }
@@ -41,13 +32,12 @@ export function GeneratedImagePreview({
   failedLabel?: string;
 }) {
   const imageRef = useRef<HTMLImageElement | null>(null);
-  const [attempt, setAttempt] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [useOriginal, setUseOriginal] = useState(false);
   const [failed, setFailed] = useState(false);
   const hasThumbnail = Boolean(image.thumbnailUrl && image.thumbnailUrl !== image.url);
   const displayUrl = !preferOriginal && !useOriginal && image.thumbnailUrl ? image.thumbnailUrl : image.url;
-  const imageSrc = useMemo(() => withRetryToken(displayUrl, attempt), [attempt, displayUrl]);
+  const imageSrc = useMemo(() => displayUrl, [displayUrl]);
 
   const syncLoadedFromElement = useCallback(() => {
     if (isLoadedImageElement(imageRef.current)) {
@@ -57,7 +47,6 @@ export function GeneratedImagePreview({
   }, []);
 
   useEffect(() => {
-    setAttempt(0);
     setLoaded(false);
     setUseOriginal(false);
     setFailed(false);
@@ -71,18 +60,12 @@ export function GeneratedImagePreview({
   function retryLoad() {
     if (hasThumbnail && !preferOriginal && !useOriginal) {
       setUseOriginal(true);
-      setAttempt(0);
+      setLoaded(false);
+      setFailed(false);
       return;
     }
 
-    if (attempt >= 8) {
-      setFailed(true);
-      return;
-    }
-
-    window.setTimeout(() => {
-      setAttempt((current) => current + 1);
-    }, Math.min(700 + attempt * 350, 2400));
+    setFailed(true);
   }
 
   return (
