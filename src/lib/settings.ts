@@ -245,6 +245,10 @@ function normalizeOptionalText(value: unknown, fallback: string, maxLength = 120
   return value.trim().slice(0, maxLength);
 }
 
+function normalizeSubmittedSecret(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
 function normalizeEmailAddress(value: unknown, fallback = "") {
   const clean = normalizeOptionalText(value, fallback, 254).toLowerCase();
   if (!clean) {
@@ -384,6 +388,19 @@ function getEncryptedSettingValue(row?: SettingRow) {
   }
 }
 
+function canDecryptSetting(row?: SettingRow) {
+  if (!row?.value || !row.isEncrypted) {
+    return true;
+  }
+
+  try {
+    decryptSecret(row.value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function parseStoredOpenAICompatibleChannels(map: Map<string, SettingRow>): StoredOpenAICompatibleChannel[] {
   const rawValue = getEncryptedSettingValue(map.get("openaiCompatibleChannels"));
   if (!rawValue) {
@@ -508,6 +525,10 @@ function shouldPersistSubmittedOpenAIChannels(
         Number(channel.timeoutSeconds) !== 120,
     );
   });
+}
+
+function submittedChannelsHaveBlankApiKey(inputChannels: SaveAdminSettingsInput["openaiCompatibleChannels"]) {
+  return Array.isArray(inputChannels) && inputChannels.some((channel) => !(typeof channel.apiKey === "string" && channel.apiKey.trim()));
 }
 
 function getStoredSetting(map: Map<string, SettingRow>, key: keyof PublicAppSettings | "deepseekPolishPrompt") {
@@ -811,6 +832,8 @@ export async function getAdminAppSettings(): Promise<AdminAppSettings> {
 
 export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
   const settingsMap = toMap(await readSettingRows());
+  const openAICompatibleChannelsRow = settingsMap.get("openaiCompatibleChannels");
+  const canReadStoredOpenAICompatibleChannels = canDecryptSetting(openAICompatibleChannelsRow);
   const currentPublicSettings = await getPublicAppSettings();
   const currentModerationSettings = getModerationSettings(settingsMap);
   const currentEmailSettings = getEmailAdminSettings(settingsMap);
@@ -854,14 +877,37 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
   const emailFromName = normalizeText(input.emailFromName, currentEmailSettings.emailFromName, 80);
   const emailReplyTo = normalizeSubmittedEmailAddress(input.emailReplyTo, currentEmailSettings.emailReplyTo, "回复邮箱");
   const emailTestRecipient = normalizeSubmittedEmailAddress(input.emailTestRecipient, currentEmailSettings.emailTestRecipient, "测试收件邮箱");
+  const submittedDeepSeekApiKey = normalizeSubmittedSecret(input.deepseekApiKey);
+  const submittedOpenaiApiKey = normalizeSubmittedSecret(input.openaiApiKey);
+  const submittedStabilityAiApiKey = normalizeSubmittedSecret(input.stabilityAiApiKey);
+  const submittedEmailSmtpPassword = normalizeSubmittedSecret(input.emailSmtpPassword);
   const shouldSaveOpenAICompatibleChannels = shouldPersistSubmittedOpenAIChannels(input.openaiCompatibleChannels, settingsMap, openaiImageModel);
+  if (shouldSaveOpenAICompatibleChannels && !canReadStoredOpenAICompatibleChannels && submittedChannelsHaveBlankApiKey(input.openaiCompatibleChannels)) {
+    throw new AppError(
+      "PROVIDER_CONFIG",
+      "已保存的 OpenAI 兼容通道无法解密。请修复 SETTINGS_ENCRYPTION_KEY，或为所有通道重新填写 API Key 后再保存。",
+      400,
+    );
+  }
+
   const openaiCompatibleChannels = shouldSaveOpenAICompatibleChannels
     ? normalizeSubmittedOpenAIChannels(
         input.openaiCompatibleChannels,
-        parseStoredOpenAICompatibleChannels(settingsMap),
+        canReadStoredOpenAICompatibleChannels ? parseStoredOpenAICompatibleChannels(settingsMap) : [],
         getEncryptedSettingValue(settingsMap.get("openaiApiKey")) || process.env.OPENAI_API_KEY || "",
       )
     : null;
+  const shouldSaveEncryptedSettings = Boolean(
+    submittedDeepSeekApiKey ||
+      submittedOpenaiApiKey ||
+      submittedStabilityAiApiKey ||
+      submittedEmailSmtpPassword ||
+      openaiCompatibleChannels,
+  );
+
+  if (shouldSaveEncryptedSettings && !hasSettingsEncryptionKey()) {
+    throw new AppError("PROVIDER_CONFIG", "缺少 SETTINGS_ENCRYPTION_KEY，无法保存敏感配置。", 400);
+  }
 
   await upsertSetting("browserTitle", browserTitle);
   await upsertSetting("siteTitle", siteTitle);
@@ -897,24 +943,24 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
   await upsertSetting("emailReplyTo", emailReplyTo);
   await upsertSetting("emailTestRecipient", emailTestRecipient);
 
-  if (input.deepseekApiKey?.trim()) {
-    await upsertSetting("deepseekApiKey", encryptSecret(input.deepseekApiKey.trim()), true);
+  if (submittedDeepSeekApiKey) {
+    await upsertSetting("deepseekApiKey", encryptSecret(submittedDeepSeekApiKey), true);
   }
 
-  if (input.openaiApiKey?.trim()) {
-    await upsertSetting("openaiApiKey", encryptSecret(input.openaiApiKey.trim()), true);
+  if (submittedOpenaiApiKey) {
+    await upsertSetting("openaiApiKey", encryptSecret(submittedOpenaiApiKey), true);
   }
 
   if (openaiCompatibleChannels) {
     await upsertSetting("openaiCompatibleChannels", encryptSecret(JSON.stringify(openaiCompatibleChannels)), true);
   }
 
-  if (input.stabilityAiApiKey?.trim()) {
-    await upsertSetting("stabilityAiApiKey", encryptSecret(input.stabilityAiApiKey.trim()), true);
+  if (submittedStabilityAiApiKey) {
+    await upsertSetting("stabilityAiApiKey", encryptSecret(submittedStabilityAiApiKey), true);
   }
 
-  if (input.emailSmtpPassword?.trim()) {
-    await upsertSetting("emailSmtpPassword", encryptSecret(input.emailSmtpPassword.trim()), true);
+  if (submittedEmailSmtpPassword) {
+    await upsertSetting("emailSmtpPassword", encryptSecret(submittedEmailSmtpPassword), true);
   }
 }
 
