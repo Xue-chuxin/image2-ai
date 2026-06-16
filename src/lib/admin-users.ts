@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/db";
+import { AppError } from "@/lib/app-error";
+import { hashPassword } from "@/lib/auth";
 
 export type AdminUserView = {
   id: string;
@@ -32,6 +34,29 @@ function normalizeLimit(value?: number) {
 
 function normalizeQuery(value?: string | null) {
   return value?.trim() || "";
+}
+
+function normalizeEditableEmail(value: unknown) {
+  const email = typeof value === "string" ? value.trim().toLowerCase() : "";
+  if (!email) {
+    throw new AppError("BAD_REQUEST", "请填写用户邮箱。", 400);
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new AppError("BAD_REQUEST", "邮箱格式不正确。", 400);
+  }
+  return email.slice(0, 254);
+}
+
+function normalizeDisplayName(value: unknown) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  return value.trim().slice(0, 80) || null;
+}
+
+function normalizeRole(value: unknown) {
+  return value === "ADMIN" ? "ADMIN" : "USER";
 }
 
 async function ensureCreditAccount(userId: string) {
@@ -241,4 +266,134 @@ export async function adjustUserCreditsByAdmin({
   });
 
   return getAdminUser(userId);
+}
+
+export async function updateUserByAdmin({
+  userId,
+  email,
+  displayName,
+  role,
+  password,
+  adminUserId,
+}: {
+  userId: string;
+  email: unknown;
+  displayName: unknown;
+  role: unknown;
+  password?: unknown;
+  adminUserId: string;
+}) {
+  const user = await prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+  });
+
+  if (!user) {
+    throw new AppError("NOT_FOUND", "用户不存在。", 404);
+  }
+
+  const nextEmail = normalizeEditableEmail(email);
+  const existingEmailUser = await prisma.user.findUnique({
+    where: {
+      email: nextEmail,
+    },
+  });
+
+  if (existingEmailUser && existingEmailUser.id !== userId) {
+    throw new AppError("CONFLICT", "这个邮箱已经被其他账号使用。", 409);
+  }
+
+  const nextRole = normalizeRole(role);
+  if (user.id === adminUserId && nextRole !== "ADMIN") {
+    throw new AppError("BAD_REQUEST", "不能把当前登录管理员降级。", 400);
+  }
+
+  if (user.role === "ADMIN" && nextRole !== "ADMIN") {
+    const adminCount = await prisma.user.count({
+      where: {
+        role: "ADMIN",
+      },
+    });
+    if (adminCount <= 1) {
+      throw new AppError("BAD_REQUEST", "不能降级最后一个管理员。", 400);
+    }
+  }
+
+  const nextPassword = typeof password === "string" ? password.trim() : "";
+  if (nextPassword && nextPassword.length < 6) {
+    throw new AppError("BAD_REQUEST", "密码至少需要 6 位。", 400);
+  }
+
+  const updated = await prisma.user.update({
+    where: {
+      id: userId,
+    },
+    data: {
+      email: nextEmail,
+      displayName: normalizeDisplayName(displayName),
+      role: nextRole,
+      passwordHash: nextPassword ? hashPassword(nextPassword) : undefined,
+      creditAccount:
+        nextRole === "USER"
+          ? {
+              upsert: {
+                update: {},
+                create: {
+                  available: 0,
+                  frozen: 0,
+                },
+              },
+            }
+          : undefined,
+    },
+    include: {
+      creditAccount: true,
+    },
+  });
+
+  return serializeUser(updated);
+}
+
+export async function deleteUserByAdmin({
+  userId,
+  adminUserId,
+}: {
+  userId: string;
+  adminUserId: string;
+}) {
+  if (userId === adminUserId) {
+    throw new AppError("BAD_REQUEST", "不能删除当前登录管理员。", 400);
+  }
+
+  const user = await prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+  });
+
+  if (!user) {
+    throw new AppError("NOT_FOUND", "用户不存在。", 404);
+  }
+
+  if (user.role === "ADMIN") {
+    const adminCount = await prisma.user.count({
+      where: {
+        role: "ADMIN",
+      },
+    });
+    if (adminCount <= 1) {
+      throw new AppError("BAD_REQUEST", "不能删除最后一个管理员。", 400);
+    }
+  }
+
+  await prisma.user.delete({
+    where: {
+      id: userId,
+    },
+  });
+
+  return {
+    id: userId,
+  };
 }

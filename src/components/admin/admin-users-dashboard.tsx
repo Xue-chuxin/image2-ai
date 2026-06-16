@@ -1,14 +1,24 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Alert, Button, Card, Form, Input, InputNumber, Statistic, Table, Tag } from "tdesign-react";
+import { Alert, Button, Card, Form, Input, InputNumber, Select, Statistic, Table, Tag } from "tdesign-react";
 import type { AdminUserView } from "@/lib/admin-users";
 
 type UsersResponse = {
   ok: boolean;
   users?: AdminUserView[];
   user?: AdminUserView;
+  deleted?: {
+    id: string;
+  };
   error?: string;
+};
+
+type EditUserForm = {
+  email: string;
+  displayName: string;
+  role: "USER" | "ADMIN";
+  password: string;
 };
 
 function formatTime(value: string | null) {
@@ -37,6 +47,13 @@ export function AdminUsersDashboard({ initialUsers }: { initialUsers: AdminUserV
   const [query, setQuery] = useState("");
   const [amounts, setAmounts] = useState<Record<string, number | undefined>>({});
   const [reasons, setReasons] = useState<Record<string, string>>({});
+  const [editingUser, setEditingUser] = useState<AdminUserView | null>(null);
+  const [editForm, setEditForm] = useState<EditUserForm>({
+    email: "",
+    displayName: "",
+    role: "USER",
+    password: "",
+  });
   const [pending, setPending] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -112,6 +129,76 @@ export function AdminUsersDashboard({ initialUsers }: { initialUsers: AdminUserV
     }
   }
 
+  function openEditUser(user: AdminUserView) {
+    setError("");
+    setMessage("");
+    setEditingUser(user);
+    setEditForm({
+      email: user.email || "",
+      displayName: user.displayName || "",
+      role: user.role === "ADMIN" ? "ADMIN" : "USER",
+      password: "",
+    });
+  }
+
+  async function saveUser() {
+    if (!editingUser) return;
+    setPending(`edit:${editingUser.id}`);
+    setMessage("");
+    setError("");
+
+    try {
+      const response = await fetch(`/api/admin/users/${editingUser.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(editForm),
+      });
+      const data = await readResponse(response);
+
+      if (!response.ok || !data.ok || !data.user) {
+        throw new Error(data.error || "编辑用户失败。");
+      }
+
+      setUsers((current) => current.map((user) => (user.id === editingUser.id ? data.user! : user)));
+      setEditingUser(null);
+      setMessage("用户资料已更新。");
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "编辑用户失败。");
+    } finally {
+      setPending("");
+    }
+  }
+
+  async function deleteUser(user: AdminUserView) {
+    if (!window.confirm(`确认删除用户 ${user.email || user.displayName || user.id} 吗？相关任务、图片、积分流水和订单也会一并删除。`)) {
+      return;
+    }
+
+    setPending(`delete:${user.id}`);
+    setMessage("");
+    setError("");
+
+    try {
+      const response = await fetch(`/api/admin/users/${user.id}`, {
+        method: "DELETE",
+      });
+      const data = await readResponse(response);
+
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || "删除用户失败。");
+      }
+
+      setUsers((current) => current.filter((item) => item.id !== user.id));
+      setMessage("用户已删除。");
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "删除用户失败。");
+    } finally {
+      setPending("");
+    }
+  }
+
   const columns = [
     {
       colKey: "identity",
@@ -176,6 +263,22 @@ export function AdminUsersDashboard({ initialUsers }: { initialUsers: AdminUserV
           </div>
         ),
     },
+    {
+      colKey: "actions",
+      title: "操作",
+      width: 180,
+      fixed: "right" as const,
+      cell: ({ row }: { row: AdminUserView }) => (
+        <div className="admin-td-action-row">
+          <Button size="small" type="button" variant="outline" onClick={() => openEditUser(row)}>
+            编辑
+          </Button>
+          <Button size="small" type="button" theme="danger" variant="outline" loading={pending === `delete:${row.id}`} onClick={() => void deleteUser(row)}>
+            删除
+          </Button>
+        </div>
+      ),
+    },
   ];
 
   return (
@@ -207,7 +310,7 @@ export function AdminUsersDashboard({ initialUsers }: { initialUsers: AdminUserV
             />
           </Form.FormItem>
           <Form.FormItem>
-            <Button theme="primary" loading={pending === "search"} onClick={() => void refreshUsers()}>
+            <Button type="button" theme="primary" loading={pending === "search"} onClick={() => void refreshUsers()}>
               刷新
             </Button>
           </Form.FormItem>
@@ -225,12 +328,57 @@ export function AdminUsersDashboard({ initialUsers }: { initialUsers: AdminUserV
             stripe
             bordered
             tableLayout="fixed"
-            tableContentWidth="1480px"
+            tableContentWidth="1660px"
             verticalAlign="top"
             empty="没有找到匹配用户"
           />
         </div>
       </Card>
+
+      {editingUser ? (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/30 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+            <div className="mb-5">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Edit User</p>
+              <h3 className="mt-1 text-2xl font-black text-slate-950">编辑用户</h3>
+              <p className="mt-2 text-sm text-slate-500">密码留空表示不修改。管理员账号受保护，不能删除或降级最后一个管理员。</p>
+            </div>
+            <div className="grid gap-4">
+              <label className="grid gap-2 text-sm font-bold text-slate-700">
+                邮箱
+                <Input value={editForm.email} placeholder="user@example.com" onChange={(value) => setEditForm((current) => ({ ...current, email: String(value) }))} />
+              </label>
+              <label className="grid gap-2 text-sm font-bold text-slate-700">
+                昵称
+                <Input value={editForm.displayName} placeholder="可留空" onChange={(value) => setEditForm((current) => ({ ...current, displayName: String(value) }))} />
+              </label>
+              <label className="grid gap-2 text-sm font-bold text-slate-700">
+                角色
+                <Select
+                  value={editForm.role}
+                  options={[
+                    { value: "USER", label: "普通用户" },
+                    { value: "ADMIN", label: "管理员" },
+                  ]}
+                  onChange={(value) => setEditForm((current) => ({ ...current, role: String(value) === "ADMIN" ? "ADMIN" : "USER" }))}
+                />
+              </label>
+              <label className="grid gap-2 text-sm font-bold text-slate-700">
+                重置密码
+                <Input value={editForm.password} type="password" placeholder="留空不修改，填写则至少 6 位" onChange={(value) => setEditForm((current) => ({ ...current, password: String(value) }))} />
+              </label>
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <Button type="button" variant="outline" onClick={() => setEditingUser(null)}>
+                取消
+              </Button>
+              <Button type="button" theme="primary" loading={pending === `edit:${editingUser.id}`} onClick={() => void saveUser()}>
+                保存用户
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

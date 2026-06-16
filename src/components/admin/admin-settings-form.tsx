@@ -34,6 +34,12 @@ type OpenAIChannelCheckResponse = {
   error?: string;
 };
 
+type EmailTestResponse = {
+  ok: boolean;
+  message?: string;
+  error?: string;
+};
+
 type EditableOpenAIChannel = OpenAICompatibleChannelSetting & {
   apiKey: string;
 };
@@ -82,6 +88,13 @@ async function readOpenAIChannelCheckResponse(response: Response): Promise<OpenA
   return { ok: false, error: text.includes("<!DOCTYPE") ? "接口返回了 HTML 错误页，请查看服务端日志。" : text || "接口返回格式异常。" };
 }
 
+async function readEmailTestResponse(response: Response): Promise<EmailTestResponse> {
+  const contentType = response.headers.get("content-type") || "";
+  if (contentType.includes("application/json")) return (await response.json()) as EmailTestResponse;
+  const text = await response.text();
+  return { ok: false, error: text.includes("<!DOCTYPE") ? "接口返回了 HTML 错误页，请查看服务端日志。" : text || "接口返回格式异常。" };
+}
+
 function diagnosticTheme(status: AdminDiagnosticStatus): "success" | "warning" | "danger" {
   if (status === "ok") return "success";
   if (status === "warning") return "warning";
@@ -100,16 +113,20 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
   const [deepseekApiKey, setDeepseekApiKey] = useState("");
   const [openaiApiKey, setOpenaiApiKey] = useState("");
   const [stabilityAiApiKey, setStabilityAiApiKey] = useState("");
+  const [emailSmtpPassword, setEmailSmtpPassword] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [chatgptMessage, setChatgptMessage] = useState("");
   const [chatgptError, setChatgptError] = useState("");
   const [openaiChannelCheckMessage, setOpenaiChannelCheckMessage] = useState("");
   const [openaiChannelCheckError, setOpenaiChannelCheckError] = useState("");
+  const [emailTestMessage, setEmailTestMessage] = useState("");
+  const [emailTestError, setEmailTestError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isOpeningChatGPT, setIsOpeningChatGPT] = useState(false);
   const [isCheckingChatGPT, setIsCheckingChatGPT] = useState(false);
+  const [isTestingEmail, setIsTestingEmail] = useState(false);
   const [checkingOpenAIChannelId, setCheckingOpenAIChannelId] = useState("");
 
   function update<K extends keyof AdminAppSettings>(key: K, value: AdminAppSettings[K]) {
@@ -191,6 +208,16 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
           storageEndpoint: settings.storageEndpoint,
           storageBucket: settings.storageBucket,
           storageRegion: settings.storageRegion,
+          emailSmtpEnabled: settings.emailSmtpEnabled,
+          emailSmtpHost: settings.emailSmtpHost,
+          emailSmtpPort: settings.emailSmtpPort,
+          emailSmtpSecure: settings.emailSmtpSecure,
+          emailSmtpUser: settings.emailSmtpUser,
+          emailSmtpPassword,
+          emailFromEmail: settings.emailFromEmail,
+          emailFromName: settings.emailFromName,
+          emailReplyTo: settings.emailReplyTo,
+          emailTestRecipient: settings.emailTestRecipient,
           deepseekApiKey,
           openaiApiKey,
           stabilityAiApiKey,
@@ -205,6 +232,7 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
       setDeepseekApiKey("");
       setOpenaiApiKey("");
       setStabilityAiApiKey("");
+      setEmailSmtpPassword("");
       setMessage("配置已保存。");
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "保存失败。");
@@ -265,6 +293,26 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
     }
   }
 
+  async function sendTestEmail() {
+    setEmailTestError("");
+    setEmailTestMessage("");
+    setIsTestingEmail(true);
+    try {
+      const response = await fetch("/api/admin/email/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: settings.emailTestRecipient }),
+      });
+      const data = await readEmailTestResponse(response);
+      if (!response.ok || !data.ok) throw new Error(data.error || "测试邮件发送失败。");
+      setEmailTestMessage(data.message || "测试邮件已发送。");
+    } catch (caughtError) {
+      setEmailTestError(caughtError instanceof Error ? caughtError.message : "测试邮件发送失败。");
+    } finally {
+      setIsTestingEmail(false);
+    }
+  }
+
   async function logout() {
     setIsLoggingOut(true);
     await fetch("/api/auth/logout", { method: "POST" }).catch(() => null);
@@ -317,7 +365,7 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
                 </Form>
               </Card>
 
-              <Card className="admin-td-card" bordered title="OpenAI 兼容中转通道" actions={<Button variant="outline" onClick={addOpenAIChannel}>新增通道</Button>}>
+              <Card className="admin-td-card" bordered title="OpenAI 兼容中转通道" actions={<Button type="button" variant="outline" onClick={addOpenAIChannel}>新增通道</Button>}>
                 <div className="admin-td-tab-panel-grid">
                   {openaiChannels.map((channel, index) => (
                     <Card key={channel.id} className="admin-td-card admin-td-channel-card" bordered title={`${index + 1}. ${channel.name}`}>
@@ -329,6 +377,7 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
                         <div className="admin-td-action-row">
                           <Button
                             size="small"
+                            type="button"
                             variant="outline"
                             loading={checkingOpenAIChannelId === channel.id}
                             disabled={!channel.enabled || !channel.apiKeyConfigured}
@@ -336,9 +385,9 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
                           >
                             检测
                           </Button>
-                          <Button size="small" variant="outline" disabled={index === 0} onClick={() => moveOpenAIChannel(channel.id, -1)}>上移</Button>
-                          <Button size="small" variant="outline" disabled={index === openaiChannels.length - 1} onClick={() => moveOpenAIChannel(channel.id, 1)}>下移</Button>
-                          <Button size="small" theme="danger" variant="outline" onClick={() => removeOpenAIChannel(channel.id)}>删除</Button>
+                          <Button size="small" type="button" variant="outline" disabled={index === 0} onClick={() => moveOpenAIChannel(channel.id, -1)}>上移</Button>
+                          <Button size="small" type="button" variant="outline" disabled={index === openaiChannels.length - 1} onClick={() => moveOpenAIChannel(channel.id, 1)}>下移</Button>
+                          <Button size="small" type="button" theme="danger" variant="outline" onClick={() => removeOpenAIChannel(channel.id)}>删除</Button>
                         </div>
                       </div>
                       <Form labelAlign="top">
@@ -446,8 +495,8 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
                     <InputNumber value={settings.chatgptWebTimeoutSeconds} min={30} max={900} onChange={(value) => update("chatgptWebTimeoutSeconds", Number(value || 120))} />
                   </Form.FormItem>
                   <div className="admin-td-action-row">
-                    <Button variant="outline" loading={isOpeningChatGPT} onClick={() => void openChatGPTLoginBrowser()}>打开登录浏览器</Button>
-                    <Button theme="primary" loading={isCheckingChatGPT} onClick={() => void checkChatGPTStatus()}>检测登录状态</Button>
+                    <Button type="button" variant="outline" loading={isOpeningChatGPT} onClick={() => void openChatGPTLoginBrowser()}>打开登录浏览器</Button>
+                    <Button type="button" theme="primary" loading={isCheckingChatGPT} onClick={() => void checkChatGPTStatus()}>检测登录状态</Button>
                   </div>
                 </Form>
                 {chatgptMessage ? <Alert className="admin-td-form-section" theme="success" message={chatgptMessage} /> : null}
@@ -456,9 +505,53 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
             </div>
           </Tabs.TabPanel>
 
+          <Tabs.TabPanel value="email" label="邮件发信">
+            <div className="admin-td-tab-panel-grid">
+              <Card className="admin-td-card" bordered title="SMTP 发信配置">
+                <Form labelAlign="top">
+                  <Form.FormItem label="启用 SMTP 发信">
+                    <Switch value={settings.emailSmtpEnabled} onChange={(value) => update("emailSmtpEnabled", Boolean(value))} />
+                  </Form.FormItem>
+                  <SettingInput label="SMTP Host" value={settings.emailSmtpHost} onChange={(value) => update("emailSmtpHost", value)} placeholder="smtp.example.com" />
+                  <Form.FormItem label="SMTP 端口">
+                    <InputNumber value={settings.emailSmtpPort} min={1} max={65535} onChange={(value) => update("emailSmtpPort", Number(value || 465))} />
+                  </Form.FormItem>
+                  <Form.FormItem label="SSL/TLS">
+                    <Switch value={settings.emailSmtpSecure} onChange={(value) => update("emailSmtpSecure", Boolean(value))} />
+                  </Form.FormItem>
+                  <SettingInput label="SMTP 用户名" value={settings.emailSmtpUser} onChange={(value) => update("emailSmtpUser", value)} placeholder="通常为邮箱账号" />
+                  <SettingInput
+                    label="SMTP 密码/授权码"
+                    value={emailSmtpPassword}
+                    onChange={setEmailSmtpPassword}
+                    placeholder={settings.emailSmtpPasswordConfigured ? "已配置，留空表示不修改" : "未配置"}
+                    type="password"
+                  />
+                  <SettingInput label="发件邮箱" value={settings.emailFromEmail} onChange={(value) => update("emailFromEmail", value)} placeholder="noreply@example.com" />
+                  <SettingInput label="发件人名称" value={settings.emailFromName} onChange={(value) => update("emailFromName", value)} />
+                  <SettingInput label="回复邮箱" value={settings.emailReplyTo} onChange={(value) => update("emailReplyTo", value)} placeholder="可留空" />
+                </Form>
+              </Card>
+
+              <Card className="admin-td-card" bordered title="发信测试">
+                <Form labelAlign="top">
+                  <SettingInput label="测试收件邮箱" value={settings.emailTestRecipient} onChange={(value) => update("emailTestRecipient", value)} placeholder="留空则发送到发件邮箱" />
+                  <div className="admin-td-action-row">
+                    <Button type="button" theme="primary" loading={isTestingEmail} onClick={() => void sendTestEmail()}>
+                      发送测试邮件
+                    </Button>
+                  </div>
+                </Form>
+                {emailTestMessage ? <Alert className="admin-td-form-section" theme="success" message={emailTestMessage} /> : null}
+                {emailTestError ? <Alert className="admin-td-form-section" theme="error" message={emailTestError} /> : null}
+                <p className="admin-td-form-hint">请先保存 SMTP 配置，再发送测试邮件。多数邮箱服务需要使用客户端授权码，而不是登录密码。</p>
+              </Card>
+            </div>
+          </Tabs.TabPanel>
+
           <Tabs.TabPanel value="diagnostics" label="配置检测">
             <div className="admin-td-tab-panel">
-              <Card className="admin-td-card" bordered title="配置检测" actions={<Button variant="outline" loading={isLoggingOut} onClick={() => void logout()}>退出登录</Button>}>
+              <Card className="admin-td-card" bordered title="配置检测" actions={<Button type="button" variant="outline" loading={isLoggingOut} onClick={() => void logout()}>退出登录</Button>}>
                 <div className="admin-td-diagnostic-list">
                   {settings.diagnostics.map((item) => (
                     <Alert

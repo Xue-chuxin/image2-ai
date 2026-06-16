@@ -59,6 +59,16 @@ export type AdminAppSettings = PublicAppSettings & {
   moderationEnabled: boolean;
   moderationForbiddenWords: string;
   moderationBlockMessage: string;
+  emailSmtpEnabled: boolean;
+  emailSmtpHost: string;
+  emailSmtpPort: number;
+  emailSmtpSecure: boolean;
+  emailSmtpUser: string;
+  emailFromEmail: string;
+  emailFromName: string;
+  emailReplyTo: string;
+  emailTestRecipient: string;
+  emailSmtpPasswordConfigured: boolean;
   deepseekApiKeyConfigured: boolean;
   openaiApiKeyConfigured: boolean;
   legacyOpenaiApiKeyConfigured: boolean;
@@ -76,6 +86,16 @@ export type SaveAdminSettingsInput = Partial<PublicAppSettings> & {
   openaiApiKey?: string;
   openaiCompatibleChannels?: Array<Partial<OpenAICompatibleChannelSetting> & { apiKey?: string }>;
   stabilityAiApiKey?: string;
+  emailSmtpEnabled?: boolean | string;
+  emailSmtpHost?: string;
+  emailSmtpPort?: number | string;
+  emailSmtpSecure?: boolean | string;
+  emailSmtpUser?: string;
+  emailSmtpPassword?: string;
+  emailFromEmail?: string;
+  emailFromName?: string;
+  emailReplyTo?: string;
+  emailTestRecipient?: string;
 };
 
 export type ChatGPTWebRuntimeConfig = {
@@ -100,6 +120,19 @@ export type ModerationRuntimeConfig = {
   enabled: boolean;
   forbiddenWords: string;
   blockMessage: string;
+};
+
+export type EmailRuntimeConfig = {
+  enabled: boolean;
+  host: string;
+  port: number;
+  secure: boolean;
+  username: string;
+  password: string;
+  fromEmail: string;
+  fromName: string;
+  replyTo: string;
+  testRecipient: string;
 };
 
 type SettingRow = {
@@ -151,6 +184,18 @@ const defaultModerationSettings: ModerationRuntimeConfig = {
   blockMessage: "内容包含不适合生成的词语，请调整后再试。",
 };
 
+const defaultEmailSettings: Omit<EmailRuntimeConfig, "password"> = {
+  enabled: false,
+  host: "",
+  port: 465,
+  secure: true,
+  username: "",
+  fromEmail: "",
+  fromName: "造图台",
+  replyTo: "",
+  testRecipient: "",
+};
+
 type StoredOpenAICompatibleChannel = {
   id: string;
   name: string;
@@ -189,6 +234,23 @@ function normalizeText(value: unknown, fallback: string, maxLength = 120) {
   }
   const clean = value.trim();
   return clean ? clean.slice(0, maxLength) : fallback;
+}
+
+function normalizeOptionalText(value: unknown, fallback: string, maxLength = 120) {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+
+  return value.trim().slice(0, maxLength);
+}
+
+function normalizeEmailAddress(value: unknown, fallback = "") {
+  const clean = normalizeOptionalText(value, fallback, 254).toLowerCase();
+  if (!clean) {
+    return "";
+  }
+
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean) ? clean : fallback;
 }
 
 function normalizeForbiddenWords(value: unknown) {
@@ -249,6 +311,15 @@ function normalizeTimeoutSeconds(value: unknown, fallback: number) {
   }
 
   return Math.min(Math.max(Math.floor(numeric), 30), 900);
+}
+
+function normalizePort(value: unknown, fallback: number) {
+  const numeric = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(numeric)) {
+    return fallback;
+  }
+
+  return Math.min(Math.max(Math.floor(numeric), 1), 65535);
 }
 
 function normalizePriority(value: unknown, fallback: number) {
@@ -437,6 +508,21 @@ function getModerationSettings(map: Map<string, SettingRow>): ModerationRuntimeC
   };
 }
 
+function getEmailAdminSettings(map: Map<string, SettingRow>) {
+  return {
+    emailSmtpEnabled: normalizeBoolean(map.get("emailSmtpEnabled")?.value, normalizeBoolean(process.env.EMAIL_SMTP_ENABLED, defaultEmailSettings.enabled)),
+    emailSmtpHost: normalizeOptionalText(map.get("emailSmtpHost")?.value ?? process.env.EMAIL_SMTP_HOST, defaultEmailSettings.host, 300),
+    emailSmtpPort: normalizePort(map.get("emailSmtpPort")?.value ?? process.env.EMAIL_SMTP_PORT, defaultEmailSettings.port),
+    emailSmtpSecure: normalizeBoolean(map.get("emailSmtpSecure")?.value, normalizeBoolean(process.env.EMAIL_SMTP_SECURE, defaultEmailSettings.secure)),
+    emailSmtpUser: normalizeOptionalText(map.get("emailSmtpUser")?.value ?? process.env.EMAIL_SMTP_USER, defaultEmailSettings.username, 254),
+    emailFromEmail: normalizeEmailAddress(map.get("emailFromEmail")?.value ?? process.env.EMAIL_FROM_EMAIL, defaultEmailSettings.fromEmail),
+    emailFromName: normalizeText(map.get("emailFromName")?.value ?? process.env.EMAIL_FROM_NAME, defaultEmailSettings.fromName, 80),
+    emailReplyTo: normalizeEmailAddress(map.get("emailReplyTo")?.value ?? process.env.EMAIL_REPLY_TO, defaultEmailSettings.replyTo),
+    emailTestRecipient: normalizeEmailAddress(map.get("emailTestRecipient")?.value ?? process.env.EMAIL_TEST_RECIPIENT, defaultEmailSettings.testRecipient),
+    emailSmtpPasswordConfigured: Boolean(map.get("emailSmtpPassword")?.value || process.env.EMAIL_SMTP_PASSWORD),
+  };
+}
+
 function getStoredBoolean(map: Map<string, SettingRow>, key: keyof PublicAppSettings, envValue: string | undefined, fallback: boolean) {
   const storedValue = map.get(key)?.value;
   if (typeof storedValue === "string") {
@@ -534,6 +620,7 @@ async function buildDiagnostics(
   openaiApiKeyConfigured: boolean,
   stabilityAiApiKeyConfigured: boolean,
   moderation: ModerationRuntimeConfig,
+  emailSettings: ReturnType<typeof getEmailAdminSettings>,
 ): Promise<AdminDiagnosticItem[]> {
   const encryptionReady = hasSettingsEncryptionKey();
   const providerIsOpenAI = settings.defaultGenerationProvider === "openai";
@@ -541,6 +628,7 @@ async function buildDiagnostics(
   const providerIsStabilityAi = settings.defaultGenerationProvider === "stability_ai";
   const enabledOpenAIChannels = openaiCompatibleChannels.filter((channel) => channel.enabled);
   const configuredOpenAIChannels = enabledOpenAIChannels.filter((channel) => channel.apiKeyConfigured);
+  const emailAuthReady = !emailSettings.emailSmtpUser || emailSettings.emailSmtpPasswordConfigured;
   const forbiddenWordCount = normalizeForbiddenWords(moderation.forbiddenWords)
     .split("\n")
     .filter(Boolean).length;
@@ -611,6 +699,21 @@ async function buildDiagnostics(
           : "已启用违禁词拦截，但词库为空。"
         : "违禁词拦截未启用，正式上线前建议开启。",
     },
+    {
+      key: "email",
+      label: "邮件发信",
+      status:
+        !emailSettings.emailSmtpEnabled
+          ? "warning"
+          : emailSettings.emailSmtpHost && emailSettings.emailFromEmail && emailAuthReady
+            ? "ok"
+            : "error",
+      message: !emailSettings.emailSmtpEnabled
+        ? "SMTP 发信未启用，注册通知、测试邮件等邮件能力不可用。"
+        : emailSettings.emailSmtpHost && emailSettings.emailFromEmail && emailAuthReady
+          ? `SMTP 已启用：${emailSettings.emailSmtpHost}:${emailSettings.emailSmtpPort}。`
+          : "SMTP 已启用，但 Host、发件邮箱或 SMTP 认证信息未配置完整。",
+    },
   ];
 }
 
@@ -665,6 +768,7 @@ export async function getAdminAppSettings(): Promise<AdminAppSettings> {
   const publicSettings = await getPublicAppSettings();
   const openaiCompatibleChannels = toPublicOpenAICompatibleChannels(map, { openaiImageModel: publicSettings.openaiImageModel });
   const moderationSettings = getModerationSettings(map);
+  const emailSettings = getEmailAdminSettings(map);
   const deepseekApiKeyConfigured = Boolean(map.get("deepseekApiKey")?.value || process.env.DEEPSEEK_API_KEY);
   const legacyOpenaiApiKeyConfigured = Boolean(map.get("openaiApiKey")?.value || process.env.OPENAI_API_KEY);
   const openaiApiKeyConfigured = openaiCompatibleChannels.some((channel) => channel.enabled && channel.apiKeyConfigured);
@@ -677,45 +781,61 @@ export async function getAdminAppSettings(): Promise<AdminAppSettings> {
     moderationEnabled: moderationSettings.enabled,
     moderationForbiddenWords: moderationSettings.forbiddenWords,
     moderationBlockMessage: moderationSettings.blockMessage,
+    ...emailSettings,
     deepseekApiKeyConfigured,
     openaiApiKeyConfigured,
     legacyOpenaiApiKeyConfigured,
     stabilityAiApiKeyConfigured,
     encryptionReady: hasSettingsEncryptionKey(),
-    diagnostics: await buildDiagnostics(publicSettings, openaiCompatibleChannels, deepseekApiKeyConfigured, openaiApiKeyConfigured, stabilityAiApiKeyConfigured, moderationSettings),
+    diagnostics: await buildDiagnostics(publicSettings, openaiCompatibleChannels, deepseekApiKeyConfigured, openaiApiKeyConfigured, stabilityAiApiKeyConfigured, moderationSettings, emailSettings),
   };
 }
 
 export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
   const settingsMap = toMap(await readSettingRows());
-  const browserTitle = normalizeText(input.browserTitle, defaultSettings.browserTitle);
-  const siteTitle = normalizeText(input.siteTitle, defaultSettings.siteTitle);
-  const siteSubtitle = normalizeText(input.siteSubtitle, defaultSettings.siteSubtitle);
-  const deepseekBaseUrl = normalizeText(input.deepseekBaseUrl, defaultSettings.deepseekBaseUrl, 200);
-  const deepseekModel = normalizeText(input.deepseekModel, defaultSettings.deepseekModel);
-  const openaiImageModel = normalizeText(input.openaiImageModel, defaultSettings.openaiImageModel);
-  const stabilityAiModel = normalizeText(input.stabilityAiModel, defaultSettings.stabilityAiModel);
-  const deepseekPolishPrompt = normalizeText(input.deepseekPolishPrompt, defaultDeepSeekPolishPrompt, 6000);
-  const moderationEnabled = normalizeBoolean(input.moderationEnabled, defaultModerationSettings.enabled);
-  const moderationForbiddenWords = normalizeForbiddenWords(input.moderationForbiddenWords);
+  const currentPublicSettings = await getPublicAppSettings();
+  const currentModerationSettings = getModerationSettings(settingsMap);
+  const currentEmailSettings = getEmailAdminSettings(settingsMap);
+  const browserTitle = normalizeText(input.browserTitle, currentPublicSettings.browserTitle);
+  const siteTitle = normalizeText(input.siteTitle, currentPublicSettings.siteTitle);
+  const siteSubtitle = normalizeText(input.siteSubtitle, currentPublicSettings.siteSubtitle);
+  const deepseekBaseUrl = normalizeText(input.deepseekBaseUrl, currentPublicSettings.deepseekBaseUrl, 200);
+  const deepseekModel = normalizeText(input.deepseekModel, currentPublicSettings.deepseekModel);
+  const openaiImageModel = normalizeText(input.openaiImageModel, currentPublicSettings.openaiImageModel);
+  const stabilityAiModel = normalizeText(input.stabilityAiModel, currentPublicSettings.stabilityAiModel);
+  const deepseekPolishPrompt = normalizeText(input.deepseekPolishPrompt, getStoredSetting(settingsMap, "deepseekPolishPrompt") || defaultDeepSeekPolishPrompt, 6000);
+  const moderationEnabled = normalizeBoolean(input.moderationEnabled, currentModerationSettings.enabled);
+  const moderationForbiddenWords =
+    typeof input.moderationForbiddenWords === "string"
+      ? normalizeForbiddenWords(input.moderationForbiddenWords)
+      : currentModerationSettings.forbiddenWords;
   const moderationBlockMessage = normalizeText(
     input.moderationBlockMessage,
-    defaultModerationSettings.blockMessage,
+    currentModerationSettings.blockMessage,
     200,
   );
-  const defaultGenerationProvider = normalizeProvider(input.defaultGenerationProvider);
-  const chatgptWebEnabled = normalizeBoolean(input.chatgptWebEnabled, defaultSettings.chatgptWebEnabled);
-  const chatgptWebUserDataDir = normalizeText(input.chatgptWebUserDataDir, defaultSettings.chatgptWebUserDataDir, 300);
-  const chatgptWebHeadless = normalizeBoolean(input.chatgptWebHeadless, defaultSettings.chatgptWebHeadless);
-  const chatgptWebTimeoutSeconds = normalizeTimeoutSeconds(input.chatgptWebTimeoutSeconds, defaultSettings.chatgptWebTimeoutSeconds);
-  const storageProvider = normalizeStorageProvider(input.storageProvider);
-  const storageLocalBaseDir = normalizeText(input.storageLocalBaseDir, defaultSettings.storageLocalBaseDir, 300);
-  const storagePublicBaseUrl = normalizeText(input.storagePublicBaseUrl, defaultSettings.storagePublicBaseUrl, 300);
-  const storageGeneratedPrefix = normalizeStoragePrefix(input.storageGeneratedPrefix, defaultSettings.storageGeneratedPrefix);
-  const storageUploadsPrefix = normalizeStoragePrefix(input.storageUploadsPrefix, defaultSettings.storageUploadsPrefix);
-  const storageEndpoint = normalizeText(input.storageEndpoint, defaultSettings.storageEndpoint, 300);
-  const storageBucket = normalizeText(input.storageBucket, defaultSettings.storageBucket, 160);
-  const storageRegion = normalizeText(input.storageRegion, defaultSettings.storageRegion, 120);
+  const defaultGenerationProvider = normalizeProvider(input.defaultGenerationProvider || currentPublicSettings.defaultGenerationProvider);
+  const chatgptWebEnabled = normalizeBoolean(input.chatgptWebEnabled, currentPublicSettings.chatgptWebEnabled);
+  const chatgptWebUserDataDir = normalizeText(input.chatgptWebUserDataDir, currentPublicSettings.chatgptWebUserDataDir, 300);
+  const chatgptWebHeadless = normalizeBoolean(input.chatgptWebHeadless, currentPublicSettings.chatgptWebHeadless);
+  const chatgptWebTimeoutSeconds = normalizeTimeoutSeconds(input.chatgptWebTimeoutSeconds, currentPublicSettings.chatgptWebTimeoutSeconds);
+  const storageProvider = normalizeStorageProvider(input.storageProvider || currentPublicSettings.storageProvider);
+  const storageLocalBaseDir = normalizeText(input.storageLocalBaseDir, currentPublicSettings.storageLocalBaseDir, 300);
+  const storagePublicBaseUrl = normalizeOptionalText(input.storagePublicBaseUrl, currentPublicSettings.storagePublicBaseUrl, 300);
+  const storageGeneratedPrefix = normalizeStoragePrefix(input.storageGeneratedPrefix, currentPublicSettings.storageGeneratedPrefix);
+  const storageUploadsPrefix = normalizeStoragePrefix(input.storageUploadsPrefix, currentPublicSettings.storageUploadsPrefix);
+  const storageEndpoint = normalizeOptionalText(input.storageEndpoint, currentPublicSettings.storageEndpoint, 300);
+  const storageBucket = normalizeOptionalText(input.storageBucket, currentPublicSettings.storageBucket, 160);
+  const storageRegion = normalizeOptionalText(input.storageRegion, currentPublicSettings.storageRegion, 120);
+  const emailSmtpEnabled = normalizeBoolean(input.emailSmtpEnabled, currentEmailSettings.emailSmtpEnabled);
+  const emailSmtpHost = normalizeOptionalText(input.emailSmtpHost, currentEmailSettings.emailSmtpHost, 300);
+  const emailSmtpPort = normalizePort(input.emailSmtpPort, currentEmailSettings.emailSmtpPort);
+  const emailSmtpSecure = normalizeBoolean(input.emailSmtpSecure, currentEmailSettings.emailSmtpSecure);
+  const emailSmtpUser = normalizeOptionalText(input.emailSmtpUser, currentEmailSettings.emailSmtpUser, 254);
+  const emailFromEmail = normalizeEmailAddress(input.emailFromEmail, currentEmailSettings.emailFromEmail);
+  const emailFromName = normalizeText(input.emailFromName, currentEmailSettings.emailFromName, 80);
+  const emailReplyTo = normalizeEmailAddress(input.emailReplyTo, currentEmailSettings.emailReplyTo);
+  const emailTestRecipient = normalizeEmailAddress(input.emailTestRecipient, currentEmailSettings.emailTestRecipient);
   const shouldSaveOpenAICompatibleChannels = shouldPersistSubmittedOpenAIChannels(input.openaiCompatibleChannels, settingsMap, openaiImageModel);
   const openaiCompatibleChannels = shouldSaveOpenAICompatibleChannels
     ? normalizeSubmittedOpenAIChannels(
@@ -749,6 +869,15 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
   await upsertSetting("storageEndpoint", storageEndpoint);
   await upsertSetting("storageBucket", storageBucket);
   await upsertSetting("storageRegion", storageRegion);
+  await upsertSetting("emailSmtpEnabled", String(emailSmtpEnabled));
+  await upsertSetting("emailSmtpHost", emailSmtpHost);
+  await upsertSetting("emailSmtpPort", String(emailSmtpPort));
+  await upsertSetting("emailSmtpSecure", String(emailSmtpSecure));
+  await upsertSetting("emailSmtpUser", emailSmtpUser);
+  await upsertSetting("emailFromEmail", emailFromEmail);
+  await upsertSetting("emailFromName", emailFromName);
+  await upsertSetting("emailReplyTo", emailReplyTo);
+  await upsertSetting("emailTestRecipient", emailTestRecipient);
 
   if (input.deepseekApiKey?.trim()) {
     await upsertSetting("deepseekApiKey", encryptSecret(input.deepseekApiKey.trim()), true);
@@ -765,9 +894,13 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
   if (input.stabilityAiApiKey?.trim()) {
     await upsertSetting("stabilityAiApiKey", encryptSecret(input.stabilityAiApiKey.trim()), true);
   }
+
+  if (input.emailSmtpPassword?.trim()) {
+    await upsertSetting("emailSmtpPassword", encryptSecret(input.emailSmtpPassword.trim()), true);
+  }
 }
 
-async function getSecretValue(key: "deepseekApiKey" | "openaiApiKey" | "stabilityAiApiKey", envValue?: string) {
+async function getSecretValue(key: "deepseekApiKey" | "openaiApiKey" | "stabilityAiApiKey" | "emailSmtpPassword", envValue?: string) {
   const map = toMap(await readSettingRows());
   const row = map.get(key);
 
@@ -867,6 +1000,24 @@ export async function getStorageRuntimeConfig(): Promise<StorageRuntimeConfig> {
     endpoint: settings.storageEndpoint,
     bucket: settings.storageBucket,
     region: settings.storageRegion,
+  };
+}
+
+export async function getEmailRuntimeConfig(): Promise<EmailRuntimeConfig> {
+  const map = toMap(await readSettingRows());
+  const settings = getEmailAdminSettings(map);
+
+  return {
+    enabled: settings.emailSmtpEnabled,
+    host: settings.emailSmtpHost,
+    port: settings.emailSmtpPort,
+    secure: settings.emailSmtpSecure,
+    username: settings.emailSmtpUser,
+    password: await getSecretValue("emailSmtpPassword", process.env.EMAIL_SMTP_PASSWORD),
+    fromEmail: settings.emailFromEmail,
+    fromName: settings.emailFromName,
+    replyTo: settings.emailReplyTo,
+    testRecipient: settings.emailTestRecipient,
   };
 }
 
