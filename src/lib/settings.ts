@@ -142,6 +142,12 @@ type SettingRow = {
   isEncrypted: boolean;
 };
 
+type SettingWrite = {
+  key: string;
+  value: string;
+  isEncrypted?: boolean;
+};
+
 const defaultDeepSeekPolishPrompt = [
   "你是图片生成平台的提示词润色助手。",
   "你的任务是把用户输入的中文画面描述改写成更清晰、具体、自然、适合图片生成的提示词。",
@@ -606,7 +612,7 @@ function toMap(rows: SettingRow[]) {
   return new Map(rows.map((row) => [row.key, row]));
 }
 
-async function upsertSetting(key: string, value: string, isEncrypted = false) {
+async function upsertSettings(settings: SettingWrite[]) {
   if (!process.env.DATABASE_URL) {
     throw new Error("缺少 DATABASE_URL，无法保存后台配置。");
   }
@@ -614,12 +620,16 @@ async function upsertSetting(key: string, value: string, isEncrypted = false) {
   const { Prisma } = await import("@prisma/client");
   const { prisma } = await import("@/lib/db");
 
-  await prisma.$executeRaw(
-    Prisma.sql`INSERT INTO "AppSetting" (id, "key", "value", "isEncrypted", "createdAt", "updatedAt")
-      VALUES (${createId()}, ${key}, ${value}, ${isEncrypted}, now(), now())
-      ON CONFLICT ("key")
-      DO UPDATE SET "value" = EXCLUDED."value", "isEncrypted" = EXCLUDED."isEncrypted", "updatedAt" = now()`,
-  );
+  await prisma.$transaction(async (tx) => {
+    for (const setting of settings) {
+      await tx.$executeRaw(
+        Prisma.sql`INSERT INTO "AppSetting" (id, "key", "value", "isEncrypted", "createdAt", "updatedAt")
+          VALUES (${createId()}, ${setting.key}, ${setting.value}, ${Boolean(setting.isEncrypted)}, now(), now())
+          ON CONFLICT ("key")
+          DO UPDATE SET "value" = EXCLUDED."value", "isEncrypted" = EXCLUDED."isEncrypted", "updatedAt" = now()`,
+      );
+    }
+  });
 }
 
 async function checkDatabase(): Promise<AdminDiagnosticItem> {
@@ -909,59 +919,63 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
     throw new AppError("PROVIDER_CONFIG", "缺少 SETTINGS_ENCRYPTION_KEY，无法保存敏感配置。", 400);
   }
 
-  await upsertSetting("browserTitle", browserTitle);
-  await upsertSetting("siteTitle", siteTitle);
-  await upsertSetting("siteSubtitle", siteSubtitle);
-  await upsertSetting("deepseekBaseUrl", deepseekBaseUrl);
-  await upsertSetting("deepseekModel", deepseekModel);
-  await upsertSetting("openaiImageModel", openaiImageModel);
-  await upsertSetting("stabilityAiModel", stabilityAiModel);
-  await upsertSetting("deepseekPolishPrompt", deepseekPolishPrompt);
-  await upsertSetting("moderationEnabled", String(moderationEnabled));
-  await upsertSetting("moderationForbiddenWords", moderationForbiddenWords);
-  await upsertSetting("moderationBlockMessage", moderationBlockMessage);
-  await upsertSetting("defaultGenerationProvider", defaultGenerationProvider);
-  await upsertSetting("chatgptWebEnabled", String(chatgptWebEnabled));
-  await upsertSetting("chatgptWebUserDataDir", chatgptWebUserDataDir);
-  await upsertSetting("chatgptWebHeadless", String(chatgptWebHeadless));
-  await upsertSetting("chatgptWebTimeoutSeconds", String(chatgptWebTimeoutSeconds));
-  await upsertSetting("storageProvider", storageProvider);
-  await upsertSetting("storageLocalBaseDir", storageLocalBaseDir);
-  await upsertSetting("storagePublicBaseUrl", storagePublicBaseUrl);
-  await upsertSetting("storageGeneratedPrefix", storageGeneratedPrefix);
-  await upsertSetting("storageUploadsPrefix", storageUploadsPrefix);
-  await upsertSetting("storageEndpoint", storageEndpoint);
-  await upsertSetting("storageBucket", storageBucket);
-  await upsertSetting("storageRegion", storageRegion);
-  await upsertSetting("emailSmtpEnabled", String(emailSmtpEnabled));
-  await upsertSetting("emailSmtpHost", emailSmtpHost);
-  await upsertSetting("emailSmtpPort", String(emailSmtpPort));
-  await upsertSetting("emailSmtpSecure", String(emailSmtpSecure));
-  await upsertSetting("emailSmtpUser", emailSmtpUser);
-  await upsertSetting("emailFromEmail", emailFromEmail);
-  await upsertSetting("emailFromName", emailFromName);
-  await upsertSetting("emailReplyTo", emailReplyTo);
-  await upsertSetting("emailTestRecipient", emailTestRecipient);
+  const settingsToSave: SettingWrite[] = [
+    { key: "browserTitle", value: browserTitle },
+    { key: "siteTitle", value: siteTitle },
+    { key: "siteSubtitle", value: siteSubtitle },
+    { key: "deepseekBaseUrl", value: deepseekBaseUrl },
+    { key: "deepseekModel", value: deepseekModel },
+    { key: "openaiImageModel", value: openaiImageModel },
+    { key: "stabilityAiModel", value: stabilityAiModel },
+    { key: "deepseekPolishPrompt", value: deepseekPolishPrompt },
+    { key: "moderationEnabled", value: String(moderationEnabled) },
+    { key: "moderationForbiddenWords", value: moderationForbiddenWords },
+    { key: "moderationBlockMessage", value: moderationBlockMessage },
+    { key: "defaultGenerationProvider", value: defaultGenerationProvider },
+    { key: "chatgptWebEnabled", value: String(chatgptWebEnabled) },
+    { key: "chatgptWebUserDataDir", value: chatgptWebUserDataDir },
+    { key: "chatgptWebHeadless", value: String(chatgptWebHeadless) },
+    { key: "chatgptWebTimeoutSeconds", value: String(chatgptWebTimeoutSeconds) },
+    { key: "storageProvider", value: storageProvider },
+    { key: "storageLocalBaseDir", value: storageLocalBaseDir },
+    { key: "storagePublicBaseUrl", value: storagePublicBaseUrl },
+    { key: "storageGeneratedPrefix", value: storageGeneratedPrefix },
+    { key: "storageUploadsPrefix", value: storageUploadsPrefix },
+    { key: "storageEndpoint", value: storageEndpoint },
+    { key: "storageBucket", value: storageBucket },
+    { key: "storageRegion", value: storageRegion },
+    { key: "emailSmtpEnabled", value: String(emailSmtpEnabled) },
+    { key: "emailSmtpHost", value: emailSmtpHost },
+    { key: "emailSmtpPort", value: String(emailSmtpPort) },
+    { key: "emailSmtpSecure", value: String(emailSmtpSecure) },
+    { key: "emailSmtpUser", value: emailSmtpUser },
+    { key: "emailFromEmail", value: emailFromEmail },
+    { key: "emailFromName", value: emailFromName },
+    { key: "emailReplyTo", value: emailReplyTo },
+    { key: "emailTestRecipient", value: emailTestRecipient },
+  ];
 
   if (submittedDeepSeekApiKey) {
-    await upsertSetting("deepseekApiKey", encryptSecret(submittedDeepSeekApiKey), true);
+    settingsToSave.push({ key: "deepseekApiKey", value: encryptSecret(submittedDeepSeekApiKey), isEncrypted: true });
   }
 
   if (submittedOpenaiApiKey) {
-    await upsertSetting("openaiApiKey", encryptSecret(submittedOpenaiApiKey), true);
+    settingsToSave.push({ key: "openaiApiKey", value: encryptSecret(submittedOpenaiApiKey), isEncrypted: true });
   }
 
   if (openaiCompatibleChannels) {
-    await upsertSetting("openaiCompatibleChannels", encryptSecret(JSON.stringify(openaiCompatibleChannels)), true);
+    settingsToSave.push({ key: "openaiCompatibleChannels", value: encryptSecret(JSON.stringify(openaiCompatibleChannels)), isEncrypted: true });
   }
 
   if (submittedStabilityAiApiKey) {
-    await upsertSetting("stabilityAiApiKey", encryptSecret(submittedStabilityAiApiKey), true);
+    settingsToSave.push({ key: "stabilityAiApiKey", value: encryptSecret(submittedStabilityAiApiKey), isEncrypted: true });
   }
 
   if (submittedEmailSmtpPassword) {
-    await upsertSetting("emailSmtpPassword", encryptSecret(submittedEmailSmtpPassword), true);
+    settingsToSave.push({ key: "emailSmtpPassword", value: encryptSecret(submittedEmailSmtpPassword), isEncrypted: true });
   }
+
+  await upsertSettings(settingsToSave);
 }
 
 async function getSecretValue(key: "deepseekApiKey" | "openaiApiKey" | "stabilityAiApiKey" | "emailSmtpPassword", envValue?: string) {
