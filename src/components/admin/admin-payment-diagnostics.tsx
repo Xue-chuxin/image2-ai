@@ -138,6 +138,7 @@ export function AdminPaymentDiagnostics({
 
       <div className="admin-td-panel-grid">
         <Card
+          className="admin-td-card"
           bordered
           title="支付联调面板"
           headerBordered
@@ -162,6 +163,7 @@ export function AdminPaymentDiagnostics({
         </Card>
 
         <Card
+          className="admin-td-card"
           bordered
           title="最近支付事件"
           headerBordered

@@ -113,7 +113,7 @@ export function AdminHealthDashboard({ report }: { report: AdminHealthReport }) 
         {summaryItems.map((item) => (
           <Card key={item.label} bordered hoverShadow className="admin-td-card">
             <Statistic title={item.label} value={item.value} unit="项" />
-            <div className="mt-3">
+            <div className="admin-td-form-section">
               <Tag theme={item.theme} variant="light">{item.label}</Tag>
             </div>
           </Card>
@@ -129,6 +129,7 @@ export function AdminHealthDashboard({ report }: { report: AdminHealthReport }) 
       )}
 
       <Card
+        className="admin-td-card"
         bordered
         title="系统检查"
         headerBordered
@@ -152,8 +153,8 @@ export function AdminHealthDashboard({ report }: { report: AdminHealthReport }) 
         </div>
       </Card>
 
-      <Card bordered title="支付渠道状态" headerBordered>
-        <Descriptions layout="vertical" bordered column={3} className="mb-4">
+      <Card className="admin-td-card" bordered title="支付渠道状态" headerBordered>
+        <Descriptions layout="vertical" bordered column={3} className="admin-td-descriptions-block">
           <Descriptions.DescriptionsItem label="生成时间">{new Date(report.generatedAt).toLocaleString("zh-CN")}</Descriptions.DescriptionsItem>
           <Descriptions.DescriptionsItem label="启用渠道">{report.paymentDiagnostics.filter((item) => item.enabled).length}</Descriptions.DescriptionsItem>
           <Descriptions.DescriptionsItem label="配置完整">{report.paymentDiagnostics.filter((item) => item.configured).length}</Descriptions.DescriptionsItem>

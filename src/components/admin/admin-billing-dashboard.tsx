@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
-import { Alert, Button, Card, Form, Input, InputNumber, Select, Space, Statistic, Switch, Table, Tabs, Tag, Textarea } from "tdesign-react";
+import { Alert, Button, Card, Form, Input, InputNumber, Select, Statistic, Switch, Table, Tabs, Tag, Textarea } from "tdesign-react";
 import type { BillingPaymentSettings, CreditPackageView, RechargeOrderView } from "@/lib/billing";
 
 type BillingPayload = {
@@ -301,7 +301,7 @@ export function AdminBillingDashboard({
       <Card className="admin-td-card">
         <Tabs defaultValue="providers">
           <Tabs.TabPanel value="providers" label="支付渠道">
-            <div className="grid gap-4 xl:grid-cols-2">
+            <div className="admin-td-two-col-grid">
               <PaymentProviderCard
                 title="易支付"
                 enabled={paymentForm.epay.enabled}
@@ -353,14 +353,14 @@ export function AdminBillingDashboard({
                 <SettingInput label={`Secret${paymentForm.paypal.secretConfigured ? "（已配置）" : ""}`} value={paymentForm.paypal.secret || ""} onChange={(value) => patchPayment("paypal.secret", value)} placeholder="留空不修改" />
               </PaymentProviderCard>
             </div>
-            <Button className="mt-4" theme="primary" loading={pending === "save-payment"} onClick={() => void savePaymentSettings()}>
+            <Button className="admin-td-form-section" theme="primary" loading={pending === "save-payment"} onClick={() => void savePaymentSettings()}>
               保存支付渠道配置
             </Button>
           </Tabs.TabPanel>
 
           <Tabs.TabPanel value="packages" label="积分套餐">
-            <div className="grid gap-4 xl:grid-cols-[360px_1fr]">
-              <Card bordered title={form.id ? "编辑套餐" : "新增套餐"}>
+            <div className="admin-td-editor-grid admin-td-editor-grid--narrow">
+              <Card className="admin-td-card admin-td-subcard" bordered title={form.id ? "编辑套餐" : "新增套餐"}>
                 <Form labelAlign="top">
                   <SettingInput label="套餐名称" value={form.name} onChange={(value) => setForm((current) => ({ ...current, name: value }))} placeholder="入门包" />
                   <SettingInput label="描述" value={form.description} onChange={(value) => setForm((current) => ({ ...current, description: value }))} placeholder="适合轻量体验" />
@@ -379,10 +379,10 @@ export function AdminBillingDashboard({
                   <Form.FormItem label="上架套餐">
                     <Switch value={form.isActive} onChange={(value) => setForm((current) => ({ ...current, isActive: Boolean(value) }))} />
                   </Form.FormItem>
-                  <Space>
+                  <div className="admin-td-action-row">
                     <Button theme="primary" loading={pending === "save-package"} onClick={() => void savePackage()}>保存套餐</Button>
                     <Button variant="outline" onClick={() => setForm(emptyForm())}>清空</Button>
-                  </Space>
+                  </div>
                 </Form>
               </Card>
               <div className="admin-td-table-scroll">
@@ -456,7 +456,7 @@ function PaymentProviderCard({
   children: ReactNode;
 }) {
   return (
-    <Card bordered title={title} headerBordered actions={<Switch value={enabled} onChange={(value) => onEnabledChange(Boolean(value))} />}>
+    <Card className="admin-td-card" bordered title={title} headerBordered actions={<Switch value={enabled} onChange={(value) => onEnabledChange(Boolean(value))} />}>
       <Form labelAlign="top">{children}</Form>
     </Card>
   );

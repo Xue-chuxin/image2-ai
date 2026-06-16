@@ -448,8 +448,8 @@ export function AdminImagesDashboard({
           </Tabs.TabPanel>
 
           <Tabs.TabPanel value="curated" label="运营精选">
-            <div className="grid gap-4 xl:grid-cols-[420px_1fr]">
-              <Card bordered title={curatedForm.id ? "编辑精选作品" : "新增精选作品"}>
+            <div className="admin-td-editor-grid">
+              <Card className="admin-td-card admin-td-subcard" bordered title={curatedForm.id ? "编辑精选作品" : "新增精选作品"}>
                 <Form labelAlign="top">
                   <Form.FormItem label="标题">
                     <Input value={curatedForm.title} placeholder="蓝白产品海报" onChange={(value) => patchCuratedForm("title", String(value))} />
@@ -498,11 +498,11 @@ export function AdminImagesDashboard({
                   <Form.FormItem label="展示到作品流">
                     <Switch value={curatedForm.isActive} onChange={(value) => patchCuratedForm("isActive", Boolean(value))} />
                   </Form.FormItem>
-                  <Space>
+                  <div className="admin-td-action-row">
                     <Button theme="primary" loading={pending === "curated-save"} onClick={() => void saveCuratedImage()}>{curatedForm.id ? "保存修改" : "添加精选"}</Button>
                     <Button variant="outline" onClick={() => setCuratedForm(emptyCuratedForm)}>清空</Button>
                     <Button variant="outline" loading={pending === "curated-refresh"} onClick={() => void loadCuratedImages()}>刷新精选</Button>
-                  </Space>
+                  </div>
                 </Form>
               </Card>
               <div className="admin-td-table-scroll admin-td-table-scroll--sm">
