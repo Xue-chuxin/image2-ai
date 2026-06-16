@@ -96,7 +96,7 @@ export default async function HomePage() {
         </GlassSurface>
 
         <div className="order-1 lg:order-2">
-          <GenerateComposer compact />
+          <GenerateComposer compact redirectOnTerminal="/history" />
         </div>
       </section>
 

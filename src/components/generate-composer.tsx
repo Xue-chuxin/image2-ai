@@ -1,10 +1,10 @@
 "use client";
 
 import { type ChangeEvent, type DragEvent, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { Loader2, RotateCcw, Send, UploadCloud, Wand2, X } from "lucide-react";
 import { IMAGE_STYLE_CATEGORIES, type ImageStyleCategory } from "@/lib/image-categories";
-import { GeneratedImagePreview } from "@/components/generated-image-preview";
 
 type ReferenceImageResult = {
   id: string;
@@ -76,6 +76,7 @@ type GenerateComposerProps = {
   onJobChange?: (job: GenerationJobResult | null) => void;
   compact?: boolean;
   referenceImagesEnabled?: boolean;
+  redirectOnTerminal?: string;
 };
 
 const ratios = ["1:1", "3:4", "16:9", "9:16"] as const;
@@ -121,7 +122,15 @@ function formatSize(bytes: number) {
   return `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
 
-export function GenerateComposer({ initialPrompt = "", initialReferenceImages = [], onJobChange, compact = false, referenceImagesEnabled = false }: GenerateComposerProps) {
+export function GenerateComposer({
+  initialPrompt = "",
+  initialReferenceImages = [],
+  onJobChange,
+  compact = false,
+  referenceImagesEnabled = false,
+  redirectOnTerminal,
+}: GenerateComposerProps) {
+  const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [prompt, setPrompt] = useState(initialPrompt);
   const [selectedStyle, setSelectedStyle] = useState<ImageStyleCategory>("写真");
@@ -134,7 +143,6 @@ export function GenerateComposer({ initialPrompt = "", initialReferenceImages = 
   const [referenceImages, setReferenceImages] = useState<ReferenceImageResult[]>(referenceImagesEnabled ? initialReferenceImages.slice(0, MAX_REFERENCE_IMAGES) : []);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploadingReference, setIsUploadingReference] = useState(false);
-  const [currentJob, setCurrentJob] = useState<GenerationJobResult | null>(null);
   const [isPolishing, setIsPolishing] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [notice, setNotice] = useState("");
@@ -143,7 +151,6 @@ export function GenerateComposer({ initialPrompt = "", initialReferenceImages = 
   const canGenerate = useMemo(() => prompt.trim().length > 0 && !isGenerating && !isUploadingReference, [prompt, isGenerating, isUploadingReference]);
 
   function updateJob(job: GenerationJobResult | null) {
-    setCurrentJob(job);
     onJobChange?.(job);
   }
 
@@ -340,7 +347,18 @@ export function GenerateComposer({ initialPrompt = "", initialReferenceImages = 
       }
 
       if (finalJob.status === "FAILED") {
+        if (redirectOnTerminal) {
+          setNotice("任务已结束，正在打开生成记录。");
+          router.push(redirectOnTerminal);
+          return;
+        }
         throw new Error(finalJob.errorMessage || "生成失败");
+      }
+
+      if (redirectOnTerminal) {
+        setNotice("生成完成，正在打开生成记录。");
+        router.push(redirectOnTerminal);
+        return;
       }
 
       setNotice("生成完成，结果已保存到历史记录。");
@@ -491,14 +509,6 @@ export function GenerateComposer({ initialPrompt = "", initialReferenceImages = 
           </div>
           {polishedPromptEn ? <p>{polishedPromptEn}</p> : null}
           {negativePrompt ? <small>避免：{negativePrompt}</small> : null}
-        </div>
-      ) : null}
-
-      {currentJob?.images.length ? (
-        <div className="result-strip">
-          {currentJob.images.map((image) => (
-            <GeneratedImagePreview key={image.id} image={image} alt={currentJob.promptZh} />
-          ))}
         </div>
       ) : null}
 

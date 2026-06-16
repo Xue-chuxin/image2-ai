@@ -27,10 +27,18 @@ export function GeneratedImagePreview({
   image,
   alt,
   className,
+  preferOriginal = false,
+  loadingLabel = "图片保存中",
+  originalLoadingLabel = "正在加载原图",
+  failedLabel = "图片暂时不可访问",
 }: {
   image: GeneratedPreviewImage;
   alt: string;
   className?: string;
+  preferOriginal?: boolean;
+  loadingLabel?: string;
+  originalLoadingLabel?: string;
+  failedLabel?: string;
 }) {
   const imageRef = useRef<HTMLImageElement | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -38,7 +46,7 @@ export function GeneratedImagePreview({
   const [useOriginal, setUseOriginal] = useState(false);
   const [failed, setFailed] = useState(false);
   const hasThumbnail = Boolean(image.thumbnailUrl && image.thumbnailUrl !== image.url);
-  const displayUrl = !useOriginal && image.thumbnailUrl ? image.thumbnailUrl : image.url;
+  const displayUrl = !preferOriginal && !useOriginal && image.thumbnailUrl ? image.thumbnailUrl : image.url;
   const imageSrc = useMemo(() => withRetryToken(displayUrl, attempt), [attempt, displayUrl]);
 
   const syncLoadedFromElement = useCallback(() => {
@@ -61,7 +69,7 @@ export function GeneratedImagePreview({
   }, [imageSrc, syncLoadedFromElement]);
 
   function retryLoad() {
-    if (hasThumbnail && !useOriginal && attempt >= 3) {
+    if (hasThumbnail && !preferOriginal && !useOriginal) {
       setUseOriginal(true);
       setAttempt(0);
       return;
@@ -82,7 +90,7 @@ export function GeneratedImagePreview({
       {!loaded ? (
         <div className="generated-image-preview__loading">
           {failed ? null : <Loader2 className="animate-spin" size={18} />}
-          <span>{failed ? "图片暂时不可访问" : useOriginal ? "正在加载原图" : "图片保存中"}</span>
+          <span>{failed ? failedLabel : useOriginal ? originalLoadingLabel : loadingLabel}</span>
         </div>
       ) : null}
       <img

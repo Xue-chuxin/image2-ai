@@ -90,7 +90,12 @@ function HistoryItem({ job }: { job: GenerationJobView }) {
       <div className="history-card-layout">
         <div className="history-image">
           {firstImage ? (
-            <GeneratedImagePreview image={firstImage} alt={job.promptZh} />
+            <GeneratedImagePreview
+              image={firstImage}
+              alt={job.promptZh}
+              loadingLabel="图片加载中"
+              originalLoadingLabel="图片加载中"
+            />
           ) : (
             <div className="history-placeholder">
               <span>{getQueueStatusLabel(job)}</span>

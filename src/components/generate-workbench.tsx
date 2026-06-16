@@ -106,7 +106,12 @@ export function GenerateWorkbench({ initialPrompt = "", initialReferenceImages =
       <aside className="preview-panel">
         <GlassSurface className="preview-card">
           {firstImage ? (
-            <GeneratedImagePreview image={firstImage} alt={job?.promptZh || "生成结果"} />
+            <GeneratedImagePreview
+              image={firstImage}
+              alt={job?.promptZh || "生成结果"}
+              loadingLabel="图片加载中"
+              originalLoadingLabel="图片加载中"
+            />
           ) : (
             <div className="preview-empty">
               <Sparkles size={28} />
