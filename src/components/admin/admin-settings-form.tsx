@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { Alert, Button, Card, Form, Input, InputNumber, Select, Switch, Tabs, Tag, Textarea } from "tdesign-react";
 import type { AdminAppSettings, AdminDiagnosticStatus, GenerationProviderName, OpenAICompatibleChannelSetting, StorageProviderName } from "@/lib/settings";
 
@@ -163,8 +163,7 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
     });
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function handleSubmit() {
     setError("");
     setMessage("");
     setIsSaving(true);
@@ -320,7 +319,7 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
   }
 
   return (
-    <form onSubmit={handleSubmit} className="admin-td-grid">
+    <div className="admin-td-grid">
       {message ? <Alert theme="success" message={message} /> : null}
       {error ? <Alert theme="error" message={error} /> : null}
 
@@ -576,11 +575,11 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
       </section>
 
       <div className="admin-td-form-footer">
-        <Button theme="primary" size="large" type="submit" loading={isSaving}>
+        <Button theme="primary" size="large" type="button" loading={isSaving} onClick={() => void handleSubmit()}>
           {isSaving ? "保存中" : "保存配置"}
         </Button>
       </div>
-    </form>
+    </div>
   );
 }
 
