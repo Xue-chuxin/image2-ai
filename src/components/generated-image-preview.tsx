@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import { Loader2 } from "lucide-react";
 
@@ -19,6 +19,10 @@ function withRetryToken(url: string, attempt: number) {
   return `${url}${separator}retry=${attempt}`;
 }
 
+function isLoadedImageElement(image: HTMLImageElement | null) {
+  return Boolean(image?.complete && image.naturalWidth > 0);
+}
+
 export function GeneratedImagePreview({
   image,
   alt,
@@ -28,6 +32,7 @@ export function GeneratedImagePreview({
   alt: string;
   className?: string;
 }) {
+  const imageRef = useRef<HTMLImageElement | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [useOriginal, setUseOriginal] = useState(false);
@@ -36,12 +41,24 @@ export function GeneratedImagePreview({
   const displayUrl = !useOriginal && image.thumbnailUrl ? image.thumbnailUrl : image.url;
   const imageSrc = useMemo(() => withRetryToken(displayUrl, attempt), [attempt, displayUrl]);
 
+  const syncLoadedFromElement = useCallback(() => {
+    if (isLoadedImageElement(imageRef.current)) {
+      setLoaded(true);
+      setFailed(false);
+    }
+  }, []);
+
   useEffect(() => {
     setAttempt(0);
     setLoaded(false);
     setUseOriginal(false);
     setFailed(false);
   }, [image.id, image.thumbnailUrl, image.url]);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(syncLoadedFromElement);
+    return () => window.cancelAnimationFrame(frame);
+  }, [imageSrc, syncLoadedFromElement]);
 
   function retryLoad() {
     if (hasThumbnail && !useOriginal && attempt >= 3) {
@@ -69,11 +86,15 @@ export function GeneratedImagePreview({
         </div>
       ) : null}
       <img
+        ref={imageRef}
         src={imageSrc}
         alt={alt}
         decoding="async"
         loading="eager"
-        onLoad={() => setLoaded(true)}
+        onLoad={() => {
+          setLoaded(true);
+          setFailed(false);
+        }}
         onError={retryLoad}
       />
       {image.thumbnailUrl && image.url !== image.thumbnailUrl ? (
