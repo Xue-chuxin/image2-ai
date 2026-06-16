@@ -5,6 +5,7 @@ import { Clock, Coins, ImageIcon, Sparkles } from "lucide-react";
 
 import { GlassSurface, SpotlightCard, StatusStepper } from "./front/react-bits";
 import { GenerateComposer } from "./generate-composer";
+import { GeneratedImagePreview } from "./generated-image-preview";
 
 type ReferenceImageResult = {
   id: string;
@@ -105,7 +106,7 @@ export function GenerateWorkbench({ initialPrompt = "", initialReferenceImages =
       <aside className="preview-panel">
         <GlassSurface className="preview-card">
           {firstImage ? (
-            <img src={firstImage.url} alt={job?.promptZh || "生成结果"} />
+            <GeneratedImagePreview image={firstImage} alt={job?.promptZh || "生成结果"} />
           ) : (
             <div className="preview-empty">
               <Sparkles size={28} />

@@ -1,6 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
 
+import { GeneratedImagePreview } from "@/components/generated-image-preview";
 import { HistoryJobActions } from "@/components/history-job-actions";
 import { BlurText, GlassSurface, SpotlightCard } from "@/components/front/react-bits";
 import { getUserSession } from "@/lib/auth";
@@ -90,7 +90,7 @@ function HistoryItem({ job }: { job: GenerationJobView }) {
       <div className="history-card-layout">
         <div className="history-image">
           {firstImage ? (
-            <Image src={firstImage.thumbnailUrl || firstImage.url} alt={job.promptZh} width={640} height={640} loading="lazy" />
+            <GeneratedImagePreview image={firstImage} alt={job.promptZh} />
           ) : (
             <div className="history-placeholder">
               <span>{getQueueStatusLabel(job)}</span>

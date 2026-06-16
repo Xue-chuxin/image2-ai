@@ -318,6 +318,52 @@ export async function markAdminLoggedIn(userId: string) {
   });
 }
 
+export async function changePasswordForSession({
+  userId,
+  role,
+  currentPassword,
+  newPassword,
+}: {
+  userId: string;
+  role: SessionRole;
+  currentPassword: string;
+  newPassword: string;
+}) {
+  assertDatabaseConfigured();
+
+  if (!currentPassword) {
+    throw new AppError("BAD_REQUEST", "请输入当前密码。", 400);
+  }
+  assertPasswordUsable(newPassword);
+  if (currentPassword === newPassword) {
+    throw new AppError("BAD_REQUEST", "新密码不能和当前密码相同。", 400);
+  }
+
+  const { prisma } = await import("@/lib/db");
+  const user = await prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+  });
+
+  if (!user || user.role !== role || !user.passwordHash) {
+    throw new AppError("UNAUTHORIZED", "登录状态已失效，请重新登录。", 401);
+  }
+
+  if (!verifyPassword(currentPassword, user.passwordHash)) {
+    throw new AppError("UNAUTHORIZED", "当前密码不正确。", 401);
+  }
+
+  await prisma.user.update({
+    where: {
+      id: user.id,
+    },
+    data: {
+      passwordHash: hashPassword(newPassword),
+    },
+  });
+}
+
 export async function loginOrCreateUser(email: string, password: string) {
   assertDatabaseConfigured();
 

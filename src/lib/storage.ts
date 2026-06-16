@@ -56,6 +56,22 @@ function joinUrl(baseUrl: string, ...segments: string[]) {
   return `${baseUrl.replace(/\/+$/, "")}/${pathValue}`;
 }
 
+function getLocalPublicUrlPrefix(config: StorageRuntimeConfig) {
+  if (config.publicBaseUrl) {
+    return "";
+  }
+
+  const publicDir = path.resolve(process.cwd(), "public");
+  const localBaseDir = path.resolve(config.localBaseDir);
+  const relativePath = path.relative(publicDir, localBaseDir).replace(/\\/g, "/");
+
+  if (!relativePath || relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
+    return "";
+  }
+
+  return relativePath.replace(/^\/+|\/+$/g, "");
+}
+
 function getNamespacePrefix(config: StorageRuntimeConfig, namespace: StorageSaveInput["namespace"]) {
   if (namespace === "generated") {
     return config.generatedPrefix;
@@ -128,6 +144,7 @@ export function createLocalStorageService(config: StorageRuntimeConfig): Storage
       await writeFile(path.join(directory, filename), input.buffer);
 
       const metadata = await inspectImage(input.buffer);
+      const publicUrlPrefix = getLocalPublicUrlPrefix(config);
 
       if (input.namespace !== "payment-proof") {
         await mkdir(thumbnailDirectory, { recursive: true });
@@ -135,8 +152,8 @@ export function createLocalStorageService(config: StorageRuntimeConfig): Storage
       }
 
       return {
-        url: joinUrl(config.publicBaseUrl, namespacePrefix, filename),
-        thumbnailUrl: input.namespace === "payment-proof" ? undefined : joinUrl(config.publicBaseUrl, namespacePrefix, "thumbs", filename),
+        url: joinUrl(config.publicBaseUrl, publicUrlPrefix, namespacePrefix, filename),
+        thumbnailUrl: input.namespace === "payment-proof" ? undefined : joinUrl(config.publicBaseUrl, publicUrlPrefix, namespacePrefix, "thumbs", filename),
         width: metadata.width,
         height: metadata.height,
         fileSize: input.buffer.byteLength,

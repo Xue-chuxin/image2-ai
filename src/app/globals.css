@@ -163,6 +163,268 @@ textarea {
   background: rgba(255, 255, 255, 0.96);
 }
 
+.account-menu {
+  position: relative;
+  z-index: 60;
+}
+
+.account-menu__trigger {
+  display: inline-flex;
+  min-height: 40px;
+  max-width: 190px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid rgba(203, 213, 225, 0.74);
+  border-radius: 999px;
+  padding: 0 14px;
+  color: #334155;
+  font-size: 0.78rem;
+  font-weight: 900;
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow: 0 18px 48px rgba(31, 49, 70, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  transition: transform 180ms ease, color 180ms ease, background 180ms ease;
+}
+
+.account-menu__trigger:hover {
+  transform: translateY(-1px);
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.account-menu__trigger span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-menu__dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  display: grid;
+  min-width: 220px;
+  gap: 6px;
+  border: 1px solid rgba(203, 213, 225, 0.78);
+  border-radius: 22px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 24px 64px rgba(31, 49, 70, 0.14);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+}
+
+.account-menu__identity {
+  display: grid;
+  gap: 3px;
+  border-radius: 16px;
+  padding: 10px 11px;
+  background: rgba(241, 245, 249, 0.82);
+}
+
+.account-menu__identity strong,
+.account-menu__identity span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-menu__identity strong {
+  color: #0f172a;
+  font-size: 0.88rem;
+}
+
+.account-menu__identity span {
+  color: #64748b;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.account-menu__item {
+  display: flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 9px;
+  border: 0;
+  border-radius: 14px;
+  padding: 0 11px;
+  color: #334155;
+  font-size: 0.82rem;
+  font-weight: 850;
+  text-align: left;
+  background: transparent;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.account-menu__item:hover {
+  color: #0f172a;
+  background: rgba(226, 236, 246, 0.72);
+}
+
+.account-menu__item--danger {
+  color: #dc2626;
+}
+
+.account-menu__item--danger:hover {
+  color: #b91c1c;
+  background: rgba(254, 226, 226, 0.76);
+}
+
+.account-menu--admin .account-menu__trigger {
+  min-height: 32px;
+  border-color: var(--td-brand-color-light, #d9e8ff);
+  border-radius: var(--td-radius-medium, 6px);
+  padding: 0 10px;
+  color: var(--td-brand-color, #0052d9);
+  font: var(--td-font-body-small);
+  font-weight: 600;
+  background: var(--td-brand-color-light, #e8f1ff);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.account-menu--admin .account-menu__dropdown {
+  border-radius: var(--td-radius-large, 9px);
+  border-color: var(--td-border-level-1-color, #e7eaf0);
+  background: var(--td-bg-color-container, #fff);
+  box-shadow: var(--td-shadow-2, 0 4px 18px rgba(0, 0, 0, 0.1));
+}
+
+.account-password-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+
+.account-password-dialog__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.28);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.account-password-dialog__panel {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: min(100%, 440px);
+  gap: 14px;
+  border: 1px solid rgba(203, 213, 225, 0.78);
+  border-radius: 26px;
+  padding: 22px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 32px 80px rgba(15, 23, 42, 0.2);
+}
+
+.account-password-dialog__eyebrow {
+  margin: 0 0 7px;
+  color: #7b8da3;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.account-password-dialog__panel h2,
+.account-password-dialog__panel p {
+  margin: 0;
+}
+
+.account-password-dialog__panel h2 {
+  color: #0f172a;
+  font-size: 1.5rem;
+  font-weight: 950;
+}
+
+.account-password-dialog__panel p {
+  margin-top: 6px;
+  color: #64748b;
+  font-size: 0.86rem;
+  line-height: 1.7;
+}
+
+.account-password-dialog__panel label {
+  display: grid;
+  gap: 7px;
+  color: #334155;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.account-password-dialog__panel input {
+  min-height: 42px;
+  border: 1px solid rgba(203, 213, 225, 0.86);
+  border-radius: 14px;
+  padding: 0 12px;
+  color: #0f172a;
+  background: rgba(248, 250, 252, 0.72);
+  outline: none;
+}
+
+.account-password-dialog__panel input:focus {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.16);
+}
+
+.account-password-dialog__message,
+.account-password-dialog__error {
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-size: 0.82rem;
+  font-weight: 850;
+  line-height: 1.55;
+}
+
+.account-password-dialog__message {
+  color: #047857;
+  background: rgba(236, 253, 245, 0.9);
+}
+
+.account-password-dialog__error {
+  color: #dc2626;
+  background: rgba(254, 242, 242, 0.9);
+}
+
+.account-password-dialog__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.account-password-dialog__cancel,
+.account-password-dialog__submit {
+  min-height: 42px;
+  border-radius: 14px;
+  font-size: 0.86rem;
+  font-weight: 950;
+}
+
+.account-password-dialog__cancel {
+  border: 1px solid rgba(203, 213, 225, 0.86);
+  color: #334155;
+  background: #ffffff;
+}
+
+.account-password-dialog__submit {
+  color: #ffffff;
+  background: #111827;
+}
+
+.account-password-dialog__submit:disabled,
+.account-menu__item:disabled {
+  cursor: not-allowed;
+  opacity: 0.56;
+}
+
 .front-mobile-nav-item {
   position: relative;
 }
@@ -1730,11 +1992,78 @@ textarea {
   padding: 10px;
 }
 
-.result-strip img {
+.result-strip .generated-image-preview {
+  min-height: 120px;
+}
+
+.result-strip .generated-image-preview,
+.result-strip .generated-image-preview img {
   width: 100%;
   aspect-ratio: 1;
-  object-fit: cover;
   border-radius: 16px;
+}
+
+.generated-image-preview {
+  position: relative;
+  display: grid;
+  overflow: hidden;
+  min-width: 0;
+  min-height: inherit;
+  background:
+    linear-gradient(135deg, rgba(248, 250, 252, 0.94), rgba(226, 236, 246, 0.58)),
+    radial-gradient(circle at 80% 10%, rgba(191, 219, 254, 0.34), transparent 12rem);
+}
+
+.generated-image-preview img {
+  grid-area: 1 / 1;
+  width: 100%;
+  height: 100%;
+  min-height: inherit;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.generated-image-preview.is-loaded img {
+  opacity: 1;
+}
+
+.generated-image-preview__loading {
+  grid-area: 1 / 1;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  color: #64748b;
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.generated-image-preview__open {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 2;
+  border: 1px solid rgba(255, 255, 255, 0.56);
+  border-radius: 999px;
+  padding: 7px 10px;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 900;
+  background: rgba(15, 23, 42, 0.68);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.2);
+  opacity: 0;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.generated-image-preview:hover .generated-image-preview__open,
+.generated-image-preview:focus-within .generated-image-preview__open {
+  opacity: 1;
+  transform: translateY(-1px);
 }
 
 .notice {
@@ -1832,11 +2161,11 @@ textarea {
   border-radius: 30px;
 }
 
-.preview-card img {
+.preview-card .generated-image-preview,
+.preview-card .generated-image-preview img {
   width: 100%;
   height: 100%;
   min-height: 360px;
-  object-fit: cover;
   border-radius: inherit;
 }
 
@@ -2000,6 +2329,13 @@ textarea {
   border: 1px solid rgba(203, 213, 225, 0.62);
   border-radius: 22px;
   background: rgba(241, 245, 249, 0.66);
+}
+
+.history-image .generated-image-preview {
+  width: 100%;
+  height: 100%;
+  min-height: 260px;
+  border-radius: inherit;
 }
 
 .history-image img {
@@ -2179,7 +2515,8 @@ textarea {
   }
 
   .preview-card,
-  .preview-card img {
+  .preview-card .generated-image-preview,
+  .preview-card .generated-image-preview img {
     min-height: 280px;
   }
 

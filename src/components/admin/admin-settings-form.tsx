@@ -404,7 +404,7 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
                       onChange={(value) => update("storageProvider", String(value) as StorageProviderName)}
                     />
                   </Form.FormItem>
-                  <SettingInput label="本地根目录" value={settings.storageLocalBaseDir} onChange={(value) => update("storageLocalBaseDir", value)} placeholder="public" />
+                  <SettingInput label="本地根目录" value={settings.storageLocalBaseDir} onChange={(value) => update("storageLocalBaseDir", value)} placeholder="public/storage" />
                   <SettingInput label="公开访问域名" value={settings.storagePublicBaseUrl} onChange={(value) => update("storagePublicBaseUrl", value)} placeholder="留空使用当前站点相对路径" />
                   <SettingInput label="生成图前缀" value={settings.storageGeneratedPrefix} onChange={(value) => update("storageGeneratedPrefix", value)} />
                   <SettingInput label="上传图前缀" value={settings.storageUploadsPrefix} onChange={(value) => update("storageUploadsPrefix", value)} />

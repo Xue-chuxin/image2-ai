@@ -29,7 +29,7 @@ src/lib/storage.ts
 新增“图片存储”配置：
 
 - `storageProvider`：`local`、`oss`、`cos`、`s3`
-- `storageLocalBaseDir`：本地根目录，默认 `public`
+- `storageLocalBaseDir`：本地根目录，默认 `public/storage`
 - `storagePublicBaseUrl`：公开访问域名，留空时使用站点相对路径
 - `storageGeneratedPrefix`：生成图前缀，默认 `generated`
 - `storageUploadsPrefix`：上传图前缀，默认 `uploads`
@@ -43,7 +43,7 @@ src/lib/storage.ts
 
 ```env
 STORAGE_PROVIDER="local"
-STORAGE_LOCAL_BASE_DIR="public"
+STORAGE_LOCAL_BASE_DIR="public/storage"
 STORAGE_PUBLIC_BASE_URL=""
 STORAGE_GENERATED_PREFIX="generated"
 STORAGE_UPLOADS_PREFIX="uploads"
@@ -52,21 +52,21 @@ STORAGE_UPLOADS_PREFIX="uploads"
 生成图保存为：
 
 ```text
-public/generated/<jobId>-1.png
-public/generated/thumbs/<jobId>-1.png
+public/storage/generated/<jobId>-1.png
+public/storage/generated/thumbs/<jobId>-1.png
 ```
 
 参考图保存为：
 
 ```text
-public/uploads/reference/<userId>-<timestamp>.png
-public/uploads/reference/thumbs/<userId>-<timestamp>.png
+public/storage/uploads/reference/<userId>-<timestamp>.png
+public/storage/uploads/reference/thumbs/<userId>-<timestamp>.png
 ```
 
 支付凭证保存为：
 
 ```text
-public/uploads/payments/<userId>-<orderId>-<timestamp>.png
+public/storage/uploads/payments/<userId>-<orderId>-<timestamp>.png
 ```
 
 ## 4. 公开 URL 规则
@@ -74,8 +74,8 @@ public/uploads/payments/<userId>-<orderId>-<timestamp>.png
 `storagePublicBaseUrl` 留空：
 
 ```text
-/generated/xxx.png
-/uploads/reference/xxx.png
+/storage/generated/xxx.png
+/storage/uploads/reference/xxx.png
 ```
 
 配置为 CDN 或对象存储域名：

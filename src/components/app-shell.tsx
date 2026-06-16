@@ -6,6 +6,7 @@ import { Clock3, Home, ImagePlus, Library, Palette, UserRound } from "lucide-rea
 import { clsx } from "clsx";
 import type { ReactNode } from "react";
 import type { PublicAppSettings } from "@/lib/settings";
+import { AccountMenu } from "@/components/account-menu";
 import { GlassSurface, GooeyNav, ShapeGrid } from "@/components/front/react-bits";
 
 const navItems = [
@@ -23,7 +24,15 @@ function isActivePath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function AppShell({ children, settings }: { children: ReactNode; settings: PublicAppSettings }) {
+export function AppShell({
+  children,
+  settings,
+  user,
+}: {
+  children: ReactNode;
+  settings: PublicAppSettings;
+  user?: { email: string } | null;
+}) {
   const pathname = usePathname();
 
   if (pathname.startsWith("/admin")) {
@@ -57,9 +66,13 @@ export function AppShell({ children, settings }: { children: ReactNode; settings
             </div>
 
             <div className="flex shrink-0 items-center gap-2">
-              <Link href="/signin" className="front-login-button">
-                登录
-              </Link>
+              {user?.email ? (
+                <AccountMenu email={user.email} role="user" />
+              ) : (
+                <Link href="/signin" className="front-login-button">
+                  登录
+                </Link>
+              )}
             </div>
           </div>
 

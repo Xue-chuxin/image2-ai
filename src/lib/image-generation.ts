@@ -1,4 +1,5 @@
 import { readFile } from "fs/promises";
+import { existsSync } from "fs";
 import path from "path";
 
 import { generateWithChatGPTWeb } from "@/lib/chatgpt-web";
@@ -89,9 +90,49 @@ function buildPrompt(request: ImageGenerationRequest, referenceAnalysis?: string
   return parts.join("\n\n");
 }
 
+function extractImagePathname(imageUrl: string) {
+  try {
+    return new URL(imageUrl).pathname;
+  } catch {
+    return imageUrl;
+  }
+}
+
+function safeDecodePathname(value: string) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
 function resolveLocalImagePath(imageUrl: string, storageLocalBaseDir: string) {
-  const clean = imageUrl.replace(/\\/g, "/").replace(/^\/+/, "");
-  return path.resolve(storageLocalBaseDir, clean);
+  const clean = safeDecodePathname(extractImagePathname(imageUrl).split("?")[0].split("#")[0])
+    .replace(/\\/g, "/")
+    .replace(/^\/+/, "");
+  const publicPath = path.resolve(process.cwd(), "public", clean);
+  const localBaseDir = path.resolve(storageLocalBaseDir);
+  const localPath = path.resolve(localBaseDir, clean);
+  const publicDir = path.resolve(process.cwd(), "public");
+  const publicRelativeBase = path.relative(publicDir, localBaseDir).replace(/\\/g, "/");
+
+  if (existsSync(publicPath)) {
+    return publicPath;
+  }
+
+  if (publicRelativeBase && !publicRelativeBase.startsWith("..") && !path.isAbsolute(publicRelativeBase)) {
+    const prefix = `${publicRelativeBase.replace(/^\/+|\/+$/g, "")}/`;
+    if (clean.startsWith(prefix)) {
+      const pathInsideLocalBase = clean.slice(prefix.length);
+      const nestedLocalPath = path.resolve(localBaseDir, pathInsideLocalBase);
+      if (existsSync(nestedLocalPath)) {
+        return nestedLocalPath;
+      }
+      return nestedLocalPath;
+    }
+  }
+
+  return localPath;
 }
 
 async function readImageAsBase64Url(filePath: string, mimeType?: string | null) {

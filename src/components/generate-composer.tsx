@@ -4,6 +4,7 @@ import { type ChangeEvent, type DragEvent, useMemo, useRef, useState } from "rea
 import clsx from "clsx";
 import { Loader2, RotateCcw, Send, UploadCloud, Wand2, X } from "lucide-react";
 import { IMAGE_STYLE_CATEGORIES, type ImageStyleCategory } from "@/lib/image-categories";
+import { GeneratedImagePreview } from "@/components/generated-image-preview";
 
 type ReferenceImageResult = {
   id: string;
@@ -496,7 +497,7 @@ export function GenerateComposer({ initialPrompt = "", initialReferenceImages = 
       {currentJob?.images.length ? (
         <div className="result-strip">
           {currentJob.images.map((image) => (
-            <img key={image.id} src={image.url} alt={currentJob.promptZh} />
+            <GeneratedImagePreview key={image.id} image={image} alt={currentJob.promptZh} />
           ))}
         </div>
       ) : null}

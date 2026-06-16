@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactElement, ReactNode } from "react";
-import { Layout, Menu, Tag } from "tdesign-react";
+import { Layout, Menu } from "tdesign-react";
 import {
   CheckCircleIcon,
   CloudUploadIcon,
@@ -12,6 +12,7 @@ import {
   TaskIcon,
   UserIcon,
 } from "tdesign-icons-react";
+import { AccountMenu } from "@/components/account-menu";
 
 type AdminTabKey = "dashboard" | "users" | "jobs" | "images" | "uploads" | "billing" | "health" | "settings";
 
@@ -91,9 +92,7 @@ export function AdminPageShell({
               <h2 className="admin-td-page-title">{title}</h2>
               <p className="admin-td-page-description">{description}</p>
             </div>
-            <Tag className="admin-td-account-tag" theme="primary" variant="light">
-              {email || "admin"}
-            </Tag>
+            <AccountMenu email={email || "admin"} role="admin" variant="admin" />
           </div>
           <HeadMenu value={active} className="admin-td-mobile-menu md:hidden" theme="light">
             {adminTabs.map((tab) => (

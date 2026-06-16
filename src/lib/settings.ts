@@ -136,7 +136,7 @@ const defaultSettings: PublicAppSettings = {
   chatgptWebHeadless: false,
   chatgptWebTimeoutSeconds: 180,
   storageProvider: "local",
-  storageLocalBaseDir: "public",
+  storageLocalBaseDir: "public/storage",
   storagePublicBaseUrl: "",
   storageGeneratedPrefix: "generated",
   storageUploadsPrefix: "uploads",

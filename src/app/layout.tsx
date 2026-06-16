@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import "tdesign-react/es/style/index.css";
 import "./globals.css";
 import { AppShell } from "@/components/app-shell";
+import { getUserSession } from "@/lib/auth";
 import { getPublicAppSettings } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
@@ -17,12 +18,17 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
-  const settings = await getPublicAppSettings();
+  const [settings, userSession] = await Promise.all([getPublicAppSettings(), getUserSession()]);
 
   return (
     <html lang="zh-CN">
       <body>
-        <AppShell settings={settings}>{children}</AppShell>
+        <AppShell
+          settings={settings}
+          user={userSession ? { email: userSession.email } : null}
+        >
+          {children}
+        </AppShell>
       </body>
     </html>
   );
