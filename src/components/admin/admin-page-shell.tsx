@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { Layout, Menu, Tag } from "tdesign-react";
 import {
   CheckCircleIcon,
@@ -22,7 +22,7 @@ const adminTabs: Array<{
   href: string;
   label: string;
   description: string;
-  icon: ReactNode;
+  icon: ReactElement;
 }> = [
   { key: "users", href: "/admin/users", label: "用户", description: "账号与积分", icon: <UserIcon /> },
   { key: "jobs", href: "/admin/jobs", label: "任务", description: "生图队列", icon: <TaskIcon /> },
