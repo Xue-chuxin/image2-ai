@@ -49,7 +49,6 @@ const adminMenuGroups = [
 export function AdminPageShell({
   active,
   email,
-  eyebrow,
   title,
   description,
   children,
@@ -57,7 +56,7 @@ export function AdminPageShell({
 }: {
   active: AdminTabKey;
   email?: string | null;
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   description: string;
   children: ReactNode;
@@ -89,7 +88,6 @@ export function AdminPageShell({
         <Header className="admin-td-header">
           <div className="admin-td-header-inner">
             <div className="admin-td-page-heading">
-              <p className="admin-td-page-eyebrow">{eyebrow}</p>
               <h2 className="admin-td-page-title">{title}</h2>
               <p className="admin-td-page-description">{description}</p>
             </div>

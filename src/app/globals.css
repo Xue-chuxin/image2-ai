@@ -825,48 +825,44 @@ textarea {
   top: 0;
   z-index: 12;
   height: auto !important;
-  min-height: 96px;
+  min-height: 72px;
   border-bottom: 1px solid var(--td-border-level-1-color, #e7eaf0);
   background: var(--td-bg-color-container, #fff);
 }
 
 .admin-td-header-inner {
   display: flex;
-  min-height: 96px;
-  align-items: flex-start;
+  min-height: 72px;
+  align-items: center;
   justify-content: space-between;
-  gap: 24px;
-  padding: 18px 28px 20px;
+  gap: 20px;
+  padding: 14px 28px;
 }
 
 .admin-td-page-heading {
   min-width: 0;
   flex: 1;
-}
-
-.admin-td-page-eyebrow,
-.admin-td-page-title,
-.admin-td-page-description {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  flex-wrap: wrap;
   margin: 0;
   text-wrap: pretty;
 }
 
-.admin-td-page-eyebrow {
-  color: var(--td-text-color-placeholder, rgba(0, 0, 0, 0.4));
-  font: var(--td-font-mark-small);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
 .admin-td-page-title {
-  margin-top: 4px;
+  margin: 0;
+  flex: 0 0 auto;
   color: var(--td-text-color-primary, rgba(0, 0, 0, 0.9));
-  font: var(--td-font-headline-small);
+  font: var(--td-font-title-extraLarge);
+  line-height: 32px;
 }
 
 .admin-td-page-description {
   max-width: 960px;
-  margin-top: 8px;
+  margin: 0;
+  min-width: 280px;
+  flex: 1 1 520px;
   color: var(--td-text-color-secondary, rgba(0, 0, 0, 0.6));
   font: var(--td-font-body-medium);
   line-height: 22px;
@@ -874,7 +870,7 @@ textarea {
 
 .admin-td-account-tag {
   flex-shrink: 0;
-  margin-top: 4px;
+  margin-top: 0;
   max-width: 260px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1405,12 +1401,25 @@ textarea {
   .admin-td-header-inner {
     min-height: auto;
     flex-direction: column;
-    gap: 12px;
-    padding: 18px 16px;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 12px 16px;
+  }
+
+  .admin-td-page-heading {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
   }
 
   .admin-td-page-title {
-    font: var(--td-font-title-extraLarge);
+    font: var(--td-font-title-large);
+    line-height: 28px;
+  }
+
+  .admin-td-page-description {
+    min-width: 0;
+    flex-basis: auto;
   }
 
   .admin-td-content {
