@@ -136,7 +136,7 @@ function assertPasswordUsable(password: string) {
 }
 
 function isUsableAdminPassword(password?: string | null) {
-  return isUsableSecret(password, 12);
+  return isUsableSecret(password, 6);
 }
 
 function isUsableAdminEmail(email?: string | null) {

@@ -46,7 +46,7 @@ function isLocalOrigin(origin: string) {
 }
 
 function isUsableAdminBootstrap(email?: string, password?: string) {
-  return Boolean(email && email !== "admin@example.com" && isUsableSecret(password, 12));
+  return Boolean(email && email !== "admin@example.com" && isUsableSecret(password, 6));
 }
 
 function countModerationWords(value: string) {
