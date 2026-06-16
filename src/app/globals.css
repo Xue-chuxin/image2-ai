@@ -163,6 +163,42 @@ textarea {
   background: rgba(255, 255, 255, 0.96);
 }
 
+.front-mobile-nav-item {
+  position: relative;
+}
+
+.front-mobile-nav-item-primary {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.54), rgba(255, 255, 255, 0.2)) padding-box,
+    linear-gradient(135deg, rgba(14, 116, 144, 0.72), rgba(125, 211, 252, 0.92) 48%, rgba(37, 99, 235, 0.5)) border-box;
+  box-shadow:
+    0 12px 30px rgba(37, 76, 115, 0.14),
+    0 0 0 4px rgba(186, 230, 253, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+.front-mobile-nav-item-primary::after {
+  content: "";
+  position: absolute;
+  inset: 4px 10px auto;
+  height: 1px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(14, 116, 144, 0.5), transparent);
+  pointer-events: none;
+}
+
+.front-mobile-nav-item-primary:hover,
+.front-mobile-nav-item-primary-active {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.68), rgba(255, 255, 255, 0.28)) padding-box,
+    linear-gradient(135deg, rgba(14, 116, 144, 0.86), rgba(125, 211, 252, 1) 48%, rgba(37, 99, 235, 0.66)) border-box;
+  box-shadow:
+    0 14px 34px rgba(37, 76, 115, 0.2),
+    0 0 0 5px rgba(186, 230, 253, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
 .front-stage {
   min-height: calc(100dvh - 8rem);
   border-radius: 34px;

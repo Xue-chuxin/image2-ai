@@ -88,13 +88,13 @@ export function AppShell({ children, settings }: { children: ReactNode; settings
               key={item.href}
               href={item.href}
               className={clsx(
-                "flex min-h-12 flex-col items-center justify-center gap-1 rounded-[17px] px-1 py-2 text-[11px] font-bold transition duration-200 active:scale-[0.98]",
+                "front-mobile-nav-item flex min-h-12 flex-col items-center justify-center gap-1 rounded-[17px] px-1 py-2 text-[11px] font-bold transition duration-200 active:scale-[0.98]",
                 isPrimary
-                  ? "border border-[#b8d9ee] bg-[#dff0fb] text-[#174766] shadow-[0_12px_30px_rgba(37,76,115,0.18)] hover:bg-[#d7ebf8]"
+                  ? "front-mobile-nav-item-primary text-[#174766]"
                   : active
                     ? "border border-sky-100 bg-[#e9f4fc] text-[#254c73] shadow-card"
                     : "text-slate-500 hover:bg-slate-50 hover:text-slate-950",
-                isPrimary && active && "bg-[#d2eafa] text-[#123b58] shadow-[0_14px_34px_rgba(37,76,115,0.24)]",
+                isPrimary && active && "front-mobile-nav-item-primary-active text-[#123b58]",
               )}
             >
               <Icon className={clsx(isPrimary ? "h-5 w-5" : "h-4 w-4")} />
