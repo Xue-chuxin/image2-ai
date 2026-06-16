@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, LockKeyhole, Mail } from "lucide-react";
+import { Alert, Button, Input } from "tdesign-react";
+import { LockOnIcon, LoginIcon, MailIcon } from "tdesign-icons-react";
 
 type ApiResponse = {
   ok: boolean;
@@ -54,41 +55,33 @@ export function AdminSignInForm({ nextPath = "/admin/settings" }: { nextPath?: s
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-      <label className="block">
-        <span className="text-sm font-bold text-slate-700">管理员邮箱</span>
-        <div className="mt-2 flex items-center gap-3 rounded-2xl border border-ocean-100 bg-ocean-50/60 px-4 py-3">
-          <Mail className="h-4 w-4 text-ocean-700" />
-          <input
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
-            placeholder="admin@example.com"
-            type="email"
-          />
-        </div>
+    <form onSubmit={handleSubmit} className="admin-td-signin-form">
+      <label className="admin-td-signin-field">
+        <span className="admin-td-signin-label">管理员邮箱</span>
+        <Input
+          value={email}
+          autocomplete="username"
+          clearable
+          prefixIcon={<MailIcon />}
+          placeholder="admin@example.com"
+          onChange={(value) => setEmail(String(value))}
+        />
       </label>
-      <label className="block">
-        <span className="text-sm font-bold text-slate-700">管理员密码</span>
-        <div className="mt-2 flex items-center gap-3 rounded-2xl border border-ocean-100 bg-ocean-50/60 px-4 py-3">
-          <LockKeyhole className="h-4 w-4 text-ocean-700" />
-          <input
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
-            placeholder="请输入密码"
-            type="password"
-          />
-        </div>
+      <label className="admin-td-signin-field">
+        <span className="admin-td-signin-label">管理员密码</span>
+        <Input
+          value={password}
+          autocomplete="current-password"
+          prefixIcon={<LockOnIcon />}
+          placeholder="请输入密码"
+          type="password"
+          onChange={(value) => setPassword(String(value))}
+        />
       </label>
-      {error ? <p className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">{error}</p> : null}
-      <button
-        disabled={isSubmitting}
-        className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-ocean-800 px-4 py-3 text-sm font-black text-white shadow-glow disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <LockKeyhole className="h-4 w-4" />}
+      {error ? <Alert theme="error" message={error} /> : null}
+      <Button block theme="primary" type="submit" loading={isSubmitting} icon={<LoginIcon />}>
         {isSubmitting ? "登录中" : "进入后台"}
-      </button>
+      </Button>
     </form>
   );
 }

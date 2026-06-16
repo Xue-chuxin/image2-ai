@@ -916,6 +916,11 @@ textarea {
   padding: 18px 24px 24px;
 }
 
+.admin-td-subcard {
+  margin-top: 16px;
+  background: var(--td-bg-color-container, #fff);
+}
+
 .admin-td-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -926,6 +931,13 @@ textarea {
 .admin-td-panel-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.admin-td-settings-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
   gap: 16px;
   align-items: start;
 }
@@ -1138,6 +1150,57 @@ textarea {
   font-weight: 600;
 }
 
+.admin-td-form-section {
+  margin-top: 16px;
+}
+
+.admin-td-channel-card .t-card__header {
+  min-height: 48px;
+}
+
+.admin-td-channel-toolbar {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 14px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--td-border-level-1-color, #e7eaf0);
+}
+
+.admin-td-channel-state {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+  color: var(--td-text-color-secondary, rgba(0, 0, 0, 0.6));
+  font: var(--td-font-body-small);
+  font-weight: 600;
+}
+
+.admin-td-diagnostic-list {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-td-signin-form {
+  display: grid;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.admin-td-signin-field {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-td-signin-label {
+  color: var(--td-text-color-secondary, rgba(0, 0, 0, 0.6));
+  font: var(--td-font-body-medium);
+  font-weight: 600;
+}
+
 .admin-td-filter-control-sm {
   width: min(180px, 100%) !important;
 }
@@ -1206,6 +1269,10 @@ textarea {
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .admin-td-settings-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .admin-td-card .t-card__header,
   .admin-td-card .t-card__body {
     padding-left: 16px;
@@ -1227,6 +1294,11 @@ textarea {
 
   .admin-user-credit-actions {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-td-channel-toolbar {
+    align-items: stretch;
+    flex-direction: column;
   }
 }
 

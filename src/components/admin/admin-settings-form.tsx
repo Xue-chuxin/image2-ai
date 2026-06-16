@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Alert, Button, Card, Form, Input, InputNumber, Select, Space, Switch, Tag, Textarea } from "tdesign-react";
+import { Alert, Button, Card, Form, Input, InputNumber, Select, Switch, Tag, Textarea } from "tdesign-react";
 import type { AdminAppSettings, AdminDiagnosticStatus, GenerationProviderName, OpenAICompatibleChannelSetting, StorageProviderName } from "@/lib/settings";
 
 type SettingsResponse = {
@@ -276,7 +276,7 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
       {message ? <Alert theme="success" message={message} /> : null}
       {error ? <Alert theme="error" message={error} /> : null}
 
-      <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
+      <div className="admin-td-settings-layout">
         <section className="admin-td-grid">
           <Card className="admin-td-card" title="站点显示">
             <Form labelAlign="top">
@@ -310,26 +310,30 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
               <p className="admin-td-form-hint">未配置兼容通道列表时，会自动使用这里的旧版单通道配置。</p>
             </Form>
 
-            <Card bordered title="OpenAI 兼容中转通道" actions={<Button variant="outline" onClick={addOpenAIChannel}>新增通道</Button>}>
+            <Card className="admin-td-card admin-td-subcard" bordered title="OpenAI 兼容中转通道" actions={<Button variant="outline" onClick={addOpenAIChannel}>新增通道</Button>}>
               <div className="admin-td-grid">
                 {openaiChannels.map((channel, index) => (
-                  <Card key={channel.id} bordered title={`${index + 1}. ${channel.name}`} actions={
-                    <Space>
-                      <Switch value={channel.enabled} onChange={(value) => updateOpenAIChannel(channel.id, "enabled", Boolean(value))} />
-                      <Button
-                        size="small"
-                        variant="outline"
-                        loading={checkingOpenAIChannelId === channel.id}
-                        disabled={!channel.enabled || !channel.apiKeyConfigured}
-                        onClick={() => void checkOpenAIChannel(channel.id)}
-                      >
-                        检测
-                      </Button>
-                      <Button size="small" variant="outline" disabled={index === 0} onClick={() => moveOpenAIChannel(channel.id, -1)}>上移</Button>
-                      <Button size="small" variant="outline" disabled={index === openaiChannels.length - 1} onClick={() => moveOpenAIChannel(channel.id, 1)}>下移</Button>
-                      <Button size="small" theme="danger" variant="outline" onClick={() => removeOpenAIChannel(channel.id)}>删除</Button>
-                    </Space>
-                  }>
+                  <Card key={channel.id} className="admin-td-card admin-td-channel-card" bordered title={`${index + 1}. ${channel.name}`}>
+                    <div className="admin-td-channel-toolbar">
+                      <div className="admin-td-channel-state">
+                        <Switch value={channel.enabled} onChange={(value) => updateOpenAIChannel(channel.id, "enabled", Boolean(value))} />
+                        <span>{channel.enabled ? "已启用" : "已停用"}</span>
+                      </div>
+                      <div className="admin-td-action-row">
+                        <Button
+                          size="small"
+                          variant="outline"
+                          loading={checkingOpenAIChannelId === channel.id}
+                          disabled={!channel.enabled || !channel.apiKeyConfigured}
+                          onClick={() => void checkOpenAIChannel(channel.id)}
+                        >
+                          检测
+                        </Button>
+                        <Button size="small" variant="outline" disabled={index === 0} onClick={() => moveOpenAIChannel(channel.id, -1)}>上移</Button>
+                        <Button size="small" variant="outline" disabled={index === openaiChannels.length - 1} onClick={() => moveOpenAIChannel(channel.id, 1)}>下移</Button>
+                        <Button size="small" theme="danger" variant="outline" onClick={() => removeOpenAIChannel(channel.id)}>删除</Button>
+                      </div>
+                    </div>
                     <Form labelAlign="top">
                       <SettingInput label="名称" value={channel.name} onChange={(value) => updateOpenAIChannel(channel.id, "name", value)} />
                       <SettingInput label="模型" value={channel.model} onChange={(value) => updateOpenAIChannel(channel.id, "model", value)} />
@@ -352,7 +356,7 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
               </div>
             </Card>
 
-            <Form className="mt-4" labelAlign="top">
+            <Form className="admin-td-form-section" labelAlign="top">
               <SettingInput label="Stability AI 模型" value={settings.stabilityAiModel} onChange={(value) => update("stabilityAiModel", value)} />
               <SettingInput
                 label="Stability AI API Key"
@@ -410,19 +414,19 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
               <Form.FormItem label="超时时间（秒）">
                 <InputNumber value={settings.chatgptWebTimeoutSeconds} min={30} max={900} onChange={(value) => update("chatgptWebTimeoutSeconds", Number(value || 120))} />
               </Form.FormItem>
-              <Space>
+              <div className="admin-td-action-row">
                 <Button variant="outline" loading={isOpeningChatGPT} onClick={() => void openChatGPTLoginBrowser()}>打开登录浏览器</Button>
                 <Button theme="primary" loading={isCheckingChatGPT} onClick={() => void checkChatGPTStatus()}>检测登录状态</Button>
-              </Space>
+              </div>
             </Form>
-            {chatgptMessage ? <Alert className="mt-4" theme="success" message={chatgptMessage} /> : null}
-            {chatgptError ? <Alert className="mt-4" theme="error" message={chatgptError} /> : null}
+            {chatgptMessage ? <Alert className="admin-td-form-section" theme="success" message={chatgptMessage} /> : null}
+            {chatgptError ? <Alert className="admin-td-form-section" theme="error" message={chatgptError} /> : null}
           </Card>
         </section>
 
         <aside className="admin-td-grid">
           <Card className="admin-td-card" title="配置检测" actions={<Button variant="outline" loading={isLoggingOut} onClick={() => void logout()}>退出</Button>}>
-            <Space direction="vertical" style={{ width: "100%" }}>
+            <div className="admin-td-diagnostic-list">
               {settings.diagnostics.map((item) => (
                 <Alert
                   key={item.key}
@@ -438,7 +442,7 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
                   }
                 />
               ))}
-            </Space>
+            </div>
           </Card>
 
           <Card className="admin-td-card" title="DeepSeek 润色接口">
