@@ -7,6 +7,16 @@ import { expirePendingRechargeOrders } from "@/lib/recharge-order-expiration";
 
 type PaymentSyncMode = "auto" | "manual";
 
+export const dynamic = "force-dynamic";
+
+const NO_STORE_HEADERS = {
+  "Cache-Control": "private, no-store, no-cache, max-age=0, must-revalidate",
+  "CDN-Cache-Control": "no-store",
+  Expires: "0",
+  Pragma: "no-cache",
+  "Surrogate-Control": "no-store",
+};
+
 function parseOrderIds(request: Request) {
   const { searchParams } = new URL(request.url);
   return Array.from(
@@ -27,7 +37,7 @@ function parseSyncMode(request: Request): PaymentSyncMode {
 export async function GET(request: Request) {
   const session = await getUserSession();
   if (!session) {
-    return NextResponse.json({ ok: false, error: "请先登录用户账号。" }, { status: 401 });
+    return NextResponse.json({ ok: false, error: "请先登录用户账号。" }, { status: 401, headers: NO_STORE_HEADERS });
   }
 
   try {
@@ -42,11 +52,14 @@ export async function GET(request: Request) {
     await expirePendingRechargeOrders(session.userId);
     const overview = await getUserBillingOverview(session.userId, { includeOrderIds });
 
-    return NextResponse.json({
-      ok: true,
-      balance: overview.balance,
-      orders: overview.orders,
-    });
+    return NextResponse.json(
+      {
+        ok: true,
+        balance: overview.balance,
+        orders: overview.orders,
+      },
+      { headers: NO_STORE_HEADERS },
+    );
   } catch (error) {
     return NextResponse.json(
       {
@@ -55,6 +68,7 @@ export async function GET(request: Request) {
       },
       {
         status: 500,
+        headers: NO_STORE_HEADERS,
       },
     );
   }

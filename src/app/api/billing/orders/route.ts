@@ -6,6 +6,16 @@ import { scheduleRechargeOrderAutoSync } from "@/lib/payment-sync";
 import { normalizePaymentProvider } from "@/lib/payments";
 import { checkRateLimit } from "@/lib/rate-limit";
 
+export const dynamic = "force-dynamic";
+
+const NO_STORE_HEADERS = {
+  "Cache-Control": "private, no-store, no-cache, max-age=0, must-revalidate",
+  "CDN-Cache-Control": "no-store",
+  Expires: "0",
+  Pragma: "no-cache",
+  "Surrogate-Control": "no-store",
+};
+
 function normalizeString(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -17,15 +27,18 @@ function getPublicOrigin(request: Request) {
 export async function GET() {
   const session = await getUserSession();
   if (!session) {
-    return NextResponse.json({ ok: false, error: "请先登录用户账号。" }, { status: 401 });
+    return NextResponse.json({ ok: false, error: "请先登录用户账号。" }, { status: 401, headers: NO_STORE_HEADERS });
   }
 
   try {
     const orders = await listUserRechargeOrders(session.userId, 20);
-    return NextResponse.json({
-      ok: true,
-      orders,
-    });
+    return NextResponse.json(
+      {
+        ok: true,
+        orders,
+      },
+      { headers: NO_STORE_HEADERS },
+    );
   } catch (error) {
     return NextResponse.json(
       {
@@ -34,6 +47,7 @@ export async function GET() {
       },
       {
         status: 500,
+        headers: NO_STORE_HEADERS,
       },
     );
   }
@@ -42,7 +56,7 @@ export async function GET() {
 export async function POST(request: Request) {
   const session = await getUserSession();
   if (!session) {
-    return NextResponse.json({ ok: false, error: "请先登录用户账号后再充值。" }, { status: 401 });
+    return NextResponse.json({ ok: false, error: "请先登录用户账号后再充值。" }, { status: 401, headers: NO_STORE_HEADERS });
   }
 
   const rateLimit = checkRateLimit(request, `billing:create-order:${session.userId}`, {
@@ -52,7 +66,7 @@ export async function POST(request: Request) {
   if (!rateLimit.ok) {
     return NextResponse.json(
       { ok: false, error: rateLimit.message },
-      { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+      { status: 429, headers: { ...NO_STORE_HEADERS, "Retry-After": String(rateLimit.retryAfterSeconds) } },
     );
   }
 
@@ -62,7 +76,7 @@ export async function POST(request: Request) {
     const provider = normalizePaymentProvider(body.provider);
 
     if (!packageId) {
-      return NextResponse.json({ ok: false, error: "请选择积分套餐。" }, { status: 400 });
+      return NextResponse.json({ ok: false, error: "请选择积分套餐。" }, { status: 400, headers: NO_STORE_HEADERS });
     }
 
     const origin = getPublicOrigin(request);
@@ -77,6 +91,7 @@ export async function POST(request: Request) {
       },
       {
         status: 201,
+        headers: NO_STORE_HEADERS,
       },
     );
   } catch (error) {
@@ -87,6 +102,7 @@ export async function POST(request: Request) {
       },
       {
         status: 400,
+        headers: NO_STORE_HEADERS,
       },
     );
   }

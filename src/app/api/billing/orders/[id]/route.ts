@@ -11,6 +11,16 @@ type RouteContext = {
   }>;
 };
 
+export const dynamic = "force-dynamic";
+
+const NO_STORE_HEADERS = {
+  "Cache-Control": "private, no-store, no-cache, max-age=0, must-revalidate",
+  "CDN-Cache-Control": "no-store",
+  Expires: "0",
+  Pragma: "no-cache",
+  "Surrogate-Control": "no-store",
+};
+
 function parseSyncMode(request: Request) {
   const { searchParams } = new URL(request.url);
   return searchParams.get("mode") === "auto" ? "auto" : "manual";
@@ -19,7 +29,7 @@ function parseSyncMode(request: Request) {
 export async function GET(request: Request, context: RouteContext) {
   const session = await getUserSession();
   if (!session) {
-    return NextResponse.json({ ok: false, error: "请先登录用户账号。" }, { status: 401 });
+    return NextResponse.json({ ok: false, error: "请先登录用户账号。" }, { status: 401, headers: NO_STORE_HEADERS });
   }
 
   const { id } = await context.params;
@@ -56,16 +66,19 @@ export async function GET(request: Request, context: RouteContext) {
     });
 
     if (!order) {
-      return NextResponse.json({ ok: false, error: "订单不存在或无权查看。" }, { status: 404 });
+      return NextResponse.json({ ok: false, error: "订单不存在或无权查看。" }, { status: 404, headers: NO_STORE_HEADERS });
     }
 
-    return NextResponse.json({
-      ok: true,
-      order: {
-        ...order,
-        totalCredits: order.credits + order.bonusCredits,
+    return NextResponse.json(
+      {
+        ok: true,
+        order: {
+          ...order,
+          totalCredits: order.credits + order.bonusCredits,
+        },
       },
-    });
+      { headers: NO_STORE_HEADERS },
+    );
   } catch (error) {
     return NextResponse.json(
       {
@@ -74,6 +87,7 @@ export async function GET(request: Request, context: RouteContext) {
       },
       {
         status: 500,
+        headers: NO_STORE_HEADERS,
       },
     );
   }

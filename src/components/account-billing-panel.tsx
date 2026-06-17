@@ -244,7 +244,13 @@ export function AccountBillingPanel({
   }, [pendingOrders]);
 
   async function requestJson(url: string, init?: RequestInit) {
-    const response = await fetch(url, init);
+    const headers = new Headers(init?.headers);
+    headers.set("Cache-Control", "no-cache");
+    headers.set("Pragma", "no-cache");
+    const response = await fetch(url, {
+      ...init,
+      headers,
+    });
     const payload = (await response.json().catch(() => ({}))) as BillingPayload;
     if (!response.ok || !payload.ok) {
       throw new Error(payload.error || "操作失败");
@@ -255,6 +261,7 @@ export function AccountBillingPanel({
   async function fetchOrder(orderId: string, mode: BillingRefreshMode = "manual") {
     const params = new URLSearchParams({
       mode,
+      _t: String(Date.now()),
     });
     const payload = await requestJson(`/api/billing/orders/${orderId}?${params.toString()}`, {
       method: "GET",
@@ -273,6 +280,7 @@ export function AccountBillingPanel({
       params.set("orderIds", uniqueOrderIds.join(","));
     }
     params.set("mode", mode);
+    params.set("_t", String(Date.now()));
     const query = params.toString() ? `?${params.toString()}` : "";
     const payload = await requestJson(`/api/billing/overview${query}`, {
       method: "GET",
