@@ -58,6 +58,22 @@ model User {
   rechargeOrders     RechargeOrder[]
 }
 
+model EmailVerificationCode {
+  id         String    @id @default(cuid())
+  email      String
+  purpose    String    @default("register")
+  codeHash   String
+  attempts   Int       @default(0)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([email, purpose, createdAt])
+  @@index([expiresAt])
+  @@index([consumedAt])
+}
+
 model PromptCategory {
   id          String   @id @default(cuid())
   name        String

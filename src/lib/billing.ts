@@ -282,12 +282,8 @@ export async function upsertCreditPackage(input: {
 export async function createRechargeOrder(userId: string, packageId: string, provider: PaymentProviderName, origin: string) {
   await ensureDefaultCreditPackages();
 
-  if (provider !== "epay") {
-    throw new Error("首版充值暂只开放易支付渠道。");
-  }
-
   const channels = await listPublicPaymentChannels();
-  if (!channels.some((channel) => channel.provider === provider && channel.enabled && channel.configured)) {
+  if (!channels.some((channel) => channel.provider === provider)) {
     throw new Error("该支付渠道未启用或尚未配置完整。");
   }
 

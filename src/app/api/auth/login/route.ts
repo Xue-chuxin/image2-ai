@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const payload = (await request.json().catch(() => null)) as { email?: string; password?: string } | null;
+  const payload = (await request.json().catch(() => null)) as { email?: string; password?: string; verificationCode?: string } | null;
   const email = payload?.email?.trim().toLowerCase();
   const password = payload?.password || "";
 
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const user = await loginOrCreateUser(email, password);
+    const user = await loginOrCreateUser(email, password, payload?.verificationCode);
     const credits = await getUserCreditBalance(user.id);
     const response = NextResponse.json({
       ok: true,

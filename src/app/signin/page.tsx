@@ -20,7 +20,7 @@ export default async function SignInPage({
         </div>
         <BlurText as="h1" text="账号登录" className="mt-5 text-3xl font-black text-slate-950" delay={0.035} />
         <p className="mt-2 text-sm leading-6 text-slate-500">
-          普通用户首次登录会自动注册并赠送积分。管理员账号用于进入后台配置站点、Provider 和 DeepSeek 润色提示词。
+          已有账号可直接登录，新用户注册需要邮箱验证码。管理员账号用于进入后台配置站点、Provider 和 DeepSeek 润色提示词。
         </p>
         <SignInForm nextPath={nextPath} initialMode={initialMode} />
       </SpotlightCard>

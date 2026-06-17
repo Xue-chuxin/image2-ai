@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { AppError } from "@/lib/app-error";
 import { isUsableSecret, safeEqual } from "@/lib/app-crypto";
+import { verifyEmailCodeForRegistration } from "@/lib/email-verification";
 
 export const ADMIN_SESSION_COOKIE = "image2_admin_session";
 export const USER_SESSION_COOKIE = "image2_user_session";
@@ -364,7 +365,7 @@ export async function changePasswordForSession({
   });
 }
 
-export async function loginOrCreateUser(email: string, password: string) {
+export async function loginOrCreateUser(email: string, password: string, verificationCode?: string) {
   assertDatabaseConfigured();
 
   const normalizedEmail = normalizeEmail(email);
@@ -432,6 +433,8 @@ export async function loginOrCreateUser(email: string, password: string) {
     });
     return user;
   }
+
+  await verifyEmailCodeForRegistration(normalizedEmail, verificationCode);
 
   const displayName = normalizedEmail.split("@")[0] || "新用户";
   const passwordHash = hashPassword(password);

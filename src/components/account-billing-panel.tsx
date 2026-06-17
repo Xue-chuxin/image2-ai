@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Clock3, CreditCard, ExternalLink, Loader2, QrCode, RefreshCw, ShieldCheck, XCircle } from "lucide-react";
+import { CheckCircle2, ChevronDown, Clock3, CreditCard, ExternalLink, Loader2, QrCode, RefreshCw, ShieldCheck, XCircle } from "lucide-react";
 
 import type { CreditPackageView, RechargeOrderView } from "@/lib/billing";
 import type { PaymentChannelView, PaymentProviderName } from "@/lib/payments";
@@ -35,7 +35,7 @@ function formatTime(value: Date | string) {
   return new Date(value).toLocaleString("zh-CN");
 }
 
-function providerLabel(provider: string) {
+function fallbackProviderLabel(provider: string) {
   if (provider === "epay") {
     return "易支付";
   }
@@ -100,7 +100,8 @@ export function AccountBillingPanel({
   initialOrders: RechargeOrderView[];
   channels: PaymentChannelView[];
 }) {
-  const availableChannels = channels.filter((channel) => channel.enabled && channel.configured);
+  const availableChannels = useMemo(() => channels.filter((channel) => channel.enabled && channel.configured), [channels]);
+  const channelLabelByProvider = useMemo(() => new Map(channels.map((channel) => [channel.provider, channel.label])), [channels]);
   const [currentBalance, setCurrentBalance] = useState(balance);
   const [orders, setOrders] = useState(initialOrders);
   const [selectedProvider, setSelectedProvider] = useState<PaymentProviderName>(availableChannels[0]?.provider || "epay");
@@ -111,6 +112,11 @@ export function AccountBillingPanel({
 
   const pendingOrders = useMemo(() => orders.filter((order) => order.status === "PENDING").length, [orders]);
   const activePendingOrder = useMemo(() => orders.find((order) => order.status === "PENDING"), [orders]);
+  const selectedChannel = availableChannels.find((channel) => channel.provider === selectedProvider) || availableChannels[0];
+
+  function displayProviderLabel(provider: string) {
+    return channelLabelByProvider.get(provider as PaymentProviderName) || fallbackProviderLabel(provider);
+  }
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -127,6 +133,15 @@ export function AccountBillingPanel({
       message: payment === "success" ? "支付平台已返回成功，系统会继续刷新到账状态。" : rawMessage || "支付未完成或返回处理失败。",
     });
   }, []);
+
+  useEffect(() => {
+    if (!selectedChannel) {
+      return;
+    }
+    if (selectedChannel.provider !== selectedProvider) {
+      setSelectedProvider(selectedChannel.provider);
+    }
+  }, [selectedChannel, selectedProvider]);
 
   useEffect(() => {
     if (pendingOrders === 0) {
@@ -254,6 +269,11 @@ export function AccountBillingPanel({
   }
 
   async function createOrder(packageId: string) {
+    if (!selectedChannel) {
+      setMessage("后台尚未配置可用支付渠道。");
+      return;
+    }
+
     setPending(`create:${packageId}`);
     setMessage("");
     try {
@@ -264,7 +284,7 @@ export function AccountBillingPanel({
         },
         body: JSON.stringify({
           packageId,
-          provider: selectedProvider,
+          provider: selectedChannel.provider,
         }),
       });
       if (payload.order) {
@@ -342,23 +362,29 @@ export function AccountBillingPanel({
           <div>
             <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-400">Online Payment</p>
             <h2 className="mt-1 text-2xl font-black text-slate-950">选择在线支付渠道</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-500">人工审核充值已关闭，支付回调成功后积分自动到账。</p>
+            <p className="mt-2 text-sm leading-6 text-slate-500">请选择支付方式并完成支付，回调成功后积分会自动到账。</p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {channels.map((channel) => (
-              <button
-                key={channel.provider}
-                type="button"
-                disabled={!channel.enabled || !channel.configured}
-                onClick={() => setSelectedProvider(channel.provider)}
-                className={`rounded-full border px-4 py-2 text-sm font-black disabled:cursor-not-allowed disabled:opacity-40 ${
-                  selectedProvider === channel.provider ? "border-slate-950 bg-slate-950 text-white" : "border-slate-200 bg-white text-slate-600"
-                }`}
+          <div className="min-w-[220px]">
+            <label htmlFor="payment-provider" className="sr-only">
+              支付方式
+            </label>
+            <div className="relative">
+              <select
+                id="payment-provider"
+                value={selectedChannel?.provider || ""}
+                disabled={availableChannels.length === 0}
+                onChange={(event) => setSelectedProvider(event.target.value as PaymentProviderName)}
+                className="h-11 w-full appearance-none rounded-full border border-slate-200 bg-white px-4 pr-10 text-sm font-black text-slate-700 shadow-card outline-none transition focus:border-ocean-400 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
               >
-                {channel.label}
-                {!channel.configured ? "（未配置）" : ""}
-              </button>
-            ))}
+                {availableChannels.length === 0 ? <option value="">暂无可用渠道</option> : null}
+                {availableChannels.map((channel) => (
+                  <option key={channel.provider} value={channel.provider}>
+                    {channel.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            </div>
           </div>
         </div>
 
@@ -442,7 +468,7 @@ export function AccountBillingPanel({
                   <div className="flex flex-wrap items-center gap-2">
                     <span className={`rounded-full border px-3 py-1 text-xs font-black ${statusClass(order.status)}`}>{statusLabel(order.status)}</span>
                     <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-black text-slate-500">{order.orderNo}</span>
-                    <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-black text-slate-500">{providerLabel(order.provider)}</span>
+                    <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-black text-slate-500">{displayProviderLabel(order.provider)}</span>
                   </div>
                   <h3 className="mt-3 text-lg font-black text-slate-950">{order.packageNameSnapshot}</h3>
                   <p className="mt-1 text-sm font-bold text-slate-500">

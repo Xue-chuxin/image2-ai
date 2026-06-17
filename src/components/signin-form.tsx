@@ -8,6 +8,7 @@ type SignInMode = "user" | "admin";
 
 type ApiResponse = {
   ok: boolean;
+  message?: string;
   error?: string;
 };
 
@@ -35,9 +36,41 @@ export function SignInForm({
   const [mode, setMode] = useState<SignInMode>(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSendingCode, setIsSendingCode] = useState(false);
+
+  async function sendVerificationCode() {
+    setError("");
+    setMessage("");
+    setIsSendingCode(true);
+
+    try {
+      const response = await fetch("/api/auth/email-code", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          purpose: "register",
+        }),
+      });
+      const data = await readApiResponse(response);
+
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || "验证码发送失败。");
+      }
+
+      setMessage(data.message || "验证码已发送，请查收邮箱。");
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "验证码发送失败。");
+    } finally {
+      setIsSendingCode(false);
+    }
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -54,6 +87,7 @@ export function SignInForm({
         body: JSON.stringify({
           email,
           password,
+          verificationCode: mode === "user" ? verificationCode : undefined,
         }),
       });
       const data = await readApiResponse(response);
@@ -121,11 +155,40 @@ export function SignInForm({
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
-              placeholder={mode === "user" ? "首次登录会自动注册" : "请输入管理员密码"}
+              placeholder={mode === "user" ? "已有账号输入密码，新用户设置密码" : "请输入管理员密码"}
               type="password"
             />
           </div>
         </label>
+
+        {mode === "user" ? (
+          <div className="block">
+            <span className="text-sm font-bold text-slate-700">注册验证码</span>
+            <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+              <div className="flex flex-1 items-center gap-3 rounded-2xl border border-ocean-100 bg-ocean-50/60 px-4 py-3">
+                <ShieldCheck className="h-4 w-4 text-ocean-700" />
+                <input
+                  value={verificationCode}
+                  onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                  className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
+                  placeholder="新用户填写 6 位验证码"
+                  inputMode="numeric"
+                  maxLength={6}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => void sendVerificationCode()}
+                disabled={isSendingCode || isSubmitting || !email.trim()}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-ocean-100 bg-white px-4 py-3 text-sm font-black text-ocean-800 shadow-card disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isSendingCode ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                {isSendingCode ? "发送中" : "发送验证码"}
+              </button>
+            </div>
+            <p className="mt-2 text-xs font-bold leading-5 text-slate-500">已有账号可直接登录；新用户注册需要邮箱验证码。</p>
+          </div>
+        ) : null}
 
         {message ? (
           <p className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">

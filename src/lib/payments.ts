@@ -428,7 +428,7 @@ export async function listEnabledPaymentChannels(): Promise<PaymentChannelView[]
 
 export async function listPublicPaymentChannels(): Promise<PaymentChannelView[]> {
   const channels = await listEnabledPaymentChannels();
-  return channels.filter((channel) => channel.provider === "epay");
+  return channels.filter((channel) => channel.enabled && channel.configured);
 }
 
 function createNotifyUrl(origin: string, provider: PaymentProviderName) {
