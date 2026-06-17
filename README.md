@@ -259,18 +259,6 @@ bash scripts/update.sh docker-web  # docker-compose.web.yml
 
 升级脚本会在拉取代码前检查工作区是否有未提交改动；如果用户做过本地二开，需要先提交、合并或备份自己的改动。
 
-## 维护者发布建议
-
-- 每次发布前更新 `CHANGELOG.md`。
-- 如果新增环境变量，同步更新 `.env.example` 和 `UPGRADE.md`。
-- 如果修改数据库结构，必须提交 Prisma migration，并在升级说明里提醒用户执行迁移。
-- 建议使用语义化 tag，例如 `v0.1.0`、`v0.2.0`。
-- 推送发布时同时推送 GitHub 和 Gitee：
-
-```bash
-git push origin main --tags
-git push gitee main --tags
-```
 
 ## 常用脚本
 
