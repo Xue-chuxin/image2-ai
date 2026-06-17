@@ -773,19 +773,19 @@ export async function getPublicAppSettings(): Promise<PublicAppSettings> {
     defaultSettings.chatgptWebUserDataDir,
     300,
   );
-  const openaiImageModel = getStoredSetting(map, "openaiImageModel") || process.env.OPENAI_IMAGE_MODEL || defaultSettings.openaiImageModel;
+  const openaiImageModel = normalizeText(getStoredSetting(map, "openaiImageModel") || process.env.OPENAI_IMAGE_MODEL, defaultSettings.openaiImageModel);
 
   return {
-    browserTitle: getStoredSetting(map, "browserTitle") || defaultSettings.browserTitle,
-    siteTitle: getStoredSetting(map, "siteTitle") || defaultSettings.siteTitle,
-    siteSubtitle: getStoredSetting(map, "siteSubtitle") || defaultSettings.siteSubtitle,
+    browserTitle: normalizeText(getStoredSetting(map, "browserTitle"), defaultSettings.browserTitle),
+    siteTitle: normalizeText(getStoredSetting(map, "siteTitle"), defaultSettings.siteTitle),
+    siteSubtitle: normalizeText(getStoredSetting(map, "siteSubtitle"), defaultSettings.siteSubtitle),
     defaultGenerationProvider: normalizeProvider(
       getStoredSetting(map, "defaultGenerationProvider") || process.env.DEFAULT_GENERATION_PROVIDER || defaultSettings.defaultGenerationProvider,
     ),
-    deepseekBaseUrl: getStoredSetting(map, "deepseekBaseUrl") || process.env.DEEPSEEK_BASE_URL || defaultSettings.deepseekBaseUrl,
-    deepseekModel: getStoredSetting(map, "deepseekModel") || process.env.DEEPSEEK_MODEL || defaultSettings.deepseekModel,
+    deepseekBaseUrl: normalizeText(getStoredSetting(map, "deepseekBaseUrl") || process.env.DEEPSEEK_BASE_URL, defaultSettings.deepseekBaseUrl, 200),
+    deepseekModel: normalizeText(getStoredSetting(map, "deepseekModel") || process.env.DEEPSEEK_MODEL, defaultSettings.deepseekModel),
     openaiImageModel,
-    stabilityAiModel: getStoredSetting(map, "stabilityAiModel") || process.env.STABILITY_AI_MODEL || defaultSettings.stabilityAiModel,
+    stabilityAiModel: normalizeText(getStoredSetting(map, "stabilityAiModel") || process.env.STABILITY_AI_MODEL, defaultSettings.stabilityAiModel),
     chatgptWebEnabled: getStoredBoolean(map, "chatgptWebEnabled", process.env.CHATGPT_WEB_ENABLED, defaultSettings.chatgptWebEnabled),
     chatgptWebUserDataDir,
     chatgptWebHeadless: getStoredBoolean(map, "chatgptWebHeadless", process.env.CHATGPT_WEB_HEADLESS, defaultSettings.chatgptWebHeadless),
@@ -797,18 +797,18 @@ export async function getPublicAppSettings(): Promise<PublicAppSettings> {
     ),
     storageProvider: normalizeStorageProvider(getStoredSetting(map, "storageProvider") || process.env.STORAGE_PROVIDER || defaultSettings.storageProvider),
     storageLocalBaseDir: normalizeText(getStoredSetting(map, "storageLocalBaseDir") || process.env.STORAGE_LOCAL_BASE_DIR, defaultSettings.storageLocalBaseDir, 300),
-    storagePublicBaseUrl: normalizeText(getStoredSetting(map, "storagePublicBaseUrl") || process.env.STORAGE_PUBLIC_BASE_URL, defaultSettings.storagePublicBaseUrl, 300),
+    storagePublicBaseUrl: normalizeOptionalText(getStoredSetting(map, "storagePublicBaseUrl") || process.env.STORAGE_PUBLIC_BASE_URL, defaultSettings.storagePublicBaseUrl, 300),
     storageGeneratedPrefix: normalizeStoragePrefix(getStoredSetting(map, "storageGeneratedPrefix") || process.env.STORAGE_GENERATED_PREFIX, defaultSettings.storageGeneratedPrefix),
     storageUploadsPrefix: normalizeStoragePrefix(getStoredSetting(map, "storageUploadsPrefix") || process.env.STORAGE_UPLOADS_PREFIX, defaultSettings.storageUploadsPrefix),
-    storageEndpoint: normalizeText(getStoredSetting(map, "storageEndpoint") || process.env.STORAGE_ENDPOINT, defaultSettings.storageEndpoint, 300),
-    storageBucket: normalizeText(getStoredSetting(map, "storageBucket") || process.env.STORAGE_BUCKET, defaultSettings.storageBucket, 160),
-    storageRegion: normalizeText(getStoredSetting(map, "storageRegion") || process.env.STORAGE_REGION, defaultSettings.storageRegion, 120),
+    storageEndpoint: normalizeOptionalText(getStoredSetting(map, "storageEndpoint") || process.env.STORAGE_ENDPOINT, defaultSettings.storageEndpoint, 300),
+    storageBucket: normalizeOptionalText(getStoredSetting(map, "storageBucket") || process.env.STORAGE_BUCKET, defaultSettings.storageBucket, 160),
+    storageRegion: normalizeOptionalText(getStoredSetting(map, "storageRegion") || process.env.STORAGE_REGION, defaultSettings.storageRegion, 120),
   };
 }
 
 export async function getOpenAICompatibleChannelSettings(): Promise<OpenAICompatibleChannelSetting[]> {
   const map = toMap(await readSettingRows());
-  const openaiImageModel = getStoredSetting(map, "openaiImageModel") || process.env.OPENAI_IMAGE_MODEL || defaultSettings.openaiImageModel;
+  const openaiImageModel = normalizeText(getStoredSetting(map, "openaiImageModel") || process.env.OPENAI_IMAGE_MODEL, defaultSettings.openaiImageModel);
   return toPublicOpenAICompatibleChannels(map, { openaiImageModel });
 }
 
@@ -826,7 +826,7 @@ export async function getAdminAppSettings(): Promise<AdminAppSettings> {
   return {
     ...publicSettings,
     openaiCompatibleChannels,
-    deepseekPolishPrompt: getStoredSetting(map, "deepseekPolishPrompt") || defaultDeepSeekPolishPrompt,
+    deepseekPolishPrompt: normalizeText(getStoredSetting(map, "deepseekPolishPrompt"), defaultDeepSeekPolishPrompt, 6000),
     moderationEnabled: moderationSettings.enabled,
     moderationForbiddenWords: moderationSettings.forbiddenWords,
     moderationBlockMessage: moderationSettings.blockMessage,

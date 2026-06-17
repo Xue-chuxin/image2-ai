@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Alert, Button, Card, Form, Image, Input, Select, Space, Statistic, Switch, Table, Tabs, Tag, Textarea } from "tdesign-react";
 import type { AdminCuratedGalleryImageView, AdminGalleryImageView } from "@/lib/gallery";
 
@@ -451,53 +451,53 @@ export function AdminImagesDashboard({
             <div className="admin-td-editor-grid">
               <Card className="admin-td-card admin-td-subcard" bordered title={curatedForm.id ? "编辑精选作品" : "新增精选作品"}>
                 <Form labelAlign="top">
-                  <Form.FormItem label="标题">
+                  <SettingField label="标题">
                     <Input value={curatedForm.title} placeholder="蓝白产品海报" onChange={(value) => patchCuratedForm("title", String(value))} />
-                  </Form.FormItem>
-                  <Form.FormItem label="图片地址">
+                  </SettingField>
+                  <SettingField label="图片地址">
                     <Input value={curatedForm.imageUrl} placeholder="https://..." onChange={(value) => patchCuratedForm("imageUrl", String(value))} />
-                  </Form.FormItem>
-                  <Form.FormItem label="缩略图地址">
+                  </SettingField>
+                  <SettingField label="缩略图地址">
                     <Input value={curatedForm.thumbnailUrl} placeholder="留空则使用原图" onChange={(value) => patchCuratedForm("thumbnailUrl", String(value))} />
-                  </Form.FormItem>
+                  </SettingField>
                   <Space breakLine size="small">
-                    <Form.FormItem label="分类">
+                    <SettingField label="分类">
                       <Select value={curatedForm.category} options={categoryOptions} className="admin-td-inline-control-sm" onChange={(value) => patchCuratedForm("category", String(value))} />
-                    </Form.FormItem>
-                    <Form.FormItem label="比例">
+                    </SettingField>
+                    <SettingField label="比例">
                       <Select value={curatedForm.ratio} options={ratioOptions} className="admin-td-inline-control-sm" onChange={(value) => patchCuratedForm("ratio", String(value))} />
-                    </Form.FormItem>
-                    <Form.FormItem label="排序">
+                    </SettingField>
+                    <SettingField label="排序">
                       <Input value={curatedForm.sortOrder} className="admin-td-inline-control-sm" onChange={(value) => patchCuratedForm("sortOrder", String(value))} />
-                    </Form.FormItem>
+                    </SettingField>
                   </Space>
-                  <Form.FormItem label="简介">
+                  <SettingField label="简介">
                     <Textarea value={curatedForm.summary} autosize={{ minRows: 2, maxRows: 4 }} onChange={(value) => patchCuratedForm("summary", String(value))} />
-                  </Form.FormItem>
-                  <Form.FormItem label="中文提示词">
+                  </SettingField>
+                  <SettingField label="中文提示词">
                     <Textarea value={curatedForm.promptZh} autosize={{ minRows: 3, maxRows: 6 }} onChange={(value) => patchCuratedForm("promptZh", String(value))} />
-                  </Form.FormItem>
-                  <Form.FormItem label="英文提示词">
+                  </SettingField>
+                  <SettingField label="英文提示词">
                     <Textarea value={curatedForm.promptEn} autosize={{ minRows: 2, maxRows: 4 }} onChange={(value) => patchCuratedForm("promptEn", String(value))} />
-                  </Form.FormItem>
-                  <Form.FormItem label="过滤指令">
+                  </SettingField>
+                  <SettingField label="过滤指令">
                     <Textarea value={curatedForm.negativePrompt} autosize={{ minRows: 2, maxRows: 4 }} onChange={(value) => patchCuratedForm("negativePrompt", String(value))} />
-                  </Form.FormItem>
-                  <Form.FormItem label="标签">
+                  </SettingField>
+                  <SettingField label="标签">
                     <Input value={curatedForm.tags} placeholder="蓝白, 产品, 留白" onChange={(value) => patchCuratedForm("tags", String(value))} />
-                  </Form.FormItem>
-                  <Form.FormItem label="作者">
+                  </SettingField>
+                  <SettingField label="作者">
                     <Input value={curatedForm.authorName} onChange={(value) => patchCuratedForm("authorName", String(value))} />
-                  </Form.FormItem>
-                  <Form.FormItem label="来源名称">
+                  </SettingField>
+                  <SettingField label="来源名称">
                     <Input value={curatedForm.sourceName} onChange={(value) => patchCuratedForm("sourceName", String(value))} />
-                  </Form.FormItem>
-                  <Form.FormItem label="来源链接">
+                  </SettingField>
+                  <SettingField label="来源链接">
                     <Input value={curatedForm.sourceUrl} placeholder="可留空" onChange={(value) => patchCuratedForm("sourceUrl", String(value))} />
-                  </Form.FormItem>
-                  <Form.FormItem label="展示到作品流">
+                  </SettingField>
+                  <SettingField label="展示到作品流">
                     <Switch value={curatedForm.isActive} onChange={(value) => patchCuratedForm("isActive", Boolean(value))} />
-                  </Form.FormItem>
+                  </SettingField>
                   <div className="admin-td-action-row">
                     <Button theme="primary" loading={pending === "curated-save"} onClick={() => void saveCuratedImage()}>{curatedForm.id ? "保存修改" : "添加精选"}</Button>
                     <Button variant="outline" onClick={() => setCuratedForm(emptyCuratedForm)}>清空</Button>
@@ -524,5 +524,14 @@ export function AdminImagesDashboard({
         </Tabs>
       </Card>
     </section>
+  );
+}
+
+function SettingField({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="admin-td-field">
+      <span className="admin-td-field-label">{label}</span>
+      <div className="admin-td-field-control">{children}</div>
+    </div>
   );
 }

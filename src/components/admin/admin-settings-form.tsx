@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Alert, Button, Card, Form, Input, InputNumber, Select, Switch, Tabs, Tag, Textarea } from "tdesign-react";
 import type { AdminAppSettings, AdminDiagnosticStatus, GenerationProviderName, OpenAICompatibleChannelSetting, StorageProviderName } from "@/lib/settings";
 
@@ -451,7 +451,7 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
             <div className="admin-td-tab-panel">
               <Card className="admin-td-card" bordered title="基础生图配置">
                 <Form labelAlign="top">
-                  <Form.FormItem label="默认生图 Provider">
+                  <SettingField label="默认生图 Provider">
                     <Select
                       value={settings.defaultGenerationProvider}
                       options={[
@@ -461,7 +461,7 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
                       ]}
                       onChange={(value) => update("defaultGenerationProvider", String(value) as GenerationProviderName)}
                     />
-                  </Form.FormItem>
+                  </SettingField>
                   <SettingInput label="OpenAI 图像模型" value={settings.openaiImageModel} onChange={(value) => update("openaiImageModel", value)} />
                   <SettingInput
                     label="旧版 OpenAI API Key"
@@ -510,9 +510,9 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
                           placeholder={channel.apiKeyConfigured ? "已配置，留空表示不修改" : "未配置"}
                           type="password"
                         />
-                        <Form.FormItem label="超时秒数">
+                        <SettingField label="超时秒数">
                           <InputNumber value={channel.timeoutSeconds} min={30} max={900} onChange={(value) => updateOpenAIChannel(channel.id, "timeoutSeconds", Number(value || 120))} />
-                        </Form.FormItem>
+                        </SettingField>
                       </Form>
                     </Card>
                   ))}
@@ -540,9 +540,9 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
             <div className="admin-td-tab-panel-grid">
               <Card className="admin-td-card" bordered title="内容安全">
                 <Form labelAlign="top">
-                  <Form.FormItem label="启用违禁词拦截">
+                  <SettingField label="启用违禁词拦截">
                     <Switch value={settings.moderationEnabled} onChange={(value) => update("moderationEnabled", Boolean(value))} />
-                  </Form.FormItem>
+                  </SettingField>
                   <SettingInput label="违禁词词库" value={settings.moderationForbiddenWords} onChange={(value) => update("moderationForbiddenWords", value)} textarea minRows={8} />
                   <SettingInput label="拦截提示文案" value={settings.moderationBlockMessage} onChange={(value) => update("moderationBlockMessage", value)} />
                 </Form>
@@ -550,7 +550,7 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
 
               <Card className="admin-td-card" bordered title="图片存储">
                 <Form labelAlign="top">
-                  <Form.FormItem label="存储类型">
+                  <SettingField label="存储类型">
                     <Select
                       value={settings.storageProvider}
                       options={[
@@ -561,7 +561,7 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
                       ]}
                       onChange={(value) => update("storageProvider", String(value) as StorageProviderName)}
                     />
-                  </Form.FormItem>
+                  </SettingField>
                   <SettingInput label="本地根目录" value={settings.storageLocalBaseDir} onChange={(value) => update("storageLocalBaseDir", value)} placeholder="public/storage" />
                   <SettingInput label="公开访问域名" value={settings.storagePublicBaseUrl} onChange={(value) => update("storagePublicBaseUrl", value)} placeholder="留空使用当前站点相对路径" />
                   <SettingInput label="生成图前缀" value={settings.storageGeneratedPrefix} onChange={(value) => update("storageGeneratedPrefix", value)} />
@@ -593,16 +593,16 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
 
               <Card className="admin-td-card" bordered title="网页版 ChatGPT">
                 <Form labelAlign="top">
-                  <Form.FormItem label="启用 ChatGPT Web">
+                  <SettingField label="启用 ChatGPT Web">
                     <Switch value={settings.chatgptWebEnabled} onChange={(value) => update("chatgptWebEnabled", Boolean(value))} />
-                  </Form.FormItem>
+                  </SettingField>
                   <SettingInput label="浏览器 Profile 路径" value={settings.chatgptWebUserDataDir} onChange={(value) => update("chatgptWebUserDataDir", value)} />
-                  <Form.FormItem label="无头模式">
+                  <SettingField label="无头模式">
                     <Switch value={settings.chatgptWebHeadless} onChange={(value) => update("chatgptWebHeadless", Boolean(value))} />
-                  </Form.FormItem>
-                  <Form.FormItem label="超时时间（秒）">
+                  </SettingField>
+                  <SettingField label="超时时间（秒）">
                     <InputNumber value={settings.chatgptWebTimeoutSeconds} min={30} max={900} onChange={(value) => update("chatgptWebTimeoutSeconds", Number(value || 120))} />
-                  </Form.FormItem>
+                  </SettingField>
                   <div className="admin-td-action-row">
                     <Button type="button" variant="outline" loading={isOpeningChatGPT} onClick={() => void openChatGPTLoginBrowser()}>打开登录浏览器</Button>
                     <Button type="button" theme="primary" loading={isCheckingChatGPT} onClick={() => void checkChatGPTStatus()}>检测登录状态</Button>
@@ -618,16 +618,16 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
             <div className="admin-td-tab-panel-grid">
               <Card className="admin-td-card" bordered title="SMTP 发信配置">
                 <Form labelAlign="top">
-                  <Form.FormItem label="启用 SMTP 发信">
+                  <SettingField label="启用 SMTP 发信">
                     <Switch value={settings.emailSmtpEnabled} onChange={(value) => update("emailSmtpEnabled", Boolean(value))} />
-                  </Form.FormItem>
+                  </SettingField>
                   <SettingInput label="SMTP Host" value={settings.emailSmtpHost} onChange={(value) => update("emailSmtpHost", value)} placeholder="smtp.example.com" />
-                  <Form.FormItem label="SMTP 端口">
+                  <SettingField label="SMTP 端口">
                     <InputNumber value={settings.emailSmtpPort} min={1} max={65535} onChange={(value) => update("emailSmtpPort", Number(value || 465))} />
-                  </Form.FormItem>
-                  <Form.FormItem label="SSL/TLS">
+                  </SettingField>
+                  <SettingField label="SSL/TLS">
                     <Switch value={settings.emailSmtpSecure} onChange={(value) => update("emailSmtpSecure", Boolean(value))} />
-                  </Form.FormItem>
+                  </SettingField>
                   <SettingInput label="SMTP 用户名" value={settings.emailSmtpUser} onChange={(value) => update("emailSmtpUser", value)} placeholder="通常为邮箱账号" />
                   <SettingInput
                     label="SMTP 密码/授权码"
@@ -711,12 +711,21 @@ function SettingInput({
   minRows?: number;
 }) {
   return (
-    <Form.FormItem label={label}>
+    <SettingField label={label}>
       {textarea ? (
         <Textarea value={value} placeholder={placeholder} autosize={{ minRows, maxRows: Math.max(minRows + 2, 6) }} onChange={(nextValue) => onChange(String(nextValue))} />
       ) : (
         <Input value={value} type={type} placeholder={placeholder} onChange={(nextValue) => onChange(String(nextValue))} />
       )}
-    </Form.FormItem>
+    </SettingField>
+  );
+}
+
+function SettingField({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="admin-td-field">
+      <span className="admin-td-field-label">{label}</span>
+      <div className="admin-td-field-control">{children}</div>
+    </div>
   );
 }

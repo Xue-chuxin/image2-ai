@@ -1551,6 +1551,41 @@ textarea {
   font-weight: 600;
 }
 
+.admin-td-field {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+  margin: 0 0 16px;
+}
+
+.admin-td-field-label {
+  color: var(--td-text-color-secondary, rgba(0, 0, 0, 0.6));
+  font: var(--td-font-body-small);
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.admin-td-field-control {
+  display: block;
+  min-width: 0;
+}
+
+.admin-td-field-control .t-input,
+.admin-td-field-control .t-input-number,
+.admin-td-field-control .t-select,
+.admin-td-field-control .t-textarea {
+  width: 100%;
+  max-width: 100%;
+}
+
+.admin-td-field-control .admin-td-inline-control-sm {
+  width: min(128px, 100%) !important;
+}
+
+.t-space .admin-td-field {
+  margin-bottom: 0;
+}
+
 .admin-td-form-section {
   margin-top: 16px;
 }

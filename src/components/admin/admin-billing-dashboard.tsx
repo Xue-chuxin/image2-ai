@@ -349,9 +349,9 @@ export function AdminBillingDashboard({
                 onEnabledChange={(value) => patchPayment("paypal.enabled", value)}
               >
                 <SettingInput label="显示名称" value={paymentForm.paypal.displayName} onChange={(value) => patchPayment("paypal.displayName", value)} />
-                <Form.FormItem label="模式">
+                <SettingField label="模式">
                   <Select value={paymentForm.paypal.mode} options={[{ value: "sandbox", label: "Sandbox" }, { value: "production", label: "Production" }]} onChange={(value) => patchPayment("paypal.mode", String(value))} />
-                </Form.FormItem>
+                </SettingField>
                 <SettingInput label="Client ID" value={paymentForm.paypal.clientId} onChange={(value) => patchPayment("paypal.clientId", value)} />
                 <SettingInput label={`Secret${paymentForm.paypal.secretConfigured ? "（已配置）" : ""}`} value={paymentForm.paypal.secret || ""} onChange={(value) => patchPayment("paypal.secret", value)} placeholder="留空不修改" />
               </PaymentProviderCard>
@@ -370,21 +370,21 @@ export function AdminBillingDashboard({
                 <Form labelAlign="top">
                   <SettingInput label="套餐名称" value={form.name} onChange={(value) => setForm((current) => ({ ...current, name: value }))} placeholder="入门包" />
                   <SettingInput label="描述" value={form.description} onChange={(value) => setForm((current) => ({ ...current, description: value }))} placeholder="适合轻量体验" />
-                  <Form.FormItem label="基础积分">
+                  <SettingField label="基础积分">
                     <InputNumber value={Number(form.credits)} onChange={(value) => setForm((current) => ({ ...current, credits: String(value || 0) }))} />
-                  </Form.FormItem>
-                  <Form.FormItem label="赠送积分">
+                  </SettingField>
+                  <SettingField label="赠送积分">
                     <InputNumber value={Number(form.bonusCredits)} onChange={(value) => setForm((current) => ({ ...current, bonusCredits: String(value || 0) }))} />
-                  </Form.FormItem>
-                  <Form.FormItem label="价格（元）">
+                  </SettingField>
+                  <SettingField label="价格（元）">
                     <InputNumber value={Number(form.priceYuan)} decimalPlaces={2} onChange={(value) => setForm((current) => ({ ...current, priceYuan: String(value || 0) }))} />
-                  </Form.FormItem>
-                  <Form.FormItem label="排序">
+                  </SettingField>
+                  <SettingField label="排序">
                     <InputNumber value={Number(form.sortOrder)} onChange={(value) => setForm((current) => ({ ...current, sortOrder: String(value || 0) }))} />
-                  </Form.FormItem>
-                  <Form.FormItem label="上架套餐">
+                  </SettingField>
+                  <SettingField label="上架套餐">
                     <Switch value={form.isActive} onChange={(value) => setForm((current) => ({ ...current, isActive: Boolean(value) }))} />
-                  </Form.FormItem>
+                  </SettingField>
                   <div className="admin-td-action-row">
                     <Button theme="primary" loading={pending === "save-package"} onClick={() => void savePackage()}>保存套餐</Button>
                     <Button variant="outline" onClick={() => setForm(emptyForm())}>清空</Button>
@@ -487,12 +487,21 @@ function SettingInput({
   textarea?: boolean;
 }) {
   return (
-    <Form.FormItem label={label}>
+    <SettingField label={label}>
       {textarea ? (
         <Textarea value={value} placeholder={placeholder} autosize={{ minRows: 3, maxRows: 6 }} onChange={(nextValue) => onChange(String(nextValue))} />
       ) : (
         <Input value={value} placeholder={placeholder} onChange={(nextValue) => onChange(String(nextValue))} />
       )}
-    </Form.FormItem>
+    </SettingField>
+  );
+}
+
+function SettingField({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="admin-td-field">
+      <span className="admin-td-field-label">{label}</span>
+      <div className="admin-td-field-control">{children}</div>
+    </div>
   );
 }
