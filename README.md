@@ -302,13 +302,6 @@ STORAGE_UPLOADS_PREFIX="uploads"
 
 项目仍在持续迭代中，当前更适合作为中文 AI 生图产品的学习、验证和二次开发基础。支付、对象存储、队列、商业化会员和复杂后台能力请根据自己的上线目标谨慎补齐和联调。
 
-## 相关文档
-
-- `docs/deployment-11a.md`：部署与环境标准化
-- `docs/storage-11b.md`：StorageService 说明
-- `docs/chatgpt-web-guide.md`：ChatGPT Web Provider 实验说明
-- `docs/socks5-proxy-setup.md`：代理配置说明
-
 ## License
 
 本项目采用 MIT License，详见 `LICENSE`。

@@ -1,4 +1,6 @@
 node_modules/
+AGENTS.md
+docs/
 .next/
 .npm-cache/
 .local/
