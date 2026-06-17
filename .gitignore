@@ -4,6 +4,7 @@ node_modules/
 .local/
 .env
 .env.local
+.env.production
 .env.*.local
 public/generated/
 public/uploads/

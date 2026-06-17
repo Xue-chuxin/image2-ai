@@ -1,37 +1,22 @@
 services:
-  postgres:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    env_file:
-      - .env.production
-    volumes:
-      - image2_postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   web:
     build:
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
     env_file:
       - .env.production
     ports:
       - "${APP_PORT:-3000}:3000"
     shm_size: "2gb"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - image2_generated:/app/public/generated
       - image2_uploads:/app/public/uploads
       - image2_chrome_profile:/app/chrome-profile
 
 volumes:
-  image2_postgres_data:
   image2_generated:
   image2_uploads:
   image2_chrome_profile:
