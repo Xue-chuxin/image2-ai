@@ -161,14 +161,14 @@ ADMIN_PASSWORD="replace-with-a-strong-password"
 3. 启动服务：
 
 ```bash
-docker compose up -d --build
+docker compose --env-file .env.production up -d --build
 ```
 
 4. 查看日志：
 
 ```bash
-docker compose logs -f web
-docker compose logs -f postgres
+docker compose --env-file .env.production logs -f web
+docker compose --env-file .env.production logs -f postgres
 ```
 
 如果服务器 3000 端口已被占用，把 `.env.production` 里的 `APP_PORT` 改成其他端口，例如：
@@ -181,7 +181,7 @@ NEXT_PUBLIC_SITE_URL="https://your-domain.com"
 然后重新启动：
 
 ```bash
-docker compose up -d
+docker compose --env-file .env.production up -d
 ```
 
 此时容器内部仍然使用 3000，宿主机访问端口会变成 `3001`。
@@ -215,18 +215,62 @@ DATABASE_URL="postgresql://db_user:db_password@host.docker.internal:5432/image2_
 3. 只启动 Web 服务：
 
 ```bash
-docker compose -f docker-compose.web.yml up -d --build
+docker compose --env-file .env.production -f docker-compose.web.yml up -d --build
 ```
 
 4. 查看日志：
 
 ```bash
-docker compose -f docker-compose.web.yml logs -f web
+docker compose --env-file .env.production -f docker-compose.web.yml logs -f web
 ```
 
 Web 容器启动时会根据 `DATABASE_URL` 自动执行 Prisma 迁移。请先确认目标数据库已创建，并且数据库用户拥有建表和迁移权限。
 
 生产环境建议使用 Nginx 或其他网关反向代理到 `http://127.0.0.1:${APP_PORT}`，并开启 HTTPS。
+
+## 项目更新与升级
+
+自部署用户升级前请先备份数据库、`.env.production` / `.env.local` 和图片存储目录。升级细节见 `UPGRADE.md`，版本变化见 `CHANGELOG.md`。
+
+源码部署常规升级流程：
+
+```bash
+git pull --ff-only
+npm ci
+npm run prisma:generate
+npm run db:migrate
+npm run build
+```
+
+Docker Compose 常规升级流程：
+
+```bash
+git pull --ff-only
+docker compose --env-file .env.production up -d --build
+```
+
+也可以使用项目内置脚本：
+
+```bash
+bash scripts/update.sh source      # 源码部署
+bash scripts/update.sh docker      # docker-compose.yml
+bash scripts/update.sh docker-web  # docker-compose.web.yml
+```
+
+升级脚本会在拉取代码前检查工作区是否有未提交改动；如果用户做过本地二开，需要先提交、合并或备份自己的改动。
+
+## 维护者发布建议
+
+- 每次发布前更新 `CHANGELOG.md`。
+- 如果新增环境变量，同步更新 `.env.example` 和 `UPGRADE.md`。
+- 如果修改数据库结构，必须提交 Prisma migration，并在升级说明里提醒用户执行迁移。
+- 建议使用语义化 tag，例如 `v0.1.0`、`v0.2.0`。
+- 推送发布时同时推送 GitHub 和 Gitee：
+
+```bash
+git push origin main --tags
+git push gitee main --tags
+```
 
 ## 常用脚本
 
@@ -238,6 +282,7 @@ npm run start:prod       # 以 0.0.0.0:3000 启动生产服务
 npm run db:migrate       # 执行 Prisma 数据库迁移
 npm run prisma:generate  # 生成 Prisma Client
 npm run prisma:seed      # 初始化示例数据
+bash scripts/update.sh   # 自部署升级辅助脚本
 ```
 
 ## 重要页面
