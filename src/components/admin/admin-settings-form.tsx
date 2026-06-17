@@ -67,6 +67,100 @@ function orderOpenAIChannels(channels: EditableOpenAIChannel[]) {
   return channels.map((channel, index) => ({ ...channel, priority: index }));
 }
 
+function mergeSavedOpenAIChannels(
+  returnedChannels: OpenAICompatibleChannelSetting[],
+  submittedChannels: EditableOpenAIChannel[],
+): OpenAICompatibleChannelSetting[] {
+  const returnedById = new Map(returnedChannels.map((channel) => [channel.id, channel]));
+
+  return submittedChannels.map((channel, index) => {
+    const returned = returnedById.get(channel.id);
+
+    return {
+      id: returned?.id || channel.id,
+      name: channel.name,
+      enabled: channel.enabled,
+      baseUrl: channel.baseUrl,
+      model: channel.model,
+      timeoutSeconds: channel.timeoutSeconds,
+      priority: index,
+      apiKeyConfigured: Boolean(returned?.apiKeyConfigured || channel.apiKeyConfigured || channel.apiKey.trim()),
+    };
+  });
+}
+
+function mergeSettingsAfterSave({
+  returnedSettings,
+  submittedSettings,
+  submittedChannels,
+  deepseekApiKey,
+  openaiApiKey,
+  stabilityAiApiKey,
+  emailSmtpPassword,
+}: {
+  returnedSettings: AdminAppSettings;
+  submittedSettings: AdminAppSettings;
+  submittedChannels: EditableOpenAIChannel[];
+  deepseekApiKey: string;
+  openaiApiKey: string;
+  stabilityAiApiKey: string;
+  emailSmtpPassword: string;
+}): AdminAppSettings {
+  const openaiCompatibleChannels = mergeSavedOpenAIChannels(returnedSettings.openaiCompatibleChannels, submittedChannels);
+  const openaiApiKeyConfigured = Boolean(
+    returnedSettings.openaiApiKeyConfigured ||
+      submittedSettings.openaiApiKeyConfigured ||
+      submittedSettings.legacyOpenaiApiKeyConfigured ||
+      openaiApiKey.trim() ||
+      openaiCompatibleChannels.some((channel) => channel.enabled && channel.apiKeyConfigured),
+  );
+
+  return {
+    ...returnedSettings,
+    browserTitle: submittedSettings.browserTitle,
+    siteTitle: submittedSettings.siteTitle,
+    siteSubtitle: submittedSettings.siteSubtitle,
+    defaultGenerationProvider: submittedSettings.defaultGenerationProvider,
+    deepseekBaseUrl: submittedSettings.deepseekBaseUrl,
+    deepseekModel: submittedSettings.deepseekModel,
+    openaiImageModel: submittedSettings.openaiImageModel,
+    stabilityAiModel: submittedSettings.stabilityAiModel,
+    chatgptWebEnabled: submittedSettings.chatgptWebEnabled,
+    chatgptWebUserDataDir: submittedSettings.chatgptWebUserDataDir,
+    chatgptWebHeadless: submittedSettings.chatgptWebHeadless,
+    chatgptWebTimeoutSeconds: submittedSettings.chatgptWebTimeoutSeconds,
+    storageProvider: submittedSettings.storageProvider,
+    storageLocalBaseDir: submittedSettings.storageLocalBaseDir,
+    storagePublicBaseUrl: submittedSettings.storagePublicBaseUrl,
+    storageGeneratedPrefix: submittedSettings.storageGeneratedPrefix,
+    storageUploadsPrefix: submittedSettings.storageUploadsPrefix,
+    storageEndpoint: submittedSettings.storageEndpoint,
+    storageBucket: submittedSettings.storageBucket,
+    storageRegion: submittedSettings.storageRegion,
+    openaiCompatibleChannels,
+    deepseekPolishPrompt: submittedSettings.deepseekPolishPrompt,
+    moderationEnabled: submittedSettings.moderationEnabled,
+    moderationForbiddenWords: submittedSettings.moderationForbiddenWords,
+    moderationBlockMessage: submittedSettings.moderationBlockMessage,
+    emailSmtpEnabled: submittedSettings.emailSmtpEnabled,
+    emailSmtpHost: submittedSettings.emailSmtpHost,
+    emailSmtpPort: submittedSettings.emailSmtpPort,
+    emailSmtpSecure: submittedSettings.emailSmtpSecure,
+    emailSmtpUser: submittedSettings.emailSmtpUser,
+    emailFromEmail: submittedSettings.emailFromEmail,
+    emailFromName: submittedSettings.emailFromName,
+    emailReplyTo: submittedSettings.emailReplyTo,
+    emailTestRecipient: submittedSettings.emailTestRecipient,
+    emailSmtpPasswordConfigured: Boolean(returnedSettings.emailSmtpPasswordConfigured || submittedSettings.emailSmtpPasswordConfigured || emailSmtpPassword.trim()),
+    deepseekApiKeyConfigured: Boolean(returnedSettings.deepseekApiKeyConfigured || submittedSettings.deepseekApiKeyConfigured || deepseekApiKey.trim()),
+    legacyOpenaiApiKeyConfigured: Boolean(returnedSettings.legacyOpenaiApiKeyConfigured || submittedSettings.legacyOpenaiApiKeyConfigured || openaiApiKey.trim()),
+    openaiApiKeyConfigured,
+    stabilityAiApiKeyConfigured: Boolean(returnedSettings.stabilityAiApiKeyConfigured || submittedSettings.stabilityAiApiKeyConfigured || stabilityAiApiKey.trim()),
+    encryptionReady: returnedSettings.encryptionReady,
+    diagnostics: returnedSettings.diagnostics,
+  };
+}
+
 async function readSettingsResponse(response: Response): Promise<SettingsResponse> {
   const contentType = response.headers.get("content-type") || "";
   if (contentType.includes("application/json")) return (await response.json()) as SettingsResponse;
@@ -167,6 +261,12 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
     setError("");
     setMessage("");
     setIsSaving(true);
+    const submittedSettings = settings;
+    const submittedChannels = openaiChannels;
+    const submittedDeepseekApiKey = deepseekApiKey;
+    const submittedOpenaiApiKey = openaiApiKey;
+    const submittedStabilityAiApiKey = stabilityAiApiKey;
+    const submittedEmailSmtpPassword = emailSmtpPassword;
 
     try {
       const response = await fetch("/api/admin/settings", {
@@ -226,8 +326,18 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
 
       if (!response.ok || !data.ok || !data.settings) throw new Error(data.error || "保存失败。");
 
-      setSettings(data.settings);
-      setOpenaiChannels(createEditableOpenAIChannels(data.settings.openaiCompatibleChannels));
+      const mergedSettings = mergeSettingsAfterSave({
+        returnedSettings: data.settings,
+        submittedSettings,
+        submittedChannels,
+        deepseekApiKey: submittedDeepseekApiKey,
+        openaiApiKey: submittedOpenaiApiKey,
+        stabilityAiApiKey: submittedStabilityAiApiKey,
+        emailSmtpPassword: submittedEmailSmtpPassword,
+      });
+
+      setSettings(mergedSettings);
+      setOpenaiChannels(createEditableOpenAIChannels(mergedSettings.openaiCompatibleChannels));
       setDeepseekApiKey("");
       setOpenaiApiKey("");
       setStabilityAiApiKey("");
