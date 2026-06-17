@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, ChevronDown, Clock3, CreditCard, ExternalLink, Loader2, QrCode, RefreshCw, ShieldCheck, XCircle } from "lucide-react";
 
 import type { CreditPackageView, RechargeOrderView } from "@/lib/billing";
@@ -78,10 +78,31 @@ function qrImageUrl(value: string) {
   return `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(value)}`;
 }
 
+function orderFingerprint(order: RechargeOrderView) {
+  return [
+    order.id,
+    order.status,
+    order.paymentUrl || "",
+    order.qrCodeUrl || "",
+    order.providerTradeNo || "",
+    order.notifyPayloadDigest || "",
+    order.paidAt || "",
+    order.expiresAt || "",
+    order.updatedAt,
+  ].join("|");
+}
+
+function ordersFingerprint(orders: RechargeOrderView[]) {
+  return orders.map(orderFingerprint).join("||");
+}
+
 function upsertOrder(orders: RechargeOrderView[], nextOrder: RechargeOrderView) {
-  const exists = orders.some((order) => order.id === nextOrder.id);
-  if (!exists) {
+  const index = orders.findIndex((order) => order.id === nextOrder.id);
+  if (index === -1) {
     return [nextOrder, ...orders];
+  }
+  if (orderFingerprint(orders[index]) === orderFingerprint(nextOrder)) {
+    return orders;
   }
   return orders.map((order) => (order.id === nextOrder.id ? nextOrder : order));
 }
@@ -109,14 +130,28 @@ export function AccountBillingPanel({
   const [polling, setPolling] = useState(false);
   const [message, setMessage] = useState("");
   const [returnNotice, setReturnNotice] = useState<ReturnNotice | null>(null);
+  const ordersRef = useRef(orders);
+  const pollingRef = useRef(false);
 
   const pendingOrders = useMemo(() => orders.filter((order) => order.status === "PENDING").length, [orders]);
   const activePendingOrder = useMemo(() => orders.find((order) => order.status === "PENDING"), [orders]);
   const selectedChannel = availableChannels.find((channel) => channel.provider === selectedProvider) || availableChannels[0];
 
+  function applyOrders(nextOrders: RechargeOrderView[]) {
+    setOrders((current) => (ordersFingerprint(current) === ordersFingerprint(nextOrders) ? current : nextOrders));
+  }
+
   function displayProviderLabel(provider: string) {
     return channelLabelByProvider.get(provider as PaymentProviderName) || fallbackProviderLabel(provider);
   }
+
+  useEffect(() => {
+    ordersRef.current = orders;
+  }, [orders]);
+
+  useEffect(() => {
+    pollingRef.current = polling;
+  }, [polling]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -153,7 +188,7 @@ export function AccountBillingPanel({
     }, 5000);
 
     return () => window.clearInterval(timer);
-  }, [pendingOrders, orders]);
+  }, [pendingOrders]);
 
   async function requestJson(url: string, init?: RequestInit) {
     const response = await fetch(url, init);
@@ -211,13 +246,17 @@ export function AccountBillingPanel({
     }
   }
 
-  async function refreshPendingOrders() {
-    const pendingList = orders.filter((order) => order.status === "PENDING");
-    if (pendingList.length === 0 || polling) {
+  async function refreshPendingOrders(manual = false) {
+    const pendingList = ordersRef.current.filter((order) => order.status === "PENDING");
+    if (pendingList.length === 0 || pollingRef.current) {
       return;
     }
 
-    setPolling(true);
+    pollingRef.current = true;
+    if (manual) {
+      setPolling(true);
+      setMessage("");
+    }
     try {
       const pendingIds = new Set(pendingList.map((order) => order.id));
       const payload = await fetchOverview();
@@ -228,7 +267,7 @@ export function AccountBillingPanel({
         setCurrentBalance(payload.balance);
       }
       if (nextOrders.length > 0) {
-        setOrders(nextOrders);
+        applyOrders(nextOrders);
       }
       if (paidOrder) {
         setMessage("检测到订单已支付，积分余额已刷新。");
@@ -236,7 +275,10 @@ export function AccountBillingPanel({
         setMessage("有待支付订单已过期，如需充值请重新创建订单。");
       }
     } finally {
-      setPolling(false);
+      pollingRef.current = false;
+      if (manual) {
+        setPolling(false);
+      }
     }
   }
 
@@ -252,7 +294,7 @@ export function AccountBillingPanel({
         setCurrentBalance(payload.balance);
       }
       if (payload.orders) {
-        setOrders(payload.orders);
+        applyOrders(payload.orders);
       }
       if (!silent) {
         setMessage("账户余额和订单状态已刷新。");
@@ -350,7 +392,7 @@ export function AccountBillingPanel({
               <p className="mt-2 text-sm font-bold leading-6 text-slate-600">{returnNotice.message}</p>
               {returnNotice.orderNo ? <p className="mt-1 text-xs font-black text-slate-400">订单号：{returnNotice.orderNo}</p> : null}
             </div>
-            <button type="button" onClick={() => void refreshPendingOrders()} className="rounded-full bg-slate-950 px-4 py-2 text-xs font-black text-white">
+            <button type="button" onClick={() => void refreshPendingOrders(true)} className="rounded-full bg-slate-950 px-4 py-2 text-xs font-black text-white">
               刷新订单
             </button>
           </div>
@@ -362,7 +404,7 @@ export function AccountBillingPanel({
           <div>
             <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-400">Online Payment</p>
             <h2 className="mt-1 text-2xl font-black text-slate-950">选择在线支付渠道</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-500">请选择支付方式并完成支付，回调成功后积分会自动到账。</p>
+            <p className="mt-2 text-sm leading-6 text-slate-500">请选择支付方式并完成支付，系统会通过回调和状态查询自动到账。</p>
           </div>
           <div className="min-w-[220px]">
             <label htmlFor="payment-provider" className="sr-only">
@@ -398,11 +440,11 @@ export function AccountBillingPanel({
                 <div>
                   <h3 className="font-black text-slate-950">正在等待支付到账</h3>
                   <p className="mt-1 text-sm leading-6 text-slate-500">
-                    当前有 {pendingOrders} 个待支付订单，页面每 5 秒自动刷新状态。支付完成后如余额未立即变化，请点击刷新或重新进入账户页。
+                    当前有 {pendingOrders} 个待支付订单，页面每 5 秒自动刷新状态并尝试查单。支付完成后如余额未立即变化，请点击刷新。
                   </p>
                 </div>
               </div>
-              <button type="button" onClick={() => void refreshPendingOrders()} disabled={polling} className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white disabled:opacity-60">
+              <button type="button" onClick={() => void refreshPendingOrders(true)} disabled={polling} className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white disabled:opacity-60">
                 <RefreshCw className={`h-4 w-4 ${polling ? "animate-spin" : ""}`} />
                 刷新待支付
               </button>
@@ -454,7 +496,7 @@ export function AccountBillingPanel({
             <h2 className="mt-1 text-2xl font-black text-slate-950">充值订单</h2>
           </div>
           {pendingOrders > 0 ? (
-            <button type="button" onClick={() => void refreshPendingOrders()} disabled={polling} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-600 disabled:opacity-60">
+            <button type="button" onClick={() => void refreshPendingOrders(true)} disabled={polling} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-600 disabled:opacity-60">
               <RefreshCw className={`h-4 w-4 ${polling ? "animate-spin" : ""}`} />
               刷新状态
             </button>

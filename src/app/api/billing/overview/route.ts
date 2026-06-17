@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getUserSession } from "@/lib/auth";
 import { getUserBillingOverview } from "@/lib/billing";
+import { syncPendingRechargeOrdersFromProviderForUser } from "@/lib/payment-sync";
 import { expirePendingRechargeOrders } from "@/lib/recharge-order-expiration";
 
 export async function GET() {
@@ -11,6 +12,7 @@ export async function GET() {
   }
 
   try {
+    await syncPendingRechargeOrdersFromProviderForUser(session.userId);
     await expirePendingRechargeOrders(session.userId);
     const overview = await getUserBillingOverview(session.userId);
 

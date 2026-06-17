@@ -94,6 +94,17 @@ export type PaymentNotifyResult = {
   rawPayload: unknown;
 };
 
+export type PaymentQueryResult = {
+  provider: PaymentProviderName;
+  orderNo: string;
+  providerTradeNo?: string | null;
+  tradeStatus: string;
+  paid: boolean;
+  amountCents?: number | null;
+  currency?: string | null;
+  rawPayload: unknown;
+};
+
 const defaultSettings: PaymentProviderSettings = {
   epay: {
     enabled: false,
@@ -727,6 +738,81 @@ export async function createPaymentForOrder(input: CreatePaymentInput): Promise<
     paymentUrl,
     providerTradeNo: payload.id,
     providerPayload: payload,
+  };
+}
+
+export async function queryPaymentOrder(provider: PaymentProviderName, orderNo: string): Promise<PaymentQueryResult> {
+  const cleanOrderNo = orderNo.trim();
+  if (!cleanOrderNo) {
+    throw new Error("缺少支付订单号。");
+  }
+
+  if (provider !== "alipay_f2f") {
+    throw new Error("该支付渠道暂不支持主动查单。");
+  }
+
+  const settings = await getPaymentRuntimeSettings();
+  const alipay = settings.alipayF2f;
+  if (!alipay.appId || !alipay.privateKey || !alipay.alipayPublicKey) {
+    throw new Error("支付宝当面付配置不完整。");
+  }
+
+  const params: Record<string, string> = {
+    app_id: alipay.appId,
+    method: "alipay.trade.query",
+    charset: "utf-8",
+    sign_type: "RSA2",
+    timestamp: new Date().toISOString().slice(0, 19).replace("T", " "),
+    version: "1.0",
+    biz_content: JSON.stringify({
+      out_trade_no: cleanOrderNo,
+    }),
+  };
+  params.sign = signAlipayParams(params, alipay.privateKey);
+
+  const response = await fetch(alipay.gatewayUrl || defaultSettings.alipayF2f.gatewayUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded;charset=utf-8",
+    },
+    body: new URLSearchParams(params).toString(),
+  });
+  const payload = (await response.json().catch(() => ({}))) as any;
+  const result = payload.alipay_trade_query_response || {};
+  const code = String(result.code || "");
+  const subCode = String(result.sub_code || "");
+
+  if (!response.ok) {
+    throw new Error(result.sub_msg || result.msg || "支付宝订单查询失败。");
+  }
+
+  if (code !== "10000") {
+    if (subCode === "ACQ.TRADE_NOT_EXIST") {
+      return {
+        provider,
+        orderNo: cleanOrderNo,
+        providerTradeNo: null,
+        tradeStatus: "TRADE_NOT_EXIST",
+        paid: false,
+        amountCents: null,
+        currency: "CNY",
+        rawPayload: result,
+      };
+    }
+    throw new Error(result.sub_msg || result.msg || "支付宝订单查询失败。");
+  }
+
+  const tradeStatus = String(result.trade_status || "");
+  const amountValue = result.total_amount ?? result.buyer_pay_amount ?? result.receipt_amount;
+  return {
+    provider,
+    orderNo: result.out_trade_no || cleanOrderNo,
+    providerTradeNo: result.trade_no || null,
+    tradeStatus,
+    paid: tradeStatus === "TRADE_SUCCESS" || tradeStatus === "TRADE_FINISHED",
+    amountCents: amountValue ? centsFromYuan(amountValue) : null,
+    currency: "CNY",
+    rawPayload: result,
   };
 }
 
