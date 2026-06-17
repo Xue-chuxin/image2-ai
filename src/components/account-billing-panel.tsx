@@ -210,8 +210,10 @@ export function AccountBillingPanel({
     return payload.order;
   }
 
-  async function fetchOverview() {
-    const payload = await requestJson("/api/billing/overview", {
+  async function fetchOverview(includeOrderIds: string[] = []) {
+    const uniqueOrderIds = Array.from(new Set(includeOrderIds.filter(Boolean))).slice(0, 20);
+    const query = uniqueOrderIds.length > 0 ? `?orderIds=${encodeURIComponent(uniqueOrderIds.join(","))}` : "";
+    const payload = await requestJson(`/api/billing/overview${query}`, {
       method: "GET",
       cache: "no-store",
     });
@@ -259,7 +261,7 @@ export function AccountBillingPanel({
     }
     try {
       const pendingIds = new Set(pendingList.map((order) => order.id));
-      const payload = await fetchOverview();
+      const payload = await fetchOverview(Array.from(pendingIds));
       const nextOrders = payload.orders || [];
       const paidOrder = nextOrders.find((order) => pendingIds.has(order.id) && order.status === "PAID");
       const expiredOrder = nextOrders.find((order) => pendingIds.has(order.id) && order.status === "EXPIRED");
@@ -289,7 +291,7 @@ export function AccountBillingPanel({
     }
 
     try {
-      const payload = await fetchOverview();
+      const payload = await fetchOverview(ordersRef.current.map((order) => order.id));
       if (payload.balance) {
         setCurrentBalance(payload.balance);
       }

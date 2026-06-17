@@ -2,19 +2,33 @@ import { NextResponse } from "next/server";
 
 import { getUserSession } from "@/lib/auth";
 import { getUserBillingOverview } from "@/lib/billing";
-import { syncPendingRechargeOrdersFromProviderForUser } from "@/lib/payment-sync";
+import { syncPendingRechargeOrdersFromProviderForUser, syncRechargeOrdersFromProviderForUser } from "@/lib/payment-sync";
 import { expirePendingRechargeOrders } from "@/lib/recharge-order-expiration";
 
-export async function GET() {
+function parseOrderIds(request: Request) {
+  const { searchParams } = new URL(request.url);
+  return Array.from(
+    new Set(
+      (searchParams.get("orderIds") || "")
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean),
+    ),
+  ).slice(0, 20);
+}
+
+export async function GET(request: Request) {
   const session = await getUserSession();
   if (!session) {
     return NextResponse.json({ ok: false, error: "请先登录用户账号。" }, { status: 401 });
   }
 
   try {
+    const includeOrderIds = parseOrderIds(request);
     await syncPendingRechargeOrdersFromProviderForUser(session.userId);
+    await syncRechargeOrdersFromProviderForUser(session.userId, includeOrderIds);
     await expirePendingRechargeOrders(session.userId);
-    const overview = await getUserBillingOverview(session.userId);
+    const overview = await getUserBillingOverview(session.userId, { includeOrderIds });
 
     return NextResponse.json({
       ok: true,

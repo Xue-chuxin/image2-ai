@@ -356,7 +356,24 @@ export async function createRechargeOrder(userId: string, packageId: string, pro
   return serializeOrder(updated);
 }
 
-export async function listUserRechargeOrders(userId: string, limit = 20) {
+type ListUserRechargeOrdersOptions = {
+  includeOrderIds?: string[];
+};
+
+function normalizeOrderIds(values?: string[]) {
+  return Array.from(new Set((values || []).map((value) => normalizeText(value, 80)).filter(Boolean))).slice(0, 20);
+}
+
+function mergeRechargeOrders(primaryOrders: any[], includedOrders: any[]) {
+  const map = new Map<string, any>();
+  for (const order of [...primaryOrders, ...includedOrders]) {
+    map.set(order.id, order);
+  }
+  return Array.from(map.values()).sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime());
+}
+
+export async function listUserRechargeOrders(userId: string, limit = 20, options: ListUserRechargeOrdersOptions = {}) {
+  const includeOrderIds = normalizeOrderIds(options.includeOrderIds);
   const orders = await prisma.rechargeOrder.findMany({
     where: {
       userId,
@@ -374,14 +391,34 @@ export async function listUserRechargeOrders(userId: string, limit = 20) {
     take: normalizeLimit(limit),
   });
 
-  return orders.map(serializeOrder);
+  if (includeOrderIds.length === 0) {
+    return orders.map(serializeOrder);
+  }
+
+  const includedOrders = await prisma.rechargeOrder.findMany({
+    where: {
+      userId,
+      id: {
+        in: includeOrderIds,
+      },
+    },
+    include: {
+      user: {
+        select: {
+          email: true,
+        },
+      },
+    },
+  });
+
+  return mergeRechargeOrders(orders, includedOrders).map(serializeOrder);
 }
 
-export async function getUserBillingOverview(userId: string): Promise<BillingOverview> {
+export async function getUserBillingOverview(userId: string, options: ListUserRechargeOrdersOptions = {}): Promise<BillingOverview> {
   const [balance, packages, orders, channels] = await Promise.all([
     getUserCreditBalance(userId),
     listActiveCreditPackages(),
-    listUserRechargeOrders(userId, 20),
+    listUserRechargeOrders(userId, 20, options),
     listPublicPaymentChannels(),
   ]);
 

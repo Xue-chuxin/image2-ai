@@ -148,6 +148,37 @@ export async function syncRechargeOrderFromProviderForUser(userId: string, order
   await syncRechargeOrder(order, options);
 }
 
+export async function syncRechargeOrdersFromProviderForUser(userId: string, orderIds: string[], options: { force?: boolean } = {}) {
+  const uniqueOrderIds = Array.from(new Set(orderIds.map((orderId) => orderId.trim()).filter(Boolean))).slice(0, 20);
+  if (uniqueOrderIds.length === 0) {
+    return;
+  }
+
+  const orders = await prisma.rechargeOrder.findMany({
+    where: {
+      id: {
+        in: uniqueOrderIds,
+      },
+      userId,
+      status: "PENDING",
+      provider: "alipay_f2f",
+    },
+    select: {
+      id: true,
+      userId: true,
+      orderNo: true,
+      provider: true,
+      status: true,
+      amountCents: true,
+      currency: true,
+    },
+  });
+
+  for (const order of orders) {
+    await syncRechargeOrder(order, options);
+  }
+}
+
 export async function syncPendingRechargeOrdersFromProviderForUser(userId: string, limit = 3) {
   const orders = await prisma.rechargeOrder.findMany({
     where: {
