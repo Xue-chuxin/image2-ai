@@ -5,7 +5,7 @@ WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --ignore-scripts
 
 FROM node:20-bookworm-slim AS builder
 
@@ -30,7 +30,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgtk-3-0 \
     libnss3 \
     libnspr4 \
-    libasound2t64 \
+    libasound2 \
     libgbm1 \
     libdrm2 \
     libxkbcommon0 \

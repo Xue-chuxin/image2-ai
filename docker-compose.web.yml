@@ -11,6 +11,8 @@ services:
     shm_size: "2gb"
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    networks:
+      - rhex_default
     volumes:
       - image2_generated:/app/public/generated
       - image2_uploads:/app/public/uploads
@@ -20,3 +22,7 @@ volumes:
   image2_generated:
   image2_uploads:
   image2_chrome_profile:
+
+networks:
+  rhex_default:
+    external: true
