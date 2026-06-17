@@ -5,6 +5,8 @@ import { getUserBillingOverview } from "@/lib/billing";
 import { syncPendingRechargeOrdersFromProviderForUser, syncRechargeOrdersFromProviderForUser } from "@/lib/payment-sync";
 import { expirePendingRechargeOrders } from "@/lib/recharge-order-expiration";
 
+type PaymentSyncMode = "auto" | "manual";
+
 function parseOrderIds(request: Request) {
   const { searchParams } = new URL(request.url);
   return Array.from(
@@ -17,6 +19,11 @@ function parseOrderIds(request: Request) {
   ).slice(0, 20);
 }
 
+function parseSyncMode(request: Request): PaymentSyncMode {
+  const { searchParams } = new URL(request.url);
+  return searchParams.get("mode") === "manual" ? "manual" : "auto";
+}
+
 export async function GET(request: Request) {
   const session = await getUserSession();
   if (!session) {
@@ -25,8 +32,13 @@ export async function GET(request: Request) {
 
   try {
     const includeOrderIds = parseOrderIds(request);
-    await syncPendingRechargeOrdersFromProviderForUser(session.userId);
-    await syncRechargeOrdersFromProviderForUser(session.userId, includeOrderIds);
+    const mode = parseSyncMode(request);
+    const syncOptions = {
+      mode,
+      force: mode === "manual",
+    };
+    await syncRechargeOrdersFromProviderForUser(session.userId, includeOrderIds, syncOptions);
+    await syncPendingRechargeOrdersFromProviderForUser(session.userId, { mode: "auto" });
     await expirePendingRechargeOrders(session.userId);
     const overview = await getUserBillingOverview(session.userId, { includeOrderIds });
 

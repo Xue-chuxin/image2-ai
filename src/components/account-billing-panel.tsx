@@ -23,6 +23,12 @@ type ReturnNotice = {
   message: string;
 };
 
+type BillingRefreshMode = "auto" | "manual";
+
+const FAST_PAYMENT_CONFIRM_WINDOW_MS = 2 * 60 * 1000;
+const FAST_PAYMENT_CONFIRM_INTERVAL_MS = 3 * 1000;
+const NORMAL_PAYMENT_CONFIRM_INTERVAL_MS = 10 * 1000;
+
 function formatCurrency(priceCents: number, currency = "CNY") {
   const value = priceCents / 100;
   if (currency === "CNY") {
@@ -76,6 +82,14 @@ function statusClass(status: string) {
 
 function qrImageUrl(value: string) {
   return `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(value)}`;
+}
+
+function isFreshPendingOrder(order: RechargeOrderView) {
+  return order.status === "PENDING" && Date.now() - new Date(order.createdAt).getTime() <= FAST_PAYMENT_CONFIRM_WINDOW_MS;
+}
+
+function pendingRefreshDelay(orders: RechargeOrderView[]) {
+  return orders.some(isFreshPendingOrder) ? FAST_PAYMENT_CONFIRM_INTERVAL_MS : NORMAL_PAYMENT_CONFIRM_INTERVAL_MS;
 }
 
 function orderFingerprint(order: RechargeOrderView) {
@@ -183,11 +197,26 @@ export function AccountBillingPanel({
       return;
     }
 
-    const timer = window.setInterval(() => {
-      void refreshPendingOrders();
-    }, 5000);
+    let stopped = false;
+    let timer = 0;
+    const scheduleRefresh = () => {
+      timer = window.setTimeout(() => {
+        void refreshPendingOrders()
+          .catch(() => undefined)
+          .finally(() => {
+            if (!stopped) {
+              scheduleRefresh();
+            }
+          });
+      }, pendingRefreshDelay(ordersRef.current));
+    };
 
-    return () => window.clearInterval(timer);
+    scheduleRefresh();
+
+    return () => {
+      stopped = true;
+      window.clearTimeout(timer);
+    };
   }, [pendingOrders]);
 
   async function requestJson(url: string, init?: RequestInit) {
@@ -210,9 +239,14 @@ export function AccountBillingPanel({
     return payload.order;
   }
 
-  async function fetchOverview(includeOrderIds: string[] = []) {
+  async function fetchOverview(includeOrderIds: string[] = [], mode: BillingRefreshMode = "auto") {
     const uniqueOrderIds = Array.from(new Set(includeOrderIds.filter(Boolean))).slice(0, 20);
-    const query = uniqueOrderIds.length > 0 ? `?orderIds=${encodeURIComponent(uniqueOrderIds.join(","))}` : "";
+    const params = new URLSearchParams();
+    if (uniqueOrderIds.length > 0) {
+      params.set("orderIds", uniqueOrderIds.join(","));
+    }
+    params.set("mode", mode);
+    const query = params.toString() ? `?${params.toString()}` : "";
     const payload = await requestJson(`/api/billing/overview${query}`, {
       method: "GET",
       cache: "no-store",
@@ -261,7 +295,7 @@ export function AccountBillingPanel({
     }
     try {
       const pendingIds = new Set(pendingList.map((order) => order.id));
-      const payload = await fetchOverview(Array.from(pendingIds));
+      const payload = await fetchOverview(Array.from(pendingIds), manual ? "manual" : "auto");
       const nextOrders = payload.orders || [];
       const paidOrder = nextOrders.find((order) => pendingIds.has(order.id) && order.status === "PAID");
       const expiredOrder = nextOrders.find((order) => pendingIds.has(order.id) && order.status === "EXPIRED");
@@ -291,7 +325,7 @@ export function AccountBillingPanel({
     }
 
     try {
-      const payload = await fetchOverview(ordersRef.current.map((order) => order.id));
+      const payload = await fetchOverview(ordersRef.current.map((order) => order.id), silent ? "auto" : "manual");
       if (payload.balance) {
         setCurrentBalance(payload.balance);
       }
@@ -338,7 +372,7 @@ export function AccountBillingPanel({
           return;
         }
       }
-      setMessage("支付订单已创建，请使用订单卡片中的二维码或跳转链接完成支付。页面会自动刷新订单状态。");
+      setMessage("支付订单已创建，请使用订单卡片中的二维码或跳转链接完成支付。系统会自动确认支付结果。");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "创建订单失败");
     } finally {
@@ -442,7 +476,11 @@ export function AccountBillingPanel({
                 <div>
                   <h3 className="font-black text-slate-950">正在等待支付到账</h3>
                   <p className="mt-1 text-sm leading-6 text-slate-500">
-                    当前有 {pendingOrders} 个待支付订单，页面每 5 秒自动刷新状态并尝试查单。支付完成后如余额未立即变化，请点击刷新。
+                    当前有 {pendingOrders} 个待支付订单，创建后前 2 分钟每 3 秒自动确认一次，之后降低频率。支付完成后如余额未立即变化，请点击刷新。
+                  </p>
+                  <p className="mt-2 inline-flex items-center gap-2 rounded-full border border-ocean-100 bg-white px-3 py-1 text-xs font-black text-ocean-700">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    正在向支付平台确认支付
                   </p>
                 </div>
               </div>

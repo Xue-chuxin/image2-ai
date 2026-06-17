@@ -20,7 +20,7 @@ export async function GET(_request: Request, context: RouteContext) {
   const { id } = await context.params;
 
   try {
-    await syncRechargeOrderFromProviderForUser(session.userId, id, { force: true });
+    await syncRechargeOrderFromProviderForUser(session.userId, id, { force: true, mode: "manual" });
     await expireRechargeOrderForUser(session.userId, id);
 
     const order = await prisma.rechargeOrder.findFirst({
