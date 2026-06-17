@@ -280,14 +280,6 @@ STORAGE_UPLOADS_PREFIX="uploads"
 
 生成图、参考图和支付凭证统一通过 `StorageService` 保存。OSS、COS、S3 已预留配置字段，但当前版本尚未接入对应 SDK。
 
-## 安全提醒
-
-- 不要提交 `.env`、`.env.local`、`.env.production`。
-- 不要把 OpenAI、DeepSeek、支付平台、数据库、Cookie、Token 或浏览器 Profile 写入仓库。
-- `AUTH_SECRET` 和 `SETTINGS_ENCRYPTION_KEY` 生产环境必须替换为高强度随机字符串。
-- `ADMIN_EMAIL` 和 `ADMIN_PASSWORD` 只用于初始化管理员账号，生产环境必须使用强密码。
-- 用户上传图和生成图建议通过 `StorageService` 管理，不要把长期图片二进制直接写入数据库。
-- 公开部署前建议访问 `/admin/health` 完成上线自检。
 
 ## 生产部署建议
 
@@ -295,7 +287,6 @@ STORAGE_UPLOADS_PREFIX="uploads"
 - 正式上线前先确认数据库迁移已完成。
 - 正式上线前先确认 `NEXT_PUBLIC_SITE_URL` 是公网 HTTPS 域名。
 - 图片文件建议后续接入对象存储或 CDN。
-- 如果启用支付能力，必须先在测试环境完成回调验签和小额订单联调。
 - `chatgpt_web` 不建议放在普通云服务器无人值守运行。
 
 ## 开发状态
