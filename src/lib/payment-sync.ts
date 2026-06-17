@@ -29,6 +29,7 @@ const NORMAL_QUERY_COOLDOWN_MS = 10 * 1000;
 const MAX_QUERY_CACHE_ITEMS = 500;
 const queryTimestamps = new Map<string, number>();
 const inFlightQueries = new Map<string, Promise<void>>();
+const scheduledOrderIds = new Map<string, ReturnType<typeof setTimeout>>();
 
 function queryableProvider(value: string): PaymentProviderName | null {
   return value === "alipay_f2f" ? "alipay_f2f" : null;
@@ -149,8 +150,8 @@ async function syncRechargeOrder(order: RechargeOrderForSync, options: PaymentSy
   await syncTask;
 }
 
-export async function syncRechargeOrderFromProviderForUser(userId: string, orderId: string, options: PaymentSyncOptions = {}) {
-  const order = await prisma.rechargeOrder.findFirst({
+async function getRechargeOrderForSync(userId: string, orderId: string) {
+  return prisma.rechargeOrder.findFirst({
     where: {
       id: orderId,
       userId,
@@ -166,12 +167,58 @@ export async function syncRechargeOrderFromProviderForUser(userId: string, order
       createdAt: true,
     },
   });
+}
+
+export async function syncRechargeOrderFromProviderForUser(userId: string, orderId: string, options: PaymentSyncOptions = {}) {
+  const order = await getRechargeOrderForSync(userId, orderId);
 
   if (!order) {
     return;
   }
 
   await syncRechargeOrder(order, options);
+}
+
+export function scheduleRechargeOrderAutoSync(userId: string, orderId: string) {
+  if (scheduledOrderIds.has(orderId)) {
+    return;
+  }
+
+  const startedAt = Date.now();
+
+  const stop = () => {
+    const timer = scheduledOrderIds.get(orderId);
+    if (timer) {
+      clearTimeout(timer);
+    }
+    scheduledOrderIds.delete(orderId);
+  };
+
+  const run = async () => {
+    try {
+      const order = await getRechargeOrderForSync(userId, orderId);
+      if (!order || order.provider !== "alipay_f2f" || order.status !== "PENDING") {
+        stop();
+        return;
+      }
+
+      await syncRechargeOrder(order, { mode: "auto" });
+
+      const currentOrder = await getRechargeOrderForSync(userId, orderId);
+      if (!currentOrder || currentOrder.status !== "PENDING" || Date.now() - startedAt >= FAST_QUERY_WINDOW_MS) {
+        stop();
+        return;
+      }
+    } catch {
+      // Keep the short-lived scheduler alive; each sync attempt records its own diagnostics.
+    }
+
+    const timer = setTimeout(run, FAST_QUERY_COOLDOWN_MS);
+    scheduledOrderIds.set(orderId, timer);
+  };
+
+  const timer = setTimeout(run, FAST_QUERY_COOLDOWN_MS);
+  scheduledOrderIds.set(orderId, timer);
 }
 
 export async function syncRechargeOrdersFromProviderForUser(userId: string, orderIds: string[], options: PaymentSyncOptions = {}) {

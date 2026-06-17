@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getUserSession } from "@/lib/auth";
 import { createRechargeOrder, listUserRechargeOrders } from "@/lib/billing";
+import { scheduleRechargeOrderAutoSync } from "@/lib/payment-sync";
 import { normalizePaymentProvider } from "@/lib/payments";
 import { checkRateLimit } from "@/lib/rate-limit";
 
@@ -66,6 +67,9 @@ export async function POST(request: Request) {
 
     const origin = getPublicOrigin(request);
     const order = await createRechargeOrder(session.userId, packageId, provider, origin);
+    if (order.provider === "alipay_f2f") {
+      scheduleRechargeOrderAutoSync(session.userId, order.id);
+    }
     return NextResponse.json(
       {
         ok: true,
