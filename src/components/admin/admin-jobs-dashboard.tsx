@@ -312,8 +312,8 @@ export function AdminJobsDashboard({ initialJobs }: { initialJobs: AdminGenerati
           </Form.FormItem>
         </Form>
 
-        {message ? <Alert className="mb-3" theme="success" message={message} /> : null}
-        {error ? <Alert className="mb-3" theme="error" message={error} /> : null}
+        {message ? <Alert className="admin-td-form-section" theme="success" message={message} /> : null}
+        {error ? <Alert className="admin-td-form-section" theme="error" message={error} /> : null}
 
         <div className="admin-td-table-scroll admin-td-table-scroll--lg">
           <Table

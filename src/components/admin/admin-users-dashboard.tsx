@@ -304,6 +304,7 @@ export function AdminUsersDashboard({ initialUsers }: { initialUsers: AdminUserV
             <Input
               value={query}
               placeholder="邮箱、昵称或用户 ID"
+              className="admin-td-filter-control-md"
               clearable
               onChange={(value) => setQuery(String(value))}
               onEnter={() => void refreshUsers()}
@@ -316,8 +317,8 @@ export function AdminUsersDashboard({ initialUsers }: { initialUsers: AdminUserV
           </Form.FormItem>
         </Form>
 
-        {message ? <Alert className="mb-3" theme="success" message={message} /> : null}
-        {error ? <Alert className="mb-3" theme="error" message={error} /> : null}
+        {message ? <Alert className="admin-td-form-section" theme="success" message={message} /> : null}
+        {error ? <Alert className="admin-td-form-section" theme="error" message={error} /> : null}
 
         <div className="admin-td-table-scroll admin-td-table-scroll--lg">
           <Table

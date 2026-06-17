@@ -132,7 +132,7 @@ export function AdminUploadsDashboard({ initialImages }: { initialImages: AdminU
           </Form.FormItem>
         </Form>
 
-        {message ? <Alert className="mb-3" theme="info" message={message} /> : null}
+        {message ? <Alert className="admin-td-form-section" theme="info" message={message} /> : null}
         <div className="admin-td-table-scroll">
           <Table
             rowKey="id"
