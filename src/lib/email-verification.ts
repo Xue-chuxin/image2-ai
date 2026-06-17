@@ -8,6 +8,7 @@ import { sendSystemEmail } from "@/lib/email";
 export type EmailVerificationPurpose = "register" | "password_reset";
 
 const CODE_TTL_MS = 10 * 60 * 1000;
+const SEND_COOLDOWN_MS = 60 * 1000;
 const MAX_VERIFY_ATTEMPTS = 5;
 
 function normalizeEmail(value: unknown) {
@@ -86,6 +87,26 @@ export async function sendEmailVerificationCode(emailInput: unknown, purpose: Em
   }
 
   const now = new Date();
+  const latestCode = await prisma.emailVerificationCode.findFirst({
+    where: {
+      email,
+      purpose,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    select: {
+      createdAt: true,
+    },
+  });
+
+  if (latestCode) {
+    const retryAfterSeconds = Math.ceil((SEND_COOLDOWN_MS - (now.getTime() - latestCode.createdAt.getTime())) / 1000);
+    if (retryAfterSeconds > 0) {
+      throw new AppError("RATE_LIMITED", `验证码已发送，请 ${retryAfterSeconds} 秒后再试。`, 429);
+    }
+  }
+
   const code = generateCode();
   const expiresAt = new Date(now.getTime() + CODE_TTL_MS);
 

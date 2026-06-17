@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import clsx from "clsx";
 import { Loader2, LockKeyhole, Mail, ShieldCheck, UserRound } from "lucide-react";
 
@@ -41,6 +41,19 @@ export function SignInForm({
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSendingCode, setIsSendingCode] = useState(false);
+  const [codeCooldown, setCodeCooldown] = useState(0);
+
+  useEffect(() => {
+    if (codeCooldown <= 0) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setCodeCooldown((current) => Math.max(0, current - 1));
+    }, 1000);
+
+    return () => window.clearTimeout(timer);
+  }, [codeCooldown]);
 
   async function sendVerificationCode() {
     setError("");
@@ -65,6 +78,7 @@ export function SignInForm({
       }
 
       setMessage(data.message || "验证码已发送，请查收邮箱。");
+      setCodeCooldown(60);
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "验证码发送失败。");
     } finally {
@@ -179,11 +193,11 @@ export function SignInForm({
               <button
                 type="button"
                 onClick={() => void sendVerificationCode()}
-                disabled={isSendingCode || isSubmitting || !email.trim()}
+                disabled={isSendingCode || isSubmitting || codeCooldown > 0 || !email.trim()}
                 className="inline-flex items-center justify-center gap-2 rounded-2xl border border-ocean-100 bg-white px-4 py-3 text-sm font-black text-ocean-800 shadow-card disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSendingCode ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                {isSendingCode ? "发送中" : "发送验证码"}
+                {isSendingCode ? "发送中" : codeCooldown > 0 ? `${codeCooldown} 秒后重发` : "发送验证码"}
               </button>
             </div>
             <p className="mt-2 text-xs font-bold leading-5 text-slate-500">已有账号可直接登录；新用户注册需要邮箱验证码。</p>

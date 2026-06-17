@@ -6,6 +6,7 @@
 
 - 前台充值支持展示所有已启用且配置完整的支付渠道，并使用后台自定义显示名称。
 - 普通用户新注册需要邮箱验证码，已有用户登录和管理员登录不受影响。
+- 注册验证码增加 60 秒发送冷却，避免同一邮箱频繁发送。
 - 新增 `UPGRADE.md`，说明源码部署、Docker Compose 部署和二开用户的升级流程。
 - 新增 `scripts/update.sh`，提供源码部署、完整 Docker Compose、仅 Web Docker Compose 三种常用升级入口。
 - 更新 README，补充升级说明、版本发布建议，并修正 Docker Compose 使用 `.env.production` 的命令写法。
