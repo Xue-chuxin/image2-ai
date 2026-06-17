@@ -454,7 +454,7 @@ function signAlipayParams(params: Record<string, string>, privateKey: string) {
     .sort()
     .map((name) => `${name}=${params[name]}`)
     .join("&");
-  return createSign("RSA-SHA256").update(source, "utf8").sign(privateKey, "base64");
+  return signWithAlipayPrivateKey(source, privateKey);
 }
 
 function verifyAlipayParams(params: Record<string, string>, publicKey: string) {
@@ -467,7 +467,53 @@ function verifyAlipayParams(params: Record<string, string>, publicKey: string) {
     .sort()
     .map((name) => `${name}=${params[name]}`)
     .join("&");
-  return createVerify("RSA-SHA256").update(source, "utf8").verify(publicKey, signValue, "base64");
+  try {
+    return createVerify("RSA-SHA256").update(source, "utf8").verify(normalizePemKey(publicKey, "PUBLIC KEY"), signValue, "base64");
+  } catch {
+    throw new Error("支付宝公钥格式不正确，请填写支付宝公钥内容或完整 PEM 公钥。");
+  }
+}
+
+function normalizePemKey(value: string, label: "PRIVATE KEY" | "RSA PRIVATE KEY" | "PUBLIC KEY") {
+  const clean = value.trim().replace(/\\n/g, "\n");
+
+  if (/-----BEGIN [A-Z ]+-----/.test(clean)) {
+    const beginPattern = /-----BEGIN ([A-Z ]+)-----/;
+    const endPattern = /-----END ([A-Z ]+)-----/;
+    const begin = clean.match(beginPattern);
+    const end = clean.match(endPattern);
+    if (!begin || !end) {
+      return clean;
+    }
+
+    const body = clean
+      .replace(beginPattern, "")
+      .replace(endPattern, "")
+      .replace(/\s+/g, "");
+
+    return `-----BEGIN ${begin[1]}-----\n${wrapPemBody(body)}\n-----END ${end[1]}-----`;
+  }
+
+  const body = clean.replace(/\s+/g, "");
+  return `-----BEGIN ${label}-----\n${wrapPemBody(body)}\n-----END ${label}-----`;
+}
+
+function wrapPemBody(value: string) {
+  return value.match(/.{1,64}/g)?.join("\n") || value;
+}
+
+function signWithAlipayPrivateKey(source: string, privateKey: string) {
+  const candidates = [normalizePemKey(privateKey, "PRIVATE KEY"), normalizePemKey(privateKey, "RSA PRIVATE KEY")];
+
+  for (const candidate of candidates) {
+    try {
+      return createSign("RSA-SHA256").update(source, "utf8").sign(candidate, "base64");
+    } catch {
+      // Try the next common private-key container.
+    }
+  }
+
+  throw new Error("支付宝应用私钥格式不正确，请填写应用私钥内容或完整 PEM 私钥。");
 }
 
 function createWechatSignature(method: string, urlPath: string, body: string, privateKey: string) {

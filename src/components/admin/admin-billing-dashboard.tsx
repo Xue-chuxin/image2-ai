@@ -325,8 +325,8 @@ export function AdminBillingDashboard({
                 <SettingInput label="显示名称" value={paymentForm.alipayF2f.displayName} onChange={(value) => patchPayment("alipayF2f.displayName", value)} />
                 <SettingInput label="网关地址" value={paymentForm.alipayF2f.gatewayUrl} onChange={(value) => patchPayment("alipayF2f.gatewayUrl", value)} />
                 <SettingInput label="App ID" value={paymentForm.alipayF2f.appId} onChange={(value) => patchPayment("alipayF2f.appId", value)} />
-                <SettingInput label={`应用私钥${paymentForm.alipayF2f.privateKeyConfigured ? "（已配置）" : ""}`} value={paymentForm.alipayF2f.privateKey || ""} onChange={(value) => patchPayment("alipayF2f.privateKey", value)} placeholder="留空不修改" textarea />
-                <SettingInput label={`支付宝公钥${paymentForm.alipayF2f.alipayPublicKeyConfigured ? "（已配置）" : ""}`} value={paymentForm.alipayF2f.alipayPublicKey || ""} onChange={(value) => patchPayment("alipayF2f.alipayPublicKey", value)} placeholder="留空不修改" textarea />
+                <SettingInput label={`应用私钥${paymentForm.alipayF2f.privateKeyConfigured ? "（已配置）" : ""}`} value={paymentForm.alipayF2f.privateKey || ""} onChange={(value) => patchPayment("alipayF2f.privateKey", value)} placeholder="支持粘贴支付宝应用私钥内容或完整 PEM，留空不修改" textarea />
+                <SettingInput label={`支付宝公钥${paymentForm.alipayF2f.alipayPublicKeyConfigured ? "（已配置）" : ""}`} value={paymentForm.alipayF2f.alipayPublicKey || ""} onChange={(value) => patchPayment("alipayF2f.alipayPublicKey", value)} placeholder="支持粘贴支付宝公钥内容或完整 PEM，留空不修改" textarea />
               </PaymentProviderCard>
 
               <PaymentProviderCard
