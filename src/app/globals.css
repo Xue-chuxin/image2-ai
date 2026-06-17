@@ -1802,28 +1802,40 @@ textarea {
 }
 
 .admin-user-credit-actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: 144px minmax(160px, 1fr) 68px;
   width: 100%;
   min-width: 0;
   align-items: center;
-  flex-wrap: nowrap;
   gap: 8px;
 }
 
 .admin-user-credit-actions .t-button {
-  flex-shrink: 0;
-  min-width: 64px;
+  width: 68px;
+  min-width: 68px;
+  padding-right: 0;
+  padding-left: 0;
 }
 
 .admin-user-credit-actions .t-input-number {
-  width: 104px;
-  flex: 0 0 104px;
+  width: 144px !important;
+  min-width: 144px;
+  max-width: 144px;
+}
+
+.admin-user-credit-actions .t-input-number .t-input {
+  min-width: 0;
+}
+
+.admin-user-credit-actions .t-input-number__decrease,
+.admin-user-credit-actions .t-input-number__increase {
+  width: var(--td-comp-size-m, 32px);
+  min-width: var(--td-comp-size-m, 32px);
 }
 
 .admin-user-credit-actions .t-input {
-  width: 150px;
-  flex: 0 1 150px;
-  min-width: 120px;
+  width: 100%;
+  min-width: 0;
 }
 
 @media (max-width: 768px) {
@@ -1909,14 +1921,15 @@ textarea {
 
   .admin-user-credit-actions {
     align-items: stretch;
-    flex-direction: column;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .admin-user-credit-actions .t-input-number,
   .admin-user-credit-actions .t-input,
   .admin-user-credit-actions .t-button {
-    width: 100%;
-    flex-basis: auto;
+    width: 100% !important;
+    min-width: 0;
+    max-width: none;
   }
 
   .admin-td-channel-toolbar {

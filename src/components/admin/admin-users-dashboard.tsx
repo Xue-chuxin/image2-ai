@@ -239,7 +239,7 @@ export function AdminUsersDashboard({ initialUsers }: { initialUsers: AdminUserV
     {
       colKey: "creditsAction",
       title: "手动调整积分",
-      width: 410,
+      width: 450,
       cell: ({ row }: { row: AdminUserView }) =>
         row.role !== "USER" ? (
           <Tag theme="warning" variant="light">
@@ -329,7 +329,7 @@ export function AdminUsersDashboard({ initialUsers }: { initialUsers: AdminUserV
             stripe
             bordered
             tableLayout="fixed"
-            tableContentWidth="1660px"
+            tableContentWidth="1700px"
             verticalAlign="top"
             empty="没有找到匹配用户"
           />
