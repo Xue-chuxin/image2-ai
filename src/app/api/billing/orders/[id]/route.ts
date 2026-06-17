@@ -11,7 +11,12 @@ type RouteContext = {
   }>;
 };
 
-export async function GET(_request: Request, context: RouteContext) {
+function parseSyncMode(request: Request) {
+  const { searchParams } = new URL(request.url);
+  return searchParams.get("mode") === "auto" ? "auto" : "manual";
+}
+
+export async function GET(request: Request, context: RouteContext) {
   const session = await getUserSession();
   if (!session) {
     return NextResponse.json({ ok: false, error: "请先登录用户账号。" }, { status: 401 });
@@ -20,7 +25,8 @@ export async function GET(_request: Request, context: RouteContext) {
   const { id } = await context.params;
 
   try {
-    await syncRechargeOrderFromProviderForUser(session.userId, id, { force: true, mode: "manual" });
+    const mode = parseSyncMode(request);
+    await syncRechargeOrderFromProviderForUser(session.userId, id, { force: mode === "manual", mode });
     await expireRechargeOrderForUser(session.userId, id);
 
     const order = await prisma.rechargeOrder.findFirst({

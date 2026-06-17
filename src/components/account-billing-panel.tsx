@@ -121,6 +121,10 @@ function upsertOrder(orders: RechargeOrderView[], nextOrder: RechargeOrderView) 
   return orders.map((order) => (order.id === nextOrder.id ? nextOrder : order));
 }
 
+function upsertOrders(orders: RechargeOrderView[], nextOrders: RechargeOrderView[]) {
+  return nextOrders.reduce((current, order) => upsertOrder(current, order), orders);
+}
+
 export function AccountBillingPanel({
   balance,
   packages,
@@ -219,6 +223,26 @@ export function AccountBillingPanel({
     };
   }, [pendingOrders]);
 
+  useEffect(() => {
+    if (pendingOrders === 0) {
+      return;
+    }
+
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") {
+        void refreshPendingOrders();
+      }
+    };
+
+    window.addEventListener("focus", refreshWhenVisible);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+
+    return () => {
+      window.removeEventListener("focus", refreshWhenVisible);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
+  }, [pendingOrders]);
+
   async function requestJson(url: string, init?: RequestInit) {
     const response = await fetch(url, init);
     const payload = (await response.json().catch(() => ({}))) as BillingPayload;
@@ -228,8 +252,11 @@ export function AccountBillingPanel({
     return payload;
   }
 
-  async function fetchOrder(orderId: string) {
-    const payload = await requestJson(`/api/billing/orders/${orderId}`, {
+  async function fetchOrder(orderId: string, mode: BillingRefreshMode = "manual") {
+    const params = new URLSearchParams({
+      mode,
+    });
+    const payload = await requestJson(`/api/billing/orders/${orderId}?${params.toString()}`, {
       method: "GET",
       cache: "no-store",
     });
@@ -261,7 +288,7 @@ export function AccountBillingPanel({
     }
 
     try {
-      const nextOrder = await fetchOrder(orderId);
+      const nextOrder = await fetchOrder(orderId, silent ? "auto" : "manual");
       setOrders((current) => upsertOrder(current, nextOrder));
       if (nextOrder.status === "PAID") {
         await refreshOverview(true);
@@ -297,16 +324,28 @@ export function AccountBillingPanel({
       const pendingIds = new Set(pendingList.map((order) => order.id));
       const payload = await fetchOverview(Array.from(pendingIds), manual ? "manual" : "auto");
       const nextOrders = payload.orders || [];
-      const paidOrder = nextOrders.find((order) => pendingIds.has(order.id) && order.status === "PAID");
-      const expiredOrder = nextOrders.find((order) => pendingIds.has(order.id) && order.status === "EXPIRED");
+      const trackedOrders = (
+        await Promise.all(
+          pendingList.map((order) =>
+            fetchOrder(order.id, manual ? "manual" : "auto").catch(() => null),
+          ),
+        )
+      ).filter((order): order is RechargeOrderView => Boolean(order));
+      const observedOrders = [...nextOrders, ...trackedOrders];
+      const paidOrder = observedOrders.find((order) => pendingIds.has(order.id) && order.status === "PAID");
+      const expiredOrder = observedOrders.find((order) => pendingIds.has(order.id) && order.status === "EXPIRED");
       if (payload.balance) {
         setCurrentBalance(payload.balance);
       }
       if (nextOrders.length > 0) {
         applyOrders(nextOrders);
       }
+      if (trackedOrders.length > 0) {
+        setOrders((current) => upsertOrders(current, trackedOrders));
+      }
       if (paidOrder) {
         setMessage("检测到订单已支付，积分余额已刷新。");
+        await refreshOverview(true);
       } else if (expiredOrder) {
         setMessage("有待支付订单已过期，如需充值请重新创建订单。");
       }
