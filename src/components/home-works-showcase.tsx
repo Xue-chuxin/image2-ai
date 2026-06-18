@@ -8,6 +8,7 @@ import { CopyPromptButton } from "@/components/copy-prompt-button";
 import { AnimatedContent, MasonryShowcase, SpotlightCard } from "@/components/front/react-bits";
 import type { GalleryImageView } from "@/lib/gallery";
 import type { PromptCardData } from "@/lib/mock-data";
+import { hasChineseText, toPublicChineseTags, toPublicChineseText } from "@/lib/public-display";
 
 type ShowcaseItem = {
   id: string;
@@ -17,14 +18,11 @@ type ShowcaseItem = {
   category: string;
   tags: string[];
   ratio: string;
-  provider: string;
   imageUrl?: string;
   thumbnailUrl?: string;
   gradient: string;
   heightClass: string;
   promptZh: string;
-  promptEn?: string | null;
-  negativePrompt?: string | null;
   authorName: string;
   createdAt?: string;
   isFallback: boolean;
@@ -55,15 +53,6 @@ const ratioHeight: Record<string, string> = {
   "16:9": "h-56",
 };
 
-function shortTitle(text: string) {
-  const clean = text.replace(/\s+/g, " ").trim();
-  if (!clean) {
-    return "生成作品";
-  }
-
-  return clean.length > 18 ? `${clean.slice(0, 18)}...` : clean;
-}
-
 function normalizeCategory(value: string) {
   if (value === "鍐欑湡") return "写真";
   if (value === "鍟嗗搧") return "商品";
@@ -73,28 +62,26 @@ function normalizeCategory(value: string) {
   if (value === "鎻掔敾") return "插画";
   if (value === "鍥介") return "国风";
   if (value === "鍏ㄩ儴") return "全部";
-  return value || "其他";
+  return hasChineseText(value) ? value : "其他";
 }
 
 function workToItem(work: GalleryImageView): ShowcaseItem {
   const category = normalizeCategory(work.category);
+  const displayPrompt = toPublicChineseText([work.promptZh, work.summary, work.title], "暂无中文描述");
   return {
     id: work.id,
     sourceType: work.sourceType,
-    title: work.title || shortTitle(work.promptZh),
-    summary: work.summary || work.promptZh,
+    title: toPublicChineseText([work.title, work.summary, work.promptZh], "生成作品", 18),
+    summary: toPublicChineseText([work.summary, work.promptZh, work.title], "暂无中文描述", 72),
     category,
-    tags: work.tags?.length ? work.tags.map(normalizeCategory) : [category, work.ratio, work.provider],
+    tags: toPublicChineseTags(work.tags || [], [category]),
     ratio: work.ratio,
-    provider: work.provider,
     imageUrl: work.url,
     thumbnailUrl: work.thumbnailUrl || work.url,
     gradient: categoryGradient[category] || categoryGradient.其他,
     heightClass: ratioHeight[work.ratio] || "h-64",
-    promptZh: work.promptZh,
-    promptEn: work.promptEn,
-    negativePrompt: work.negativePrompt,
-    authorName: work.authorName,
+    promptZh: displayPrompt,
+    authorName: toPublicChineseText([work.authorName], "创作者", 12),
     createdAt: work.publishedAt || work.createdAt,
     isFallback: false,
   };
@@ -102,21 +89,19 @@ function workToItem(work: GalleryImageView): ShowcaseItem {
 
 function promptToItem(prompt: PromptCardData): ShowcaseItem {
   const category = normalizeCategory(prompt.category);
+  const displayPrompt = toPublicChineseText([prompt.promptZh, prompt.summary, prompt.title], "暂无中文描述");
   return {
     id: prompt.slug,
     sourceType: "sample",
-    title: prompt.title,
-    summary: prompt.summary,
+    title: toPublicChineseText([prompt.title, prompt.summary, prompt.promptZh], "生成作品", 18),
+    summary: toPublicChineseText([prompt.summary, prompt.promptZh, prompt.title], "暂无中文描述", 72),
     category,
-    tags: prompt.tags.map(normalizeCategory),
+    tags: toPublicChineseTags(prompt.tags, [category]),
     ratio: prompt.ratio,
-    provider: "sample",
     gradient: categoryGradient[category] || prompt.gradient,
     heightClass: prompt.heightClass,
-    promptZh: prompt.promptZh,
-    promptEn: prompt.promptEn,
-    negativePrompt: prompt.negativePrompt,
-    authorName: prompt.authorName,
+    promptZh: displayPrompt,
+    authorName: toPublicChineseText([prompt.authorName], "造图台", 12),
     isFallback: true,
   };
 }
@@ -125,7 +110,7 @@ function filterItems(items: ShowcaseItem[], query: string, category: string) {
   const keyword = query.trim().toLowerCase();
   return items.filter((item) => {
     const matchesCategory = category === "全部" || item.category === category;
-    const haystack = [item.title, item.summary, item.category, item.promptZh, item.promptEn, item.negativePrompt, ...item.tags]
+    const haystack = [item.title, item.summary, item.category, item.promptZh, ...item.tags]
       .filter(Boolean)
       .join(" ")
       .toLowerCase();
@@ -148,7 +133,7 @@ export function HomeWorksShowcase({
   initialWorks,
   fallbackPrompts,
   galleryError,
-  eyebrow = "Works",
+  eyebrow = "作品",
   title = "作品展示",
   realDescription = "来自用户发布的公开作品。",
   fallbackDescription = "暂无公开作品，先展示一些可复用的方向。",
@@ -320,7 +305,7 @@ export function HomeWorksShowcase({
                     <div className={`h-full min-h-[420px] w-full bg-gradient-to-br ${selectedItem.gradient} p-6`}>
                       <div className="flex h-full min-h-[420px] items-end rounded-[24px] border border-white/80 bg-white/54 p-6 shadow-inner backdrop-blur-sm">
                         <div>
-                          <p className="text-sm font-black uppercase tracking-[0.18em] text-slate-400">Preview</p>
+                          <p className="text-sm font-black tracking-[0.18em] text-slate-400">预览</p>
                           <h3 className="mt-2 text-4xl font-black tracking-[-0.05em] text-slate-950">{selectedItem.title}</h3>
                         </div>
                       </div>
@@ -378,28 +363,10 @@ export function HomeWorksShowcase({
                     <p className="text-sm leading-7 text-slate-600">{selectedItem.promptZh}</p>
                   </div>
 
-                  {selectedItem.promptEn ? (
-                    <div className="rounded-[20px] border border-slate-200 bg-slate-50 p-4">
-                      <div className="mb-3 flex items-center justify-between">
-                        <p className="text-sm font-black text-slate-950">英文提示词</p>
-                        <CopyPromptButton text={selectedItem.promptEn} label="复制" className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-black text-slate-600" />
-                      </div>
-                      <p className="text-sm leading-7 text-slate-500">{selectedItem.promptEn}</p>
-                    </div>
-                  ) : null}
-
-                  {selectedItem.negativePrompt ? (
-                    <div className="rounded-[20px] border border-slate-200 bg-slate-50 p-4">
-                      <p className="text-sm font-black text-slate-950">过滤指令</p>
-                      <p className="mt-3 text-sm leading-7 text-slate-500">{selectedItem.negativePrompt}</p>
-                    </div>
-                  ) : null}
-
                   <div className="space-y-2 rounded-[20px] border border-slate-200 bg-white p-4">
                     {[
                       ["类别", selectedItem.category],
                       ["画幅比例", selectedItem.ratio],
-                      ["Provider", selectedItem.provider],
                       ["来源", selectedItem.isFallback ? fallbackSourceLabel : selectedItem.sourceType === "curated" ? "运营精选" : "真实生成"],
                       ["时间", selectedItem.isFallback ? "示例数据" : formatDate(selectedItem.createdAt)],
                     ].map(([label, value]) => (

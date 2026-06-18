@@ -27,6 +27,7 @@ import { HomeScenarioTabs } from "@/components/home-scenario-tabs";
 import { HomeWorksShowcase } from "@/components/home-works-showcase";
 import { GALLERY_CATEGORIES, listPublicGalleryImages, type GalleryImageView } from "@/lib/gallery";
 import { promptCards } from "@/lib/mock-data";
+import { toPublicChineseText } from "@/lib/public-display";
 import { getPublicAppSettings } from "@/lib/settings";
 
 const steps = [
@@ -202,30 +203,21 @@ function getWorkTone(category: string) {
   return workToneMap[category] || "default";
 }
 
-function shortSummary(text: string, maxLength = 46) {
-  const clean = text.replace(/\s+/g, " ").trim();
-  if (clean.length <= maxLength) {
-    return clean;
-  }
-
-  return `${clean.slice(0, maxLength)}...`;
-}
-
 function buildHeroWorks(publicWorks: GalleryImageView[]): HeroWork[] {
   const liveWorks = publicWorks.slice(0, 5).map((work) => ({
     id: work.id,
-    title: work.title,
-    summary: shortSummary(work.summary || work.promptZh || "公开作品"),
-    category: work.category,
+    title: toPublicChineseText([work.title, work.summary, work.promptZh], "生成作品", 18),
+    summary: toPublicChineseText([work.summary, work.promptZh, work.title], "暂无中文描述", 46),
+    category: toPublicChineseText([work.category], "其他", 8),
     imageUrl: work.thumbnailUrl || work.url,
     ratio: work.ratio,
     tone: getWorkTone(work.category),
   }));
   const fallbackWorks = promptCards.slice(0, Math.max(0, 5 - liveWorks.length)).map((prompt) => ({
     id: `prompt-${prompt.slug}`,
-    title: prompt.title,
-    summary: shortSummary(prompt.summary),
-    category: prompt.category,
+    title: toPublicChineseText([prompt.title, prompt.summary, prompt.promptZh], "生成作品", 18),
+    summary: toPublicChineseText([prompt.summary, prompt.promptZh, prompt.title], "暂无中文描述", 46),
+    category: toPublicChineseText([prompt.category], "其他", 8),
     ratio: prompt.ratio,
     tone: getWorkTone(prompt.category),
   }));
