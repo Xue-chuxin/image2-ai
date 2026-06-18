@@ -2299,11 +2299,11 @@ textarea {
   color: var(--td-text-color-primary, rgba(0, 0, 0, 0.9));
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.76) 0%, rgba(246, 248, 251, 0.66) 48%, rgba(238, 243, 248, 0.86) 100%),
-    url("/home-minimal-bg.svg?v=2"),
+    url("/home-minimal-bg.svg?v=3"),
     linear-gradient(180deg, #ffffff 0%, #f6f8fb 48%, #eef3f8 100%);
   background-position: center top, center top, center;
-  background-repeat: no-repeat;
-  background-size: auto, min(100%, 1600px) auto, auto;
+  background-repeat: no-repeat, repeat-y, no-repeat;
+  background-size: auto, 100vw auto, auto;
 }
 
 .front-site-shell--auth {
@@ -2446,11 +2446,11 @@ textarea {
   inset: 0 calc(50% - 50vw);
   pointer-events: none;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.74) 0%, rgba(255, 255, 255, 0.52) 42%, rgba(244, 248, 253, 0.72) 100%),
-    url("/home-minimal-bg.svg?v=2");
-  background-position: center top, center -120px;
-  background-repeat: no-repeat;
-  background-size: auto, 1600px auto;
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.3) 42%, rgba(244, 248, 253, 0.54) 100%),
+    url("/home-minimal-bg.svg?v=3");
+  background-position: center top, center -100px;
+  background-repeat: no-repeat, repeat-y;
+  background-size: auto, 100vw auto;
   content: "";
 }
 
@@ -3492,7 +3492,7 @@ textarea {
 .front-site-scenario-list article {
   background:
     linear-gradient(90deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.9) 42%, rgba(255, 255, 255, 0.54) 100%),
-    url("/home-card-bg.svg?v=2"),
+    url("/home-card-flow-bg.svg?v=1"),
     rgba(255, 255, 255, 0.86);
   background-position: center, right -16px center, center;
   background-repeat: no-repeat;
@@ -3500,9 +3500,38 @@ textarea {
 }
 
 .front-site-feature-card:nth-child(2),
-.front-site-workflow-card:nth-child(even),
+.front-site-workflow-card:nth-child(2),
+.front-site-operation-card:nth-child(2),
+.front-site-scenario-list article:nth-child(2) {
+  background-image:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.9) 42%, rgba(255, 255, 255, 0.54) 100%),
+    url("/home-card-gallery-bg.svg?v=1"),
+    linear-gradient(135deg, #ffffff, #f3f8ff);
+}
+
+.front-site-feature-card:nth-child(3),
+.front-site-workflow-card:nth-child(3),
+.front-site-operation-card:nth-child(3),
+.front-site-scenario-list article:nth-child(3) {
+  background-image:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.9) 42%, rgba(255, 255, 255, 0.54) 100%),
+    url("/home-card-config-bg.svg?v=1"),
+    linear-gradient(135deg, #ffffff, #f6fbff);
+}
+
+.front-site-workflow-card:nth-child(4),
+.front-site-operation-card:nth-child(4),
+.front-site-scenario-list article:nth-child(4) {
+  background-image:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.9) 42%, rgba(255, 255, 255, 0.54) 100%),
+    url("/home-card-shield-bg.svg?v=1"),
+    linear-gradient(135deg, #ffffff, #f7fbff);
+}
+
+.front-site-feature-card:nth-child(2n),
+.front-site-workflow-card:nth-child(2n),
 .front-site-operation-card:nth-child(2n),
-.front-site-scenario-list article:nth-child(even) {
+.front-site-scenario-list article:nth-child(2n) {
   background-position: center, right -52px bottom -18px, center;
 }
 
@@ -5303,13 +5332,13 @@ textarea {
   }
 
   .front-site-shell:not(.front-site-shell--auth) {
-    background-position: center top, 48% top, center;
-    background-size: auto, 1180px auto, auto;
+    background-position: center top, center top, center;
+    background-size: auto, 100vw auto, auto;
   }
 
   .front-site-main--home::before {
     background-position: center top, center -70px;
-    background-size: auto, 1180px auto;
+    background-size: auto, 100vw auto;
   }
 
   .front-site-header-inner {
