@@ -3197,29 +3197,33 @@ textarea {
   min-width: 0;
 }
 
-.front-site-scenario-nav a {
+.front-site-scenario-nav button {
   display: grid;
   grid-template-columns: 34px minmax(0, 1fr);
   gap: 12px;
   align-items: center;
   min-height: 58px;
+  border: 0;
   border-left: 3px solid transparent;
   border-radius: var(--td-radius-medium, 6px);
   padding: 0 16px 0 13px;
   color: var(--td-text-color-secondary, rgba(0, 0, 0, 0.6));
   background: rgba(255, 255, 255, 0.56);
+  font: inherit;
   font-weight: 750;
+  text-align: left;
+  cursor: pointer;
   transition: border-color 180ms ease, background 180ms ease, color 180ms ease, transform 180ms ease;
 }
 
-.front-site-scenario-nav a:hover,
-.front-site-scenario-nav a.is-active {
+.front-site-scenario-nav button:hover,
+.front-site-scenario-nav button.is-active {
   border-left-color: var(--td-brand-color, #0052d9);
   color: var(--td-brand-color, #0052d9);
   background: var(--td-bg-color-container-hover, #f8fafc);
 }
 
-.front-site-scenario-nav a:hover {
+.front-site-scenario-nav button:hover {
   transform: translateX(2px);
 }
 

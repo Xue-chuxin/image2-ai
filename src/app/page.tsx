@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { GenerateComposer } from "@/components/generate-composer";
 import { BlurText, GlassSurface, SpotlightCard, SplitText } from "@/components/front/react-bits";
+import { HomeScenarioTabs } from "@/components/home-scenario-tabs";
 import { HomeWorksShowcase } from "@/components/home-works-showcase";
 import { GALLERY_CATEGORIES, listPublicGalleryImages, type GalleryImageView } from "@/lib/gallery";
 import { promptCards } from "@/lib/mock-data";
@@ -401,48 +402,7 @@ export default async function HomePage() {
         </section>
 
         <section id="scenarios" className="front-site-section front-site-scenarios">
-          <div className="front-site-scenario-shell">
-            <div className="front-site-scenario-left">
-              <div className="front-site-section-head">
-                <span className="front-site-eyebrow">适用场景</span>
-                <h2>适合需要持续产图的业务场景</h2>
-                <p>不是一次性玩具，而是能沉淀提示词、作品和运营配置的生产入口。</p>
-              </div>
-              <nav className="front-site-scenario-nav" aria-label="适用场景目录">
-                {scenarios.map(({ title }, index) => (
-                  <a key={title} href={`#scenario-${index + 1}`} className={index === 0 ? "is-active" : ""}>
-                    <span>{String(index + 1).padStart(2, "0")}</span>
-                    <strong>{title}</strong>
-                  </a>
-                ))}
-              </nav>
-            </div>
-            <div className="front-site-scenario-list">
-              {scenarios.map(({ title, description, audience, input, output }, index) => (
-                <article key={title} id={`scenario-${index + 1}`}>
-                  <strong>{String(index + 1).padStart(2, "0")}</strong>
-                  <div>
-                    <h3>{title}</h3>
-                    <p>{description}</p>
-                    <dl className="front-site-scenario-meta">
-                      <div>
-                        <dt>适合谁</dt>
-                        <dd>{audience}</dd>
-                      </div>
-                      <div>
-                        <dt>输入</dt>
-                        <dd>{input}</dd>
-                      </div>
-                      <div>
-                        <dt>产出</dt>
-                        <dd>{output}</dd>
-                      </div>
-                    </dl>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
+          <HomeScenarioTabs scenarios={scenarios} />
         </section>
 
         <section id="showcase" className="front-site-section front-site-showcase">
