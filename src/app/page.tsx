@@ -1,7 +1,6 @@
 import Link from "next/link";
 import {
   ArrowRight,
-  BadgeCheck,
   Bot,
   CheckCircle2,
   Clock3,
@@ -77,8 +76,6 @@ const enterpriseCapabilities = [
     Icon: WalletCards,
   },
 ];
-
-const trustSignals = ["内容运营团队", "电商视觉生产", "设计提案协作", "品牌素材归档"];
 
 const heroProofs = [
   { label: "模型组合", value: "DeepSeek + OpenAI", Icon: Bot },
@@ -340,18 +337,6 @@ export default async function HomePage() {
         </section>
 
         <HeroResultStrip works={heroWorks} />
-
-        <section className="front-site-trust-strip" aria-label="适用团队">
-          <span>适合持续产图的团队</span>
-          <div>
-            {trustSignals.map((item) => (
-              <strong key={item}>
-                <BadgeCheck className="h-4 w-4" />
-                {item}
-              </strong>
-            ))}
-          </div>
-        </section>
 
         <section id="features" className="front-site-section">
           <div className="front-site-section-head">
