@@ -2565,7 +2565,7 @@ textarea {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
-  max-width: 620px;
+  max-width: 560px;
 }
 
 .front-site-proof-grid div {
@@ -2577,8 +2577,11 @@ textarea {
   background: rgba(255, 255, 255, 0.72);
 }
 
-.front-site-proof-icon {
-  margin-bottom: 2px;
+.front-site-proof-heading {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
 }
 
 .front-site-proof-label,
@@ -2597,12 +2600,11 @@ textarea {
 
 .front-site-proof-grid strong {
   color: var(--td-text-color-primary, rgba(0, 0, 0, 0.9));
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 750;
   line-height: 20px;
-  text-overflow: clip;
-  white-space: normal;
-  word-break: keep-all;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .front-site-product-preview {

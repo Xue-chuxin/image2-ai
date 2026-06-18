@@ -325,10 +325,12 @@ export default async function HomePage() {
             <div className="front-site-proof-grid" aria-label="产品可信能力">
               {heroProofs.map(({ label, value, Icon }) => (
                 <div key={label}>
-                  <span className="front-site-proof-icon" aria-hidden="true">
-                    <Icon className="h-4 w-4" />
+                  <span className="front-site-proof-heading">
+                    <span className="front-site-proof-icon" aria-hidden="true">
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <span className="front-site-proof-label">{label}</span>
                   </span>
-                  <span className="front-site-proof-label">{label}</span>
                   <strong>{value}</strong>
                 </div>
               ))}
