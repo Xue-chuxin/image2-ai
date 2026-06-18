@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { Clock3, Home, ImagePlus, Library, Palette, UserRound } from "lucide-react";
 import { clsx } from "clsx";
 import type { ReactElement, ReactNode } from "react";
-import { Layout, Menu, Tag } from "tdesign-react";
+import { Layout, Menu } from "tdesign-react";
 import {
   AiImageIcon,
   BrowseGalleryIcon,
@@ -262,11 +262,8 @@ function TDesignWorkspaceShell({
         <Header className="front-td-header">
           <div className="front-td-header-inner">
             <div className="front-td-heading">
-              <Tag theme="primary" variant="light">TDesign Workspace</Tag>
-              <div>
-                <h1>{meta.title}</h1>
-                <p>{meta.description}</p>
-              </div>
+              <h1>{meta.title}</h1>
+              <p>{meta.description}</p>
             </div>
             <div className="front-td-account">
               {user?.email ? (
