@@ -5863,13 +5863,60 @@ textarea {
   }
 
   .front-td-content {
-    padding: 14px 14px 92px;
+    padding: 14px 14px calc(128px + env(safe-area-inset-bottom));
   }
 
   .td-front-card .t-card__header,
   .td-front-card .t-card__body {
     padding-left: 14px;
     padding-right: 14px;
+  }
+
+  .td-generate-workbench,
+  .td-composer-panel,
+  .td-composer-card,
+  .td-composer-stack,
+  .td-field-block,
+  .td-option-block,
+  .td-preview-panel {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .td-generate-workbench {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .td-preview-panel {
+    position: static;
+  }
+
+  .td-field-block .t-textarea,
+  .td-field-block textarea,
+  .td-option-block .t-select,
+  .td-option-block .t-radio-group,
+  .td-option-block .t-radio-group__wrapper,
+  .td-prompt-preview,
+  .td-prompt-preview p,
+  .td-prompt-preview small {
+    max-width: 100%;
+  }
+
+  .td-field-block .t-textarea,
+  .td-field-block textarea,
+  .td-option-block .t-select {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .td-prompt-preview {
+    overflow: hidden;
+  }
+
+  .td-prompt-preview p,
+  .td-prompt-preview small {
+    overflow-wrap: anywhere;
   }
 
   .td-option-row,
