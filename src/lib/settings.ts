@@ -281,6 +281,9 @@ function normalizeFooterLinkHref(value: unknown) {
   if (clean.startsWith("/") || clean.startsWith("#")) {
     return clean;
   }
+  if (clean.startsWith("www.")) {
+    return `https://${clean}`;
+  }
 
   try {
     const url = new URL(clean);
@@ -290,6 +293,35 @@ function normalizeFooterLinkHref(value: unknown) {
   }
 }
 
+function parseFooterLinkTextLine(line: string) {
+  const pipeParts = line.split(/[|｜]/);
+  if (pipeParts.length >= 2) {
+    return { label: pipeParts[0], href: pipeParts.slice(1).join("|") };
+  }
+
+  const commaParts = line.split(/[，,]/);
+  if (commaParts.length >= 2) {
+    return { label: commaParts[0], href: commaParts.slice(1).join(",") };
+  }
+
+  const urlMatch = line.match(/\s+(https?:\/\/\S+|www\.\S+|\/\S*|#\S+)$/);
+  if (urlMatch?.index) {
+    return { label: line.slice(0, urlMatch.index), href: urlMatch[1] };
+  }
+
+  return null;
+}
+
+function parseFooterLinksText(value: string) {
+  return value
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map(parseFooterLinkTextLine)
+    .filter((link): link is { label: string; href: string } => Boolean(link));
+}
+
 function normalizeFriendLinks(value: unknown, fallback: FooterFriendLink[] = []) {
   let rawLinks: unknown = value;
 
@@ -297,7 +329,7 @@ function normalizeFriendLinks(value: unknown, fallback: FooterFriendLink[] = [])
     try {
       rawLinks = rawLinks.trim() ? JSON.parse(rawLinks) : [];
     } catch {
-      rawLinks = [];
+      rawLinks = parseFooterLinksText(rawLinks);
     }
   }
 

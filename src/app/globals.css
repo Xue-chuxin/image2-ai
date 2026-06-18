@@ -930,10 +930,12 @@ textarea {
   overflow: hidden;
 }
 
+.admin-td-menu.t-menu .t-menu__logo,
 .admin-td-menu .t-menu__logo {
   display: flex;
   align-items: center;
-  height: 72px;
+  height: 72px !important;
+  min-height: 72px !important;
   margin: 0;
   padding: 0 20px;
   border-bottom: 1px solid var(--td-border-level-1-color, #eef1f5);
@@ -3597,10 +3599,12 @@ textarea {
   background: transparent !important;
 }
 
+.front-td-menu.t-menu .t-menu__logo,
 .front-td-menu .t-menu__logo {
   display: flex;
   align-items: center;
-  height: 72px;
+  height: 72px !important;
+  min-height: 72px !important;
   margin: 0;
   padding: 0 18px;
   border-bottom: 1px solid var(--td-border-level-1-color, #eef1f5);

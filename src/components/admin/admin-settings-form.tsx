@@ -78,20 +78,69 @@ function formatFriendLinks(links: FooterFriendLink[]) {
   return links.map((link) => `${link.label} | ${link.href}`).join("\n");
 }
 
-function parseFriendLinksText(value: string): FooterFriendLink[] {
-  const seen = new Set<string>();
+function parseFriendLinkLine(line: string) {
+  const pipeParts = line.split(/[|｜]/);
+  if (pipeParts.length >= 2) {
+    return {
+      label: pipeParts[0].trim(),
+      href: pipeParts.slice(1).join("|").trim(),
+    };
+  }
 
-  return value
+  const commaParts = line.split(/[，,]/);
+  if (commaParts.length >= 2) {
+    return {
+      label: commaParts[0].trim(),
+      href: commaParts.slice(1).join(",").trim(),
+    };
+  }
+
+  const urlMatch = line.match(/\s+(https?:\/\/\S+|www\.\S+|\/\S*|#\S+)$/);
+  if (urlMatch?.index) {
+    return {
+      label: line.slice(0, urlMatch.index).trim(),
+      href: urlMatch[1].trim(),
+    };
+  }
+
+  return null;
+}
+
+function normalizeFriendLinkHref(value: string) {
+  const clean = value.trim().slice(0, 300);
+  if (!clean) return "";
+  if (clean.startsWith("/") || clean.startsWith("#")) return clean;
+  if (clean.startsWith("www.")) return `https://${clean}`;
+
+  try {
+    const url = new URL(clean);
+    return url.protocol === "http:" || url.protocol === "https:" ? clean : "";
+  } catch {
+    return "";
+  }
+}
+
+function parseFriendLinksText(value: string): { links: FooterFriendLink[]; error: string } {
+  const seen = new Set<string>();
+  const invalidLines: string[] = [];
+
+  const links = value
     .replace(/\r\n/g, "\n")
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean)
     .map((line) => {
-      const [rawLabel, ...rawHrefParts] = line.split("|");
-      const label = rawLabel.trim().slice(0, 40);
-      const href = rawHrefParts.join("|").trim().slice(0, 300);
+      const parsed = parseFriendLinkLine(line);
+      if (!parsed) {
+        invalidLines.push(line);
+        return null;
+      }
+
+      const label = parsed.label.slice(0, 40);
+      const href = normalizeFriendLinkHref(parsed.href);
 
       if (!label || !href) {
+        invalidLines.push(line);
         return null;
       }
 
@@ -105,6 +154,11 @@ function parseFriendLinksText(value: string): FooterFriendLink[] {
     })
     .filter((link): link is FooterFriendLink => Boolean(link))
     .slice(0, 8);
+
+  return {
+    links,
+    error: invalidLines.length ? `友情链接格式不正确：${invalidLines.slice(0, 2).join("；")}。请按“名称 | 链接”填写。` : "",
+  };
 }
 
 function mergeSavedOpenAIChannels(
@@ -305,7 +359,13 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
     setError("");
     setMessage("");
     setIsSaving(true);
-    const submittedSettings = { ...settings, friendLinks: parseFriendLinksText(friendLinksText) };
+    const parsedFriendLinks = parseFriendLinksText(friendLinksText);
+    if (parsedFriendLinks.error) {
+      setError(parsedFriendLinks.error);
+      setIsSaving(false);
+      return;
+    }
+    const submittedSettings = { ...settings, friendLinks: parsedFriendLinks.links };
     const submittedChannels = openaiChannels;
     const submittedDeepseekApiKey = deepseekApiKey;
     const submittedOpenaiApiKey = openaiApiKey;
@@ -503,7 +563,7 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
                     textarea
                     minRows={5}
                   />
-                  <p className="admin-td-form-hint">每行一个友情链接，格式为：名称 | 链接。最多展示 8 个，支持 http、https、站内路径和锚点链接。</p>
+                  <p className="admin-td-form-hint">每行一个友情链接，推荐格式：名称 | 链接。也支持“名称｜链接”“名称，链接”或“名称 https://example.com”。最多展示 8 个。</p>
                 </Form>
               </Card>
               <Card className="admin-td-card" bordered title="前台模板">
