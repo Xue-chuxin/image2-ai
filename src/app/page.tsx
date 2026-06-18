@@ -296,28 +296,28 @@ export default async function HomePage() {
             <dl className="front-site-metrics" aria-label="产品能力概览">
               <div>
                 <dt>
-                  <span className="front-site-metric-icon">
+                  <span className="front-site-metric-icon" aria-hidden="true">
                     <Bot className="h-4 w-4" />
                   </span>
-                  模型通道
+                  <span className="front-site-metric-label">模型通道</span>
                 </dt>
                 <dd>OpenAI</dd>
               </div>
               <div>
                 <dt>
-                  <span className="front-site-metric-icon">
+                  <span className="front-site-metric-icon" aria-hidden="true">
                     <WandSparkles className="h-4 w-4" />
                   </span>
-                  提示词
+                  <span className="front-site-metric-label">提示词</span>
                 </dt>
                 <dd>DeepSeek</dd>
               </div>
               <div>
                 <dt>
-                  <span className="front-site-metric-icon">
+                  <span className="front-site-metric-icon" aria-hidden="true">
                     <Database className="h-4 w-4" />
                   </span>
-                  任务流程
+                  <span className="front-site-metric-label">任务流程</span>
                 </dt>
                 <dd>任务归档</dd>
               </div>
@@ -325,8 +325,10 @@ export default async function HomePage() {
             <div className="front-site-proof-grid" aria-label="产品可信能力">
               {heroProofs.map(({ label, value, Icon }) => (
                 <div key={label}>
-                  <Icon className="h-4 w-4" />
-                  <span>{label}</span>
+                  <span className="front-site-proof-icon" aria-hidden="true">
+                    <Icon className="h-4 w-4" />
+                  </span>
+                  <span className="front-site-proof-label">{label}</span>
                   <strong>{value}</strong>
                 </div>
               ))}
