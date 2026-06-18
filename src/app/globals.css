@@ -1334,6 +1334,20 @@ textarea {
   padding-left: 20px;
 }
 
+.admin-td-content-placeholder {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.admin-td-content-placeholder span {
+  display: block;
+  min-height: 96px;
+  border: 1px solid var(--td-border-level-1-color, #e7eaf0);
+  border-radius: var(--td-radius-medium, 6px);
+  background: linear-gradient(90deg, #f6f8fb 0%, #ffffff 48%, #f6f8fb 100%);
+}
+
 @media (min-width: 768px) {
   .admin-td-sider + .t-layout {
     margin-left: 236px;

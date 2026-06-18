@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactElement, type ReactNode } from "react";
+import { useEffect, useState, type ReactElement, type ReactNode } from "react";
 import { Layout, Menu } from "tdesign-react";
 import {
   CheckCircleIcon,
@@ -72,6 +72,11 @@ export function AdminPageShell({
   wide?: boolean;
 }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <Layout className="admin-td-shell">
@@ -120,9 +125,21 @@ export function AdminPageShell({
           </div>
           {mobileNavOpen ? <AdminMobileDrawer active={active} email={email} onClose={() => setMobileNavOpen(false)} /> : null}
         </Header>
-        <Content className={wide ? "admin-td-content admin-td-content--wide" : "admin-td-content"}>{children}</Content>
+        <Content className={wide ? "admin-td-content admin-td-content--wide" : "admin-td-content"}>
+          {mounted ? children : <AdminContentPlaceholder />}
+        </Content>
       </Layout>
     </Layout>
+  );
+}
+
+function AdminContentPlaceholder() {
+  return (
+    <div className="admin-td-content-placeholder" aria-hidden="true">
+      <span />
+      <span />
+      <span />
+    </div>
   );
 }
 
