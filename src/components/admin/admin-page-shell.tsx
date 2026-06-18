@@ -1,13 +1,15 @@
 "use client";
 
-import type { ReactElement, ReactNode } from "react";
+import { useState, type ReactElement, type ReactNode } from "react";
 import { Layout, Menu } from "tdesign-react";
 import {
   CheckCircleIcon,
   CloudUploadIcon,
+  CloseIcon,
   DashboardIcon,
   ImageIcon,
   InternetIcon,
+  MenuIcon,
   MoneyIcon,
   SettingIcon,
   TaskIcon,
@@ -18,7 +20,7 @@ import { AccountMenu } from "@/components/account-menu";
 type AdminTabKey = "dashboard" | "users" | "jobs" | "images" | "uploads" | "billing" | "health" | "settings" | "relays";
 
 const { Header, Content, Aside } = Layout;
-const { HeadMenu, MenuGroup, MenuItem } = Menu;
+const { MenuGroup, MenuItem } = Menu;
 
 const adminTabs: Array<{
   key: AdminTabKey;
@@ -69,6 +71,8 @@ export function AdminPageShell({
   children: ReactNode;
   wide?: boolean;
 }) {
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
   return (
     <Layout className="admin-td-shell">
       <Aside className="admin-td-sider hidden md:block" width="236px">
@@ -94,23 +98,77 @@ export function AdminPageShell({
       <Layout>
         <Header className="admin-td-header">
           <div className="admin-td-header-inner">
+            <button
+              className="admin-td-mobile-nav-trigger md:hidden"
+              type="button"
+              aria-label="打开后台导航"
+              aria-expanded={mobileNavOpen}
+              onClick={() => setMobileNavOpen(true)}
+            >
+              <MenuIcon />
+            </button>
             <div className="admin-td-page-heading">
               <h2 className="admin-td-page-title">{title}</h2>
               <p className="admin-td-page-description">{description}</p>
             </div>
-            <AccountMenu email={email || "admin"} role="admin" variant="admin" />
+            <div className="admin-td-desktop-account hidden md:block">
+              <AccountMenu email={email || "admin"} role="admin" variant="admin" />
+            </div>
+            <div className="admin-td-mobile-user md:hidden">
+              <AccountMenu email={email || "admin"} role="admin" variant="admin" />
+            </div>
           </div>
-          <HeadMenu value={active} className="admin-td-mobile-menu md:hidden" theme="light">
-            {adminTabs.map((tab) => (
-              <MenuItem key={tab.key} value={tab.key} href={tab.href}>
-                {tab.label}
-              </MenuItem>
-            ))}
-          </HeadMenu>
+          {mobileNavOpen ? <AdminMobileDrawer active={active} email={email} onClose={() => setMobileNavOpen(false)} /> : null}
         </Header>
         <Content className={wide ? "admin-td-content admin-td-content--wide" : "admin-td-content"}>{children}</Content>
       </Layout>
     </Layout>
+  );
+}
+
+function AdminMobileDrawer({
+  active,
+  email,
+  onClose,
+}: {
+  active: AdminTabKey;
+  email?: string | null;
+  onClose: () => void;
+}) {
+  return (
+    <div className="admin-td-mobile-drawer md:hidden" role="dialog" aria-modal="true" aria-label="后台导航">
+      <button className="admin-td-mobile-drawer__backdrop" type="button" aria-label="关闭后台导航" onClick={onClose} />
+      <aside className="admin-td-mobile-drawer__panel">
+        <div className="admin-td-mobile-drawer__head">
+          <AdminBrand />
+          <button type="button" aria-label="关闭后台导航" onClick={onClose}>
+            <CloseIcon />
+          </button>
+        </div>
+        <nav className="admin-td-mobile-drawer__nav" aria-label="后台菜单">
+          {adminMenuGroups.map((group) => (
+            <section key={group.title}>
+              <p>{group.title}</p>
+              <div>
+                {group.items.map((tab) => (
+                  <a key={tab.key} className={active === tab.key ? "is-active" : ""} href={tab.href} onClick={onClose}>
+                    <span className="admin-td-mobile-drawer__icon">{tab.icon}</span>
+                    <span>
+                      <strong>{tab.label}</strong>
+                      <small>{tab.description}</small>
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </section>
+          ))}
+        </nav>
+        <div className="admin-td-mobile-drawer__session">
+          <span>当前管理员</span>
+          <strong>{email || "admin"}</strong>
+        </div>
+      </aside>
+    </div>
   );
 }
 
