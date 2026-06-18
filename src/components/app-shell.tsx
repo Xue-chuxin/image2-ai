@@ -4,10 +4,22 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Clock3, Home, ImagePlus, Library, Palette, UserRound } from "lucide-react";
 import { clsx } from "clsx";
-import type { ReactNode } from "react";
+import type { ReactElement, ReactNode } from "react";
+import { Layout, Menu, Tag } from "tdesign-react";
+import {
+  AiImageIcon,
+  BrowseGalleryIcon,
+  HistoryIcon,
+  HomeIcon,
+  ImageEditIcon,
+  UserIcon,
+} from "tdesign-icons-react";
 import type { PublicAppSettings } from "@/lib/settings";
 import { AccountMenu } from "@/components/account-menu";
 import { GlassSurface, GooeyNav, ShapeGrid } from "@/components/front/react-bits";
+
+const { Aside, Content, Header } = Layout;
+const { MenuItem } = Menu;
 
 const navItems = [
   { href: "/", label: "首页", icon: Home },
@@ -16,6 +28,27 @@ const navItems = [
   { href: "/history", label: "记录", icon: Clock3 },
   { href: "/account", label: "账户", icon: UserRound },
 ];
+
+const tdesignNavItems: Array<{
+  href: string;
+  label: string;
+  icon: ReactElement;
+}> = [
+  { href: "/", label: "首页", icon: <HomeIcon /> },
+  { href: "/generate", label: "创作", icon: <ImageEditIcon /> },
+  { href: "/prompts", label: "灵感", icon: <BrowseGalleryIcon /> },
+  { href: "/history", label: "记录", icon: <HistoryIcon /> },
+  { href: "/account", label: "账户", icon: <UserIcon /> },
+];
+
+const pageMeta: Record<string, { title: string; description: string }> = {
+  "/": { title: "创作工作台", description: "直接输入画面描述，整理提示词并提交生图任务。" },
+  "/generate": { title: "创作", description: "完整生成流程、任务进度和结果预览。" },
+  "/prompts": { title: "灵感", description: "浏览公开作品和运营精选，复用描述继续创作。" },
+  "/history": { title: "记录", description: "查看当前账号的生图任务、结果和失败原因。" },
+  "/account": { title: "账户", description: "查看积分余额、充值套餐和订单状态。" },
+  "/signin": { title: "账号登录", description: "登录普通用户账号，或进入管理员后台。" },
+};
 
 function isActivePath(pathname: string, href: string) {
   if (href === "/") {
@@ -39,6 +72,24 @@ export function AppShell({
     return <>{children}</>;
   }
 
+  if (settings.frontTemplate === "glass_app") {
+    return <GlassAppShell settings={settings} user={user} pathname={pathname}>{children}</GlassAppShell>;
+  }
+
+  return <TDesignWorkspaceShell settings={settings} user={user} pathname={pathname}>{children}</TDesignWorkspaceShell>;
+}
+
+function GlassAppShell({
+  children,
+  settings,
+  user,
+  pathname,
+}: {
+  children: ReactNode;
+  settings: PublicAppSettings;
+  user?: { email: string } | null;
+  pathname: string;
+}) {
   const navLinks = navItems.map((item) => ({
     href: item.href,
     label: item.label,
@@ -88,34 +139,129 @@ export function AppShell({
 
       </div>
 
-      <nav
-        className="fixed inset-x-3 bottom-3 z-50 mx-auto grid max-w-md grid-cols-5 gap-1 rounded-[22px] border border-slate-200/80 bg-white/86 p-1.5 shadow-card backdrop-blur-xl md:hidden"
-        aria-label="移动端主导航"
-      >
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const active = isActivePath(pathname, item.href);
-          const isPrimary = Boolean(item.primary);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={clsx(
-                "front-mobile-nav-item flex min-h-12 flex-col items-center justify-center gap-1 rounded-[17px] px-1 py-2 text-[11px] font-bold transition duration-200 active:scale-[0.98]",
-                isPrimary
-                  ? "front-mobile-nav-item-primary text-[#174766]"
-                  : active
-                    ? "border border-sky-100 bg-[#e9f4fc] text-[#254c73] shadow-card"
-                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-950",
-                isPrimary && active && "front-mobile-nav-item-primary-active text-[#123b58]",
-              )}
-            >
-              <Icon className={clsx(isPrimary ? "h-5 w-5" : "h-4 w-4")} />
-              {item.label}
-            </Link>
-          );
-        })}
-      </nav>
+      <MobileNav pathname={pathname} />
     </div>
+  );
+}
+
+function TDesignWorkspaceShell({
+  children,
+  settings,
+  user,
+  pathname,
+}: {
+  children: ReactNode;
+  settings: PublicAppSettings;
+  user?: { email: string } | null;
+  pathname: string;
+}) {
+  const activeItem = tdesignNavItems.find((item) => isActivePath(pathname, item.href));
+  const metaKey = pathname.startsWith("/signin") ? "/signin" : activeItem?.href || "/";
+  const meta = pageMeta[metaKey] || pageMeta["/"];
+
+  return (
+    <Layout className="front-td-shell">
+      <Aside className="front-td-sider hidden md:block" width="236px">
+        <Menu
+          value={activeItem?.href || ""}
+          className="front-td-menu"
+          theme="light"
+          width="236px"
+          logo={<FrontTDesignBrand settings={settings} />}
+          operations={<FrontTDesignOperations user={user} />}
+        >
+          {tdesignNavItems.map((item) => (
+            <MenuItem key={item.href} value={item.href} href={item.href} icon={item.icon}>
+              {item.label}
+            </MenuItem>
+          ))}
+        </Menu>
+      </Aside>
+      <Layout>
+        <Header className="front-td-header">
+          <div className="front-td-header-inner">
+            <div className="front-td-heading">
+              <Tag theme="primary" variant="light">TDesign Workspace</Tag>
+              <div>
+                <h1>{meta.title}</h1>
+                <p>{meta.description}</p>
+              </div>
+            </div>
+            <div className="front-td-account">
+              {user?.email ? (
+                <AccountMenu email={user.email} role="user" />
+              ) : (
+                <Link href="/signin" className="front-td-login-button">
+                  登录 / 注册
+                </Link>
+              )}
+            </div>
+          </div>
+        </Header>
+        <Content className="front-td-content">{children}</Content>
+      </Layout>
+      <MobileNav pathname={pathname} tdesign />
+    </Layout>
+  );
+}
+
+function FrontTDesignBrand({ settings }: { settings: PublicAppSettings }) {
+  return (
+    <Link href="/" className="front-td-brand">
+      <span className="front-td-brand-mark">
+        <AiImageIcon />
+      </span>
+      <span className="front-td-brand-copy">
+        <strong>{settings.siteTitle}</strong>
+        <small>{settings.siteSubtitle}</small>
+      </span>
+    </Link>
+  );
+}
+
+function FrontTDesignOperations({ user }: { user?: { email: string } | null }) {
+  return (
+    <div className="front-td-menu-operations">
+      <span className="front-td-status-dot" />
+      <span>{user?.email ? "已登录" : "访客模式"}</span>
+    </div>
+  );
+}
+
+function MobileNav({ pathname, tdesign = false }: { pathname: string; tdesign?: boolean }) {
+  return (
+    <nav
+      className={clsx(
+        "fixed inset-x-3 bottom-3 z-50 mx-auto grid max-w-md grid-cols-5 gap-1 rounded-[22px] border p-1.5 md:hidden",
+        tdesign ? "front-td-mobile-nav" : "border-slate-200/80 bg-white/86 shadow-card backdrop-blur-xl",
+      )}
+      aria-label="移动端主导航"
+    >
+      {navItems.map((item) => {
+        const Icon = item.icon;
+        const active = isActivePath(pathname, item.href);
+        const isPrimary = Boolean(item.primary);
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={clsx(
+              "front-mobile-nav-item flex min-h-12 flex-col items-center justify-center gap-1 rounded-[17px] px-1 py-2 text-[11px] font-bold transition duration-200 active:scale-[0.98]",
+              isPrimary
+                ? "front-mobile-nav-item-primary text-[#174766]"
+                : active
+                  ? "border border-sky-100 bg-[#e9f4fc] text-[#254c73] shadow-card"
+                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-950",
+              isPrimary && active && "front-mobile-nav-item-primary-active text-[#123b58]",
+              tdesign && "front-td-mobile-nav-item",
+              tdesign && active && "front-td-mobile-nav-item-active",
+            )}
+          >
+            <Icon className={clsx(isPrimary ? "h-5 w-5" : "h-4 w-4")} />
+            {item.label}
+          </Link>
+        );
+      })}
+    </nav>
   );
 }

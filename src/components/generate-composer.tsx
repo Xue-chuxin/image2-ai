@@ -4,6 +4,7 @@ import { type ChangeEvent, type DragEvent, useMemo, useRef, useState } from "rea
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { Loader2, RotateCcw, Send, UploadCloud, Wand2, X } from "lucide-react";
+import { Alert, Button, Card, Radio, Select, Tag, Textarea } from "tdesign-react";
 import { IMAGE_STYLE_CATEGORIES, type ImageStyleCategory } from "@/lib/image-categories";
 
 type ReferenceImageResult = {
@@ -77,6 +78,7 @@ type GenerateComposerProps = {
   compact?: boolean;
   referenceImagesEnabled?: boolean;
   redirectOnTerminal?: string;
+  variant?: "glass" | "tdesign";
 };
 
 const ratios = ["1:1", "3:4", "16:9", "9:16"] as const;
@@ -129,6 +131,7 @@ export function GenerateComposer({
   compact = false,
   referenceImagesEnabled = false,
   redirectOnTerminal,
+  variant = "glass",
 }: GenerateComposerProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -381,6 +384,131 @@ export function GenerateComposer({
 
   function removeReferenceImage(id: string) {
     setReferenceImages((current) => current.filter((image) => image.id !== id));
+  }
+
+  if (variant === "tdesign") {
+    return (
+      <section className={clsx("td-composer-panel", compact && "td-composer-panel--compact")}>
+        <Card
+          className="td-front-card td-composer-card"
+          bordered
+          title={
+            <div className="td-composer-title">
+              <span>CREATE</span>
+              <strong>把一句描述整理成画面</strong>
+            </div>
+          }
+          actions={
+            <Button type="button" variant="outline" onClick={resetComposer}>
+              <RotateCcw size={16} />
+              重置
+            </Button>
+          }
+        >
+          <div className="td-composer-stack">
+            {referenceImagesEnabled ? (
+              <div
+                className={clsx("td-upload-card", isDragging && "is-dragging")}
+                onDragOver={(event) => {
+                  event.preventDefault();
+                  setIsDragging(true);
+                }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={onReferenceDrop}
+              >
+                <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" multiple className="hidden" onChange={onReferenceInputChange} />
+                <Button type="button" variant="text" loading={isUploadingReference} onClick={() => fileInputRef.current?.click()}>
+                  <UploadCloud size={18} />
+                  {isUploadingReference ? "参考图上传中" : "拖入参考图，或点击上传"}
+                </Button>
+                <p>PNG / JPG / WEBP，单张不超过 8MB，最多 4 张</p>
+              </div>
+            ) : null}
+
+            {referenceImages.length > 0 ? (
+              <div className="td-reference-grid">
+                {referenceImages.map((image) => (
+                  <div key={image.id} className="td-reference-card">
+                    <img src={image.thumbnailUrl || image.url} alt="参考图" />
+                    <button type="button" onClick={() => removeReferenceImage(image.id)} aria-label="移除参考图">
+                      <X size={14} />
+                    </button>
+                    <div>
+                      <strong>{image.mimeType.replace("image/", "").toUpperCase()}</strong>
+                      <span>{formatSize(image.fileSize)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            <label className="td-field-block">
+              <span>画面描述</span>
+              <Textarea
+                value={prompt}
+                placeholder="例如：雨夜街头的人像写真，浅景深，侧光，35mm 镜头，背景干净，真实皮肤质感。"
+                autosize={{ minRows: 5, maxRows: 8 }}
+                onChange={(nextValue) => {
+                  setPrompt(String(nextValue));
+                  setPolishedPromptEn("");
+                  setNegativePrompt("");
+                }}
+              />
+            </label>
+
+            <div className="td-option-row">
+              <div className="td-option-block td-option-block--wide">
+                <span>风格方向</span>
+                <Select
+                  value={selectedStyle}
+                  options={IMAGE_STYLE_CATEGORIES.map((style) => ({ label: style, value: style }))}
+                  onChange={(value) => setSelectedStyle(String(value) as ImageStyleCategory)}
+                />
+              </div>
+              <div className="td-option-block">
+                <span>画幅比例</span>
+                <Radio.Group value={ratio} theme="button" variant="default-filled" options={ratios.map((item) => ({ label: item, value: item }))} onChange={(value) => setRatio(value as typeof ratio)} />
+              </div>
+              <div className="td-option-block">
+                <span>质量</span>
+                <Radio.Group value={quality} theme="button" variant="default-filled" options={qualities.map((item) => ({ label: item.label, value: item.value }))} onChange={(value) => setQuality(value as typeof quality)} />
+              </div>
+              <div className="td-option-block">
+                <span>张数</span>
+                <Radio.Group value={imageCount} theme="button" variant="default-filled" options={imageCounts.map((item) => ({ label: `${item} 张`, value: item }))} onChange={(value) => setImageCount(Number(value) as typeof imageCount)} />
+              </div>
+            </div>
+
+            {polishedPromptEn || negativePrompt ? (
+              <div className="td-prompt-preview">
+                <div>
+                  <Tag theme="primary" variant="light">{polishProvider}</Tag>
+                  <strong>已回填整理结果</strong>
+                </div>
+                {polishedPromptEn ? <p>{polishedPromptEn}</p> : null}
+                {negativePrompt ? <small>避免：{negativePrompt}</small> : null}
+              </div>
+            ) : null}
+
+            {notice ? <Alert theme="success" message={notice} /> : null}
+            {error ? <Alert theme="error" message={error} /> : null}
+
+            <div className="td-composer-actions">
+              <Button type="button" variant="outline" loading={isPolishing} disabled={isGenerating} onClick={polishPrompt}>
+                {!isPolishing ? <Wand2 size={17} /> : null}
+                整理描述
+              </Button>
+              <Button type="button" theme="primary" loading={isGenerating} disabled={!canGenerate} onClick={startGeneration}>
+                {!isGenerating ? <Send size={17} /> : null}
+                开始生成
+              </Button>
+            </div>
+
+            {referenceImagesEnabled && referenceImages.length > 0 ? <p className="td-muted-line">参考图会保存到任务记录中。</p> : null}
+          </div>
+        </Card>
+      </section>
+    );
   }
 
   return (

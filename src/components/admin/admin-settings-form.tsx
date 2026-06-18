@@ -2,7 +2,13 @@
 
 import { useState, type ReactNode } from "react";
 import { Alert, Button, Card, Form, Input, InputNumber, Select, Switch, Tabs, Tag, Textarea } from "tdesign-react";
-import type { AdminAppSettings, AdminDiagnosticStatus, GenerationProviderName, OpenAICompatibleChannelSetting, StorageProviderName } from "@/lib/settings";
+import type {
+  AdminAppSettings,
+  AdminDiagnosticStatus,
+  GenerationProviderName,
+  OpenAICompatibleChannelSetting,
+  StorageProviderName,
+} from "@/lib/settings";
 
 type SettingsResponse = {
   ok: boolean;
@@ -120,6 +126,7 @@ function mergeSettingsAfterSave({
     browserTitle: submittedSettings.browserTitle,
     siteTitle: submittedSettings.siteTitle,
     siteSubtitle: submittedSettings.siteSubtitle,
+    frontTemplate: submittedSettings.frontTemplate,
     defaultGenerationProvider: submittedSettings.defaultGenerationProvider,
     deepseekBaseUrl: submittedSettings.deepseekBaseUrl,
     deepseekModel: submittedSettings.deepseekModel,
@@ -276,6 +283,7 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
           browserTitle: settings.browserTitle,
           siteTitle: settings.siteTitle,
           siteSubtitle: settings.siteSubtitle,
+          frontTemplate: settings.frontTemplate,
           defaultGenerationProvider: settings.defaultGenerationProvider,
           deepseekBaseUrl: settings.deepseekBaseUrl,
           deepseekModel: settings.deepseekModel,
@@ -443,6 +451,24 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
                   <SettingInput label="网站标题" value={settings.siteTitle} onChange={(value) => update("siteTitle", value)} />
                   <SettingInput label="网站副标题" value={settings.siteSubtitle} onChange={(value) => update("siteSubtitle", value)} />
                 </Form>
+              </Card>
+              <Card className="admin-td-card" bordered title="前台模板">
+                <div className="admin-template-grid">
+                  <TemplatePreviewCard
+                    active={settings.frontTemplate === "tdesign_workspace"}
+                    title="TDesign 工作台风"
+                    description="桌面左侧导航，中间直接进入完整创作工作台，整体更克制清爽。"
+                    badge="默认"
+                    onClick={() => update("frontTemplate", "tdesign_workspace")}
+                  />
+                  <TemplatePreviewCard
+                    active={settings.frontTemplate === "glass_app"}
+                    title="玻璃拟 App 风"
+                    description="保留当前蓝白毛玻璃、顶部导航和拟 App 氛围，适合作为回退模板。"
+                    badge="回退"
+                    onClick={() => update("frontTemplate", "glass_app")}
+                  />
+                </div>
               </Card>
             </div>
           </Tabs.TabPanel>
@@ -727,5 +753,39 @@ function SettingField({ label, children }: { label: string; children: ReactNode 
       <span className="admin-td-field-label">{label}</span>
       <div className="admin-td-field-control">{children}</div>
     </div>
+  );
+}
+
+function TemplatePreviewCard({
+  active,
+  title,
+  description,
+  badge,
+  onClick,
+}: {
+  active: boolean;
+  title: string;
+  description: string;
+  badge: string;
+  onClick: () => void;
+}) {
+  return (
+    <button type="button" className={active ? "admin-template-card is-active" : "admin-template-card"} onClick={onClick}>
+      <div className="admin-template-card__preview" aria-hidden="true">
+        <span className="admin-template-card__sider" />
+        <span className="admin-template-card__header" />
+        <span className="admin-template-card__panel" />
+        <span className="admin-template-card__panel admin-template-card__panel--wide" />
+      </div>
+      <div className="admin-template-card__body">
+        <div>
+          <strong>{title}</strong>
+          <p>{description}</p>
+        </div>
+        <Tag theme={active ? "primary" : "default"} variant={active ? "light" : "outline"}>
+          {active ? "已启用" : badge}
+        </Tag>
+      </div>
+    </button>
   );
 }

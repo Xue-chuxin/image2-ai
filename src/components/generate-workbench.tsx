@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Clock, Coins, ImageIcon, Sparkles } from "lucide-react";
+import { Card, Tag } from "tdesign-react";
 
 import { GlassSurface, SpotlightCard, StatusStepper } from "./front/react-bits";
 import { GenerateComposer } from "./generate-composer";
@@ -45,6 +46,7 @@ type GenerateWorkbenchProps = {
   initialPrompt?: string;
   initialReferenceImages?: ReferenceImageResult[];
   referenceImagesEnabled?: boolean;
+  variant?: "glass" | "tdesign";
 };
 
 function getStatusLabel(status?: string) {
@@ -87,7 +89,7 @@ function getQualityLabel(quality?: string) {
   return "标准";
 }
 
-export function GenerateWorkbench({ initialPrompt = "", initialReferenceImages = [], referenceImagesEnabled = false }: GenerateWorkbenchProps) {
+export function GenerateWorkbench({ initialPrompt = "", initialReferenceImages = [], referenceImagesEnabled = false, variant = "glass" }: GenerateWorkbenchProps) {
   const [job, setJob] = useState<GenerationJobResult | null>(null);
   const firstImage = job?.images[0];
   const references = referenceImagesEnabled ? (job?.referenceImages?.length ? job.referenceImages : initialReferenceImages) : [];
@@ -98,6 +100,102 @@ export function GenerateWorkbench({ initialPrompt = "", initialReferenceImages =
     { label: "保存", complete: status === "COMPLETED", active: status === "UPLOADING" },
     { label: status === "FAILED" ? "失败" : "完成", active: status === "FAILED" || status === "COMPLETED", complete: status === "COMPLETED" },
   ];
+
+  if (variant === "tdesign") {
+    return (
+      <section className="td-generate-workbench">
+        <GenerateComposer
+          initialPrompt={initialPrompt}
+          initialReferenceImages={initialReferenceImages}
+          onJobChange={setJob}
+          referenceImagesEnabled={referenceImagesEnabled}
+          variant="tdesign"
+        />
+
+        <aside className="td-preview-panel">
+          <Card className="td-front-card td-preview-card" bordered title="结果预览">
+            {firstImage ? (
+              <GeneratedImagePreview
+                image={firstImage}
+                alt={job?.promptZh || "生成结果"}
+                loadingLabel="图片加载中"
+                originalLoadingLabel="图片加载中"
+              />
+            ) : (
+              <div className="td-preview-empty">
+                <Sparkles size={28} />
+                <strong>生成结果会显示在这里</strong>
+                <span>生成前会检查积分。成功后扣除积分，失败会退回冻结积分。</span>
+              </div>
+            )}
+          </Card>
+
+          <Card className="td-front-card td-job-card" bordered title="任务进度" actions={<Tag theme={job?.status === "FAILED" ? "danger" : job?.status === "COMPLETED" ? "success" : "primary"} variant="light">{job ? getStatusLabel(job.status) : "等待生成"}</Tag>}>
+            <StatusStepper items={statusSteps} />
+          </Card>
+
+          {references.length > 0 ? (
+            <Card className="td-front-card td-job-card" bordered title="参考图">
+              <div className="td-reference-preview-grid">
+                {references.map((image) => (
+                  <img key={image.id} src={image.thumbnailUrl || image.url} alt="参考图" />
+                ))}
+              </div>
+              <p className="td-muted-line">参考图会保存在任务记录里，便于后续复用。</p>
+            </Card>
+          ) : null}
+
+          <Card className="td-front-card td-job-card" bordered title="任务信息">
+            {job ? (
+              <>
+                <dl className="td-meta-list">
+                  <div>
+                    <dt>Provider</dt>
+                    <dd>{job.provider}</dd>
+                  </div>
+                  <div>
+                    <dt>模型</dt>
+                    <dd>{job.model || "未返回"}</dd>
+                  </div>
+                  <div>
+                    <dt>比例</dt>
+                    <dd>{job.ratio}</dd>
+                  </div>
+                  <div>
+                    <dt>质量</dt>
+                    <dd>{getQualityLabel(job.quality)}</dd>
+                  </div>
+                  <div>
+                    <dt>张数</dt>
+                    <dd>{job.imageCount}</dd>
+                  </div>
+                  <div>
+                    <dt>积分</dt>
+                    <dd>{job.creditCost}</dd>
+                  </div>
+                </dl>
+
+                {job.errorMessage ? <p className="job-error">{job.errorMessage}</p> : null}
+              </>
+            ) : (
+              <p className="td-muted-copy">输入描述并点击“开始生成”后，这里会显示当前任务信息。</p>
+            )}
+          </Card>
+
+          <Card className="td-front-card td-rule-card" bordered>
+            <div className="rule-row">
+              <Coins size={18} />
+              <span>标准 10 积分 / 张，高清 35 积分 / 张，省积分 3 积分 / 张。</span>
+            </div>
+            <div className="rule-row">
+              <Clock size={18} />
+              <span>如果任务还在处理中，可以到“记录”页面继续查看。</span>
+            </div>
+          </Card>
+        </aside>
+      </section>
+    );
+  }
 
   return (
     <section className="generate-workbench">

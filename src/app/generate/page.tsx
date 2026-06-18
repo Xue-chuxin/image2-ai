@@ -1,5 +1,6 @@
 import { GenerateWorkbench } from "@/components/generate-workbench";
 import { BlurText, SpotlightCard } from "@/components/front/react-bits";
+import { getPublicAppSettings } from "@/lib/settings";
 
 function toArray(value?: string | string[]) {
   if (!value) {
@@ -18,6 +19,7 @@ export default async function GeneratePage({
     referenceImageUrls?: string | string[];
   }>;
 }) {
+  const settings = await getPublicAppSettings();
   const resolvedSearchParams = searchParams ? await searchParams : {};
   const initialPrompt = resolvedSearchParams.prompt || "";
   const referenceIds = toArray(resolvedSearchParams.referenceImageIds);
@@ -31,6 +33,14 @@ export default async function GeneratePage({
     width: null,
     height: null,
   }));
+
+  if (settings.frontTemplate === "tdesign_workspace") {
+    return (
+      <main className="front-td-page-stack">
+        <GenerateWorkbench initialPrompt={initialPrompt} initialReferenceImages={initialReferenceImages.filter((image) => image.id)} referenceImagesEnabled={false} variant="tdesign" />
+      </main>
+    );
+  }
 
   return (
     <main className="space-y-5 pb-28">

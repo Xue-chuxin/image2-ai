@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import clsx from "clsx";
 import { Loader2, LockKeyhole, Mail, ShieldCheck, UserRound } from "lucide-react";
+import { Alert, Button, Input, Radio } from "tdesign-react";
 
 type SignInMode = "user" | "admin";
 
@@ -29,9 +30,11 @@ async function readApiResponse(response: Response): Promise<ApiResponse> {
 export function SignInForm({
   nextPath = "/generate",
   initialMode = "user",
+  variant = "glass",
 }: {
   nextPath?: string;
   initialMode?: SignInMode;
+  variant?: "glass" | "tdesign";
 }) {
   const [mode, setMode] = useState<SignInMode>(initialMode);
   const [email, setEmail] = useState("");
@@ -117,6 +120,73 @@ export function SignInForm({
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  if (variant === "tdesign") {
+    return (
+      <div className="td-signin-form">
+        <Radio.Group
+          value={mode}
+          theme="button"
+          variant="default-filled"
+          options={[
+            { label: "普通用户", value: "user" },
+            { label: "管理员", value: "admin" },
+          ]}
+          onChange={(value) => setMode(String(value) as SignInMode)}
+        />
+
+        <form onSubmit={handleSubmit} className="td-signin-form__body">
+          <label className="td-field-block">
+            <span>{mode === "admin" ? "管理员邮箱" : "用户邮箱"}</span>
+            <Input value={email} type="email" placeholder="name@example.com" prefixIcon={<Mail className="h-4 w-4" />} onChange={(value) => setEmail(String(value))} />
+          </label>
+
+          <label className="td-field-block">
+            <span>{mode === "admin" ? "管理员密码" : "登录密码"}</span>
+            <Input
+              value={password}
+              type="password"
+              placeholder={mode === "user" ? "已有账号输入密码，新用户设置密码" : "请输入管理员密码"}
+              prefixIcon={<LockKeyhole className="h-4 w-4" />}
+              onChange={(value) => setPassword(String(value))}
+            />
+          </label>
+
+          {mode === "user" ? (
+            <div className="td-signin-code-row">
+              <label className="td-field-block">
+                <span>注册验证码</span>
+                <Input
+                  value={verificationCode}
+                  placeholder="新用户填写 6 位验证码"
+                  prefixIcon={<ShieldCheck className="h-4 w-4" />}
+                  maxlength={6}
+                  onChange={(value) => setVerificationCode(String(value).replace(/\D/g, "").slice(0, 6))}
+                />
+              </label>
+              <Button
+                type="button"
+                variant="outline"
+                loading={isSendingCode}
+                disabled={isSubmitting || codeCooldown > 0 || !email.trim()}
+                onClick={() => void sendVerificationCode()}
+              >
+                {codeCooldown > 0 ? `${codeCooldown} 秒后重发` : "发送验证码"}
+              </Button>
+            </div>
+          ) : null}
+
+          {message ? <Alert theme="success" message={message} /> : null}
+          {error ? <Alert theme="error" message={error} /> : null}
+
+          <Button type="submit" theme="primary" size="large" block loading={isSubmitting}>
+            {mode === "admin" ? "进入后台" : "登录 / 注册"}
+          </Button>
+          <p className="td-muted-line">已有账号可直接登录；新用户注册需要邮箱验证码。</p>
+        </form>
+      </div>
+    );
   }
 
   return (

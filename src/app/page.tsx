@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, ImageDown, PenLine, WandSparkles } from "lucide-react";
 import { GenerateComposer } from "@/components/generate-composer";
+import { GenerateWorkbench } from "@/components/generate-workbench";
 import { BlurText, GlassSurface, SpotlightCard, SplitText } from "@/components/front/react-bits";
 import { HomeWorksShowcase } from "@/components/home-works-showcase";
 import { GALLERY_CATEGORIES, listPublicGalleryImages, type GalleryImageView } from "@/lib/gallery";
 import { promptCards } from "@/lib/mock-data";
+import { getPublicAppSettings } from "@/lib/settings";
 
 const steps = [
   ["01", "写清画面", "先把主体、场景、镜头和比例写清楚。页面会保留你的原意，不把描述改成模板话术。"],
@@ -31,6 +33,7 @@ const flowSteps = [
 ];
 
 export default async function HomePage() {
+  const settings = await getPublicAppSettings();
   let publicWorks: GalleryImageView[] = [];
   let galleryError: string | null = null;
 
@@ -38,6 +41,21 @@ export default async function HomePage() {
     publicWorks = await listPublicGalleryImages({ limit: 48 });
   } catch {
     galleryError = "作品库暂时不可用，请检查数据库服务。";
+  }
+
+  if (settings.frontTemplate === "tdesign_workspace") {
+    return (
+      <main className="front-td-home">
+        <GenerateWorkbench referenceImagesEnabled={false} variant="tdesign" />
+
+        <HomeWorksShowcase
+          categories={GALLERY_CATEGORIES}
+          initialWorks={publicWorks}
+          fallbackPrompts={promptCards}
+          galleryError={galleryError}
+        />
+      </main>
+    );
   }
 
   return (

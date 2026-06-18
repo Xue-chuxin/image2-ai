@@ -6,11 +6,13 @@ import { decryptSecret, encryptSecret, hasSettingsEncryptionKey } from "@/lib/ap
 
 export type GenerationProviderName = "openai" | "chatgpt_web" | "stability_ai";
 export type StorageProviderName = "local" | "oss" | "cos" | "s3";
+export type FrontTemplateName = "tdesign_workspace" | "glass_app";
 
 export type PublicAppSettings = {
   browserTitle: string;
   siteTitle: string;
   siteSubtitle: string;
+  frontTemplate: FrontTemplateName;
   defaultGenerationProvider: GenerationProviderName;
   deepseekBaseUrl: string;
   deepseekModel: string;
@@ -166,6 +168,7 @@ const defaultSettings: PublicAppSettings = {
   browserTitle: "Image2 Studio",
   siteTitle: "造图台",
   siteSubtitle: "Image Studio",
+  frontTemplate: "tdesign_workspace",
   defaultGenerationProvider: "openai",
   deepseekBaseUrl: "https://api.deepseek.com",
   deepseekModel: "deepseek-chat",
@@ -226,6 +229,11 @@ function normalizeProvider(value?: string): GenerationProviderName {
   if (value === "chatgpt_web") return "chatgpt_web";
   if (value === "stability_ai") return "stability_ai";
   return "openai";
+}
+
+function normalizeFrontTemplate(value?: string): FrontTemplateName {
+  if (value === "glass_app") return "glass_app";
+  return "tdesign_workspace";
 }
 
 function normalizeStorageProvider(value?: string): StorageProviderName {
@@ -779,6 +787,7 @@ export async function getPublicAppSettings(): Promise<PublicAppSettings> {
     browserTitle: normalizeText(getStoredSetting(map, "browserTitle"), defaultSettings.browserTitle),
     siteTitle: normalizeText(getStoredSetting(map, "siteTitle"), defaultSettings.siteTitle),
     siteSubtitle: normalizeText(getStoredSetting(map, "siteSubtitle"), defaultSettings.siteSubtitle),
+    frontTemplate: normalizeFrontTemplate(getStoredSetting(map, "frontTemplate") || defaultSettings.frontTemplate),
     defaultGenerationProvider: normalizeProvider(
       getStoredSetting(map, "defaultGenerationProvider") || process.env.DEFAULT_GENERATION_PROVIDER || defaultSettings.defaultGenerationProvider,
     ),
@@ -850,6 +859,7 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
   const browserTitle = normalizeText(input.browserTitle, currentPublicSettings.browserTitle);
   const siteTitle = normalizeText(input.siteTitle, currentPublicSettings.siteTitle);
   const siteSubtitle = normalizeText(input.siteSubtitle, currentPublicSettings.siteSubtitle);
+  const frontTemplate = normalizeFrontTemplate(input.frontTemplate || currentPublicSettings.frontTemplate);
   const deepseekBaseUrl = normalizeText(input.deepseekBaseUrl, currentPublicSettings.deepseekBaseUrl, 200);
   const deepseekModel = normalizeText(input.deepseekModel, currentPublicSettings.deepseekModel);
   const openaiImageModel = normalizeText(input.openaiImageModel, currentPublicSettings.openaiImageModel);
@@ -923,6 +933,7 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
     { key: "browserTitle", value: browserTitle },
     { key: "siteTitle", value: siteTitle },
     { key: "siteSubtitle", value: siteSubtitle },
+    { key: "frontTemplate", value: frontTemplate },
     { key: "deepseekBaseUrl", value: deepseekBaseUrl },
     { key: "deepseekModel", value: deepseekModel },
     { key: "openaiImageModel", value: openaiImageModel },
