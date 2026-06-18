@@ -2299,7 +2299,7 @@ textarea {
   color: var(--td-text-color-primary, rgba(0, 0, 0, 0.9));
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.76) 0%, rgba(246, 248, 251, 0.66) 48%, rgba(238, 243, 248, 0.86) 100%),
-    url("/home-minimal-bg.svg"),
+    url("/home-minimal-bg.svg?v=2"),
     linear-gradient(180deg, #ffffff 0%, #f6f8fb 48%, #eef3f8 100%);
   background-position: center top, center top, center;
   background-repeat: no-repeat;
@@ -2447,7 +2447,7 @@ textarea {
   pointer-events: none;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.74) 0%, rgba(255, 255, 255, 0.52) 42%, rgba(244, 248, 253, 0.72) 100%),
-    url("/home-minimal-bg.svg");
+    url("/home-minimal-bg.svg?v=2");
   background-position: center top, center -120px;
   background-repeat: no-repeat;
   background-size: auto, 1600px auto;
@@ -2997,7 +2997,7 @@ textarea {
   padding: 20px;
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.86), rgba(243, 248, 255, 0.62)),
-    url("/home-feature-bg.svg"),
+    url("/home-feature-bg.svg?v=2"),
     linear-gradient(135deg, #ffffff, #f3f8ff);
   background-position: center, right -38px center, center;
   background-repeat: no-repeat;
@@ -3135,7 +3135,7 @@ textarea {
   padding: 26px;
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.82) 0%, rgba(237, 245, 255, 0.58) 64%, rgba(227, 245, 242, 0.5) 100%),
-    url("/home-feature-bg.svg"),
+    url("/home-feature-bg.svg?v=2"),
     linear-gradient(135deg, #ffffff, #edf5ff);
   background-position: center, right -18px bottom -70px, center;
   background-repeat: no-repeat;
@@ -3492,7 +3492,7 @@ textarea {
 .front-site-scenario-list article {
   background:
     linear-gradient(90deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.9) 42%, rgba(255, 255, 255, 0.54) 100%),
-    url("/home-card-bg.svg"),
+    url("/home-card-bg.svg?v=2"),
     rgba(255, 255, 255, 0.86);
   background-position: center, right -16px center, center;
   background-repeat: no-repeat;
