@@ -1,0 +1,39 @@
+<svg width="1600" height="2200" viewBox="0 0 1600 2200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1600" height="2200" fill="#F7FAFE"/>
+  <path d="M0 128H1600" stroke="#D7E3F2" stroke-opacity="0.42"/>
+  <path d="M0 402H1600" stroke="#E4ECF7" stroke-opacity="0.58"/>
+  <path d="M0 930H1600" stroke="#D7E3F2" stroke-opacity="0.42"/>
+  <path d="M0 1478H1600" stroke="#E4ECF7" stroke-opacity="0.58"/>
+  <path d="M196 0V2200" stroke="#E6EEF8" stroke-opacity="0.46"/>
+  <path d="M760 0V2200" stroke="#DCE7F5" stroke-opacity="0.36"/>
+  <path d="M1356 0V2200" stroke="#E6EEF8" stroke-opacity="0.5"/>
+  <path d="M1480 170C1314 257 1215 392 1178 574C1145 738 1065 862 938 946C815 1028 731 1142 686 1290C633 1462 517 1578 338 1638" stroke="#C7DBF2" stroke-opacity="0.42" stroke-width="2"/>
+  <path d="M184 512C334 444 487 456 642 548C781 631 908 649 1021 601C1137 552 1246 580 1348 684" stroke="#D6E6F7" stroke-opacity="0.52" stroke-width="2"/>
+  <g opacity="0.58">
+    <rect x="1040" y="212" width="352" height="238" rx="24" fill="#FFFFFF" fill-opacity="0.82" stroke="#D7E3F2"/>
+    <rect x="1076" y="252" width="130" height="116" rx="16" fill="#E8F2FF"/>
+    <rect x="1228" y="252" width="126" height="20" rx="10" fill="#D5E6FA"/>
+    <rect x="1228" y="292" width="92" height="14" rx="7" fill="#E9F0F8"/>
+    <rect x="1228" y="322" width="108" height="14" rx="7" fill="#E9F0F8"/>
+    <rect x="1076" y="392" width="278" height="16" rx="8" fill="#E2ECF8"/>
+  </g>
+  <g opacity="0.48">
+    <rect x="122" y="1170" width="320" height="224" rx="24" fill="#FFFFFF" fill-opacity="0.78" stroke="#D7E3F2"/>
+    <rect x="154" y="1206" width="100" height="76" rx="14" fill="#E5F7F5"/>
+    <rect x="276" y="1206" width="118" height="16" rx="8" fill="#D5E6FA"/>
+    <rect x="276" y="1240" width="86" height="12" rx="6" fill="#E9F0F8"/>
+    <rect x="154" y="1314" width="240" height="14" rx="7" fill="#E4EDF7"/>
+    <rect x="154" y="1350" width="172" height="14" rx="7" fill="#EAF1F8"/>
+  </g>
+  <g opacity="0.38">
+    <path d="M1160 1230H1436" stroke="#C7DBF2" stroke-width="2"/>
+    <path d="M1160 1286H1436" stroke="#DCE7F5" stroke-width="2"/>
+    <path d="M1160 1342H1436" stroke="#DCE7F5" stroke-width="2"/>
+    <path d="M1160 1398H1436" stroke="#DCE7F5" stroke-width="2"/>
+    <path d="M1216 1174V1456" stroke="#DCE7F5" stroke-width="2"/>
+    <path d="M1272 1174V1456" stroke="#DCE7F5" stroke-width="2"/>
+    <path d="M1328 1174V1456" stroke="#DCE7F5" stroke-width="2"/>
+    <path d="M1384 1174V1456" stroke="#DCE7F5" stroke-width="2"/>
+  </g>
+  <path d="M0 1960C210 1876 440 1888 690 1998C932 2105 1216 2078 1600 1912" stroke="#D6E6F7" stroke-opacity="0.58" stroke-width="2"/>
+</svg>

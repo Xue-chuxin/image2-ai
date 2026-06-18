@@ -2298,7 +2298,12 @@ textarea {
   min-height: 100dvh;
   color: var(--td-text-color-primary, rgba(0, 0, 0, 0.9));
   background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(246, 248, 251, 0.78) 48%, rgba(238, 243, 248, 0.92) 100%),
+    url("/home-minimal-bg.svg"),
     linear-gradient(180deg, #ffffff 0%, #f6f8fb 48%, #eef3f8 100%);
+  background-position: center top, center top, center;
+  background-repeat: no-repeat;
+  background-size: auto, min(100%, 1600px) auto, auto;
 }
 
 .front-site-shell--auth {
@@ -2970,7 +2975,12 @@ textarea {
   border-radius: var(--td-radius-large, 9px);
   padding: 20px;
   background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(243, 248, 255, 0.9)),
+    url("/home-feature-bg.svg"),
     linear-gradient(135deg, #ffffff, #f3f8ff);
+  background-position: center, right -128px center, center;
+  background-repeat: no-repeat;
+  background-size: auto, 560px auto, auto;
 }
 
 .front-site-result-strip__head {
@@ -3093,15 +3103,22 @@ textarea {
 }
 
 .front-site-feature-spotlight {
+  position: relative;
   display: grid;
   align-content: space-between;
   gap: 22px;
   min-width: 0;
+  overflow: hidden;
   border: 1px solid var(--td-brand-color-light, #c7ddff);
   border-radius: var(--td-radius-large, 9px);
   padding: 26px;
   background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(237, 245, 255, 0.84)),
+    url("/home-feature-bg.svg"),
     linear-gradient(135deg, #ffffff, #edf5ff);
+  background-position: center, right -92px bottom -108px, center;
+  background-repeat: no-repeat;
+  background-size: auto, min(86%, 620px) auto, auto;
   box-shadow: 0 18px 38px rgba(0, 82, 217, 0.08);
 }
 
@@ -3446,6 +3463,26 @@ textarea {
   border-radius: var(--td-radius-large, 9px);
   padding: 22px;
   background: rgba(255, 255, 255, 0.86);
+}
+
+.front-site-feature-card,
+.front-site-workflow-card,
+.front-site-operation-card,
+.front-site-scenario-list article {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.8)),
+    url("/home-card-bg.svg"),
+    rgba(255, 255, 255, 0.86);
+  background-position: center, right -58px top -30px, center;
+  background-repeat: no-repeat;
+  background-size: auto, 276px auto, auto;
+}
+
+.front-site-feature-card:nth-child(2),
+.front-site-workflow-card:nth-child(even),
+.front-site-operation-card:nth-child(2n),
+.front-site-scenario-list article:nth-child(even) {
+  background-position: center, right -82px bottom -44px, center;
 }
 
 .front-site-scenario-panel-head {
@@ -5244,6 +5281,11 @@ textarea {
     width: min(100% - 28px, 1200px);
   }
 
+  .front-site-shell:not(.front-site-shell--auth) {
+    background-position: center top, 48% top, center;
+    background-size: auto, 1180px auto, auto;
+  }
+
   .front-site-header-inner {
     min-height: 64px;
     gap: 10px;
@@ -5392,6 +5434,8 @@ textarea {
   .front-site-feature-spotlight {
     gap: 18px;
     padding: 18px;
+    background-position: center, right -170px bottom -84px, center;
+    background-size: auto, 420px auto, auto;
   }
 
   .front-site-feature-spotlight h3 {
@@ -5402,6 +5446,19 @@ textarea {
   .front-site-feature-spotlight p {
     font-size: 15px;
     line-height: 26px;
+  }
+
+  .front-site-result-strip {
+    background-position: center, right -190px top -32px, center;
+    background-size: auto, 420px auto, auto;
+  }
+
+  .front-site-feature-card,
+  .front-site-workflow-card,
+  .front-site-operation-card,
+  .front-site-scenario-list article {
+    background-position: center, right -106px top -44px, center;
+    background-size: auto, 230px auto, auto;
   }
 
   .front-site-preview-main {
