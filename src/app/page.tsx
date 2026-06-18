@@ -1,17 +1,25 @@
 import Link from "next/link";
 import {
   ArrowRight,
+  BadgeCheck,
+  Bot,
   CheckCircle2,
   Clock3,
+  Database,
+  FileImage,
   GalleryHorizontalEnd,
+  Gauge,
   ImageDown,
   Images,
   Layers3,
   PenLine,
+  Settings2 as Settings2Icon,
   ShieldCheck,
   Sparkles,
+  UploadCloud,
   WandSparkles,
   WalletCards,
+  Workflow,
 } from "lucide-react";
 import { GenerateComposer } from "@/components/generate-composer";
 import { BlurText, GlassSurface, SpotlightCard, SplitText } from "@/components/front/react-bits";
@@ -52,7 +60,7 @@ const enterpriseCapabilities = [
   },
   {
     title: "统一生图任务",
-    description: "通过 Provider 抽象提交任务、轮询状态、保存结果，前台无需直连模型接口。",
+    description: "通过统一模型通道提交任务、轮询状态、保存结果，前台无需直连模型接口。",
     Icon: Sparkles,
   },
   {
@@ -67,10 +75,89 @@ const enterpriseCapabilities = [
   },
 ];
 
+const trustSignals = ["内容运营团队", "电商视觉生产", "设计提案协作", "品牌素材归档"];
+
+const heroProofs = [
+  { label: "模型组合", value: "DeepSeek + OpenAI", Icon: Bot },
+  { label: "任务状态", value: "进度可追踪", Icon: Gauge },
+  { label: "作品资产", value: "图库可复用", Icon: FileImage },
+];
+
+const workflowStages = [
+  {
+    title: "描述进入",
+    description: "把中文想法、商品信息或活动主题写成初稿，保留业务语境。",
+    meta: "输入",
+    Icon: PenLine,
+  },
+  {
+    title: "提示词润色",
+    description: "DeepSeek 将口语描述整理成更稳定的画面结构和镜头语言。",
+    meta: "润色",
+    Icon: WandSparkles,
+  },
+  {
+    title: "任务生成",
+    description: "统一模型通道提交、状态轮询、失败提示和结果预览。",
+    meta: "生成",
+    Icon: Workflow,
+  },
+  {
+    title: "沉淀复用",
+    description: "作品、提示词、积分和公开展示一起归档，方便团队复盘。",
+    meta: "归档",
+    Icon: Database,
+  },
+];
+
+const operations = [
+  {
+    title: "前台创作体验",
+    description: "给普通用户一个清晰入口，从灵感浏览到正式生成都在同一套应用结构里完成。",
+    Icon: Sparkles,
+    items: ["创作工作台", "灵感库复用", "历史记录"],
+  },
+  {
+    title: "运营后台配置",
+    description: "管理员可以集中配置站点显示、模型通道、作品公开和支付积分相关能力。",
+    Icon: Settings2Icon,
+    items: ["模板切换", "通道管理", "作品审核"],
+  },
+  {
+    title: "生产安全边界",
+    description: "外部模型只在服务端调用，用户会话、管理员会话和公开内容职责分离。",
+    Icon: ShieldCheck,
+    items: ["统一接口", "权限隔离", "配置兜底"],
+  },
+  {
+    title: "素材与存储扩展",
+    description: "当前结构已预留上传、存储和公开展示能力，后续接对象存储时前台体验不需要重做。",
+    Icon: UploadCloud,
+    items: ["参考图", "存储服务", "公开展示"],
+  },
+];
+
 const scenarios = [
-  ["电商商品图", "统一生成商品主图、详情素材和场景氛围图。"],
-  ["内容运营", "快速产出封面、配图、活动视觉和社媒素材。"],
-  ["设计提案", "用提示词库沉淀视觉方向，让团队复用稳定风格。"],
+  {
+    title: "电商商品图",
+    description: "统一生成商品主图、详情素材和场景氛围图。",
+    tags: ["商品主图", "详情页", "场景图"],
+  },
+  {
+    title: "内容运营",
+    description: "快速产出封面、活动视觉、社媒配图和栏目素材。",
+    tags: ["封面", "活动图", "社媒"],
+  },
+  {
+    title: "设计提案",
+    description: "将风格方向、镜头描述和作品样例沉淀成团队资产。",
+    tags: ["风格板", "概念图", "风格复用"],
+  },
+  {
+    title: "品牌素材库",
+    description: "把公开作品、精选图和提示词归档，形成可持续展示入口。",
+    tags: ["图库", "精选", "归档"],
+  },
 ];
 
 const previewNavItems = [
@@ -96,7 +183,7 @@ export default async function HomePage() {
       <main className="front-site-main">
         <section className="front-site-hero">
           <div className="front-site-hero-copy">
-            <span className="front-site-eyebrow">AI Image Studio</span>
+            <span className="front-site-eyebrow">AI 生图官网</span>
             <h1>{settings.siteTitle}</h1>
             <p>
               {settings.siteSubtitle ? `${settings.siteSubtitle}。` : ""}
@@ -113,26 +200,47 @@ export default async function HomePage() {
             </div>
             <dl className="front-site-metrics" aria-label="产品能力概览">
               <div>
-                <dt>Provider</dt>
+                <dt>模型通道</dt>
                 <dd>OpenAI</dd>
               </div>
               <div>
-                <dt>Prompt</dt>
+                <dt>提示词</dt>
                 <dd>DeepSeek</dd>
               </div>
               <div>
-                <dt>Workflow</dt>
+                <dt>任务流程</dt>
                 <dd>任务归档</dd>
               </div>
             </dl>
+            <div className="front-site-proof-grid" aria-label="产品可信能力">
+              {heroProofs.map(({ label, value, Icon }) => (
+                <div key={label}>
+                  <Icon className="h-4 w-4" />
+                  <span>{label}</span>
+                  <strong>{value}</strong>
+                </div>
+              ))}
+            </div>
           </div>
 
           <ProductInterfacePreview siteTitle={settings.siteTitle} />
         </section>
 
+        <section className="front-site-trust-strip" aria-label="适用团队">
+          <span>适合持续产图的团队</span>
+          <div>
+            {trustSignals.map((item) => (
+              <strong key={item}>
+                <BadgeCheck className="h-4 w-4" />
+                {item}
+              </strong>
+            ))}
+          </div>
+        </section>
+
         <section id="features" className="front-site-section">
           <div className="front-site-section-head">
-            <span className="front-site-eyebrow">Product Capabilities</span>
+            <span className="front-site-eyebrow">产品能力</span>
             <h2>从生成到运营，前台和后台连成一条线</h2>
             <p>首页负责介绍产品价值，应用页负责真实创作流程，后台负责通道、存储和内容管理。</p>
           </div>
@@ -149,19 +257,79 @@ export default async function HomePage() {
           </div>
         </section>
 
+        <section id="workflow" className="front-site-section">
+          <div className="front-site-section-head front-site-section-head--row">
+            <div>
+              <span className="front-site-eyebrow">生产流程</span>
+              <h2>把一次生成，变成可复用的生产流程</h2>
+              <p>首页只负责建立信任和讲清产品能力；用户进入应用页后，完整生成链路仍保留在工作台中。</p>
+            </div>
+            <Link href="/generate" className="front-site-secondary">
+              查看工作台
+            </Link>
+          </div>
+          <div className="front-site-workflow-grid">
+            {workflowStages.map(({ title, description, meta, Icon }, index) => (
+              <article key={title} className="front-site-workflow-card">
+                <div>
+                  <span>{String(index + 1).padStart(2, "0")}</span>
+                  <small>{meta}</small>
+                </div>
+                <Icon className="h-5 w-5" />
+                <h3>{title}</h3>
+                <p>{description}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="front-site-section front-site-operations">
+          <div className="front-site-section-head">
+            <span className="front-site-eyebrow">运营就绪</span>
+            <h2>不只是前台好看，也能支撑后续运营</h2>
+            <p>模板、模型、作品、用户和积分都从后台统一管理，官网首页负责承接访客，应用工作台负责真实生产。</p>
+          </div>
+          <div className="front-site-operation-grid">
+            {operations.map(({ title, description, Icon, items }) => (
+              <article key={title} className="front-site-operation-card">
+                <span>
+                  <Icon className="h-5 w-5" />
+                </span>
+                <div>
+                  <h3>{title}</h3>
+                  <p>{description}</p>
+                </div>
+                <ul>
+                  {items.map((item) => (
+                    <li key={item}>
+                      <CheckCircle2 className="h-4 w-4" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </article>
+            ))}
+          </div>
+        </section>
+
         <section id="scenarios" className="front-site-section front-site-section--split">
           <div className="front-site-section-head">
-            <span className="front-site-eyebrow">Use Cases</span>
+            <span className="front-site-eyebrow">适用场景</span>
             <h2>适合需要持续产图的业务场景</h2>
             <p>不是一次性玩具，而是能沉淀提示词、作品和运营配置的生产入口。</p>
           </div>
           <div className="front-site-scenario-list">
-            {scenarios.map(([title, description], index) => (
+            {scenarios.map(({ title, description, tags }, index) => (
               <article key={title}>
                 <strong>{String(index + 1).padStart(2, "0")}</strong>
                 <div>
                   <h3>{title}</h3>
                   <p>{description}</p>
+                  <span>
+                    {tags.map((tag) => (
+                      <small key={tag}>{tag}</small>
+                    ))}
+                  </span>
                 </div>
               </article>
             ))}
@@ -171,7 +339,7 @@ export default async function HomePage() {
         <section id="showcase" className="front-site-section front-site-showcase">
           <div className="front-site-section-head front-site-section-head--row">
             <div>
-              <span className="front-site-eyebrow">Works</span>
+              <span className="front-site-eyebrow">作品展示</span>
               <h2>用作品展示真实生成结果</h2>
               <p>公开作品和运营精选会在这里沉淀，访客可以浏览风格、复用描述并继续创作。</p>
             </div>
@@ -185,6 +353,23 @@ export default async function HomePage() {
             fallbackPrompts={promptCards}
             galleryError={galleryError}
           />
+        </section>
+
+        <section className="front-site-final-cta">
+          <div>
+            <span className="front-site-eyebrow">开始使用</span>
+            <h2>从官网进入产品，从工作台完成创作</h2>
+            <p>访客先理解能力，用户再进入生成流程。前台门面和应用体验各司其职，后续也方便继续扩展模板。</p>
+          </div>
+          <div>
+            <Link href="/generate" className="front-site-primary front-site-primary--large">
+              开始创作
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link href="/signup" className="front-site-secondary">
+              注册账号
+            </Link>
+          </div>
         </section>
       </main>
     );

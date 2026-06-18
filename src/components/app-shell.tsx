@@ -169,9 +169,9 @@ function TDesignMarketingShell({
           <FrontTDesignBrand settings={settings} />
           <nav className="front-site-nav" aria-label="官网导航">
             <a href="#features">产品能力</a>
+            <a href="#workflow">工作流</a>
             <a href="#scenarios">适用场景</a>
             <a href="#showcase">作品展示</a>
-            <Link href="/prompts">灵感库</Link>
           </nav>
           <div className="front-site-actions">
             {user?.email ? (
