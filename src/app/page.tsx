@@ -298,15 +298,30 @@ export default async function HomePage() {
             </div>
             <dl className="front-site-metrics" aria-label="产品能力概览">
               <div>
-                <dt>模型通道</dt>
+                <dt>
+                  <span className="front-site-metric-icon">
+                    <Bot className="h-4 w-4" />
+                  </span>
+                  模型通道
+                </dt>
                 <dd>OpenAI</dd>
               </div>
               <div>
-                <dt>提示词</dt>
+                <dt>
+                  <span className="front-site-metric-icon">
+                    <WandSparkles className="h-4 w-4" />
+                  </span>
+                  提示词
+                </dt>
                 <dd>DeepSeek</dd>
               </div>
               <div>
-                <dt>任务流程</dt>
+                <dt>
+                  <span className="front-site-metric-icon">
+                    <Database className="h-4 w-4" />
+                  </span>
+                  任务流程
+                </dt>
                 <dd>任务归档</dd>
               </div>
             </dl>

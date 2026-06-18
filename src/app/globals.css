@@ -2380,9 +2380,24 @@ textarea {
 }
 
 .front-site-metrics dt {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   color: var(--td-text-color-placeholder, rgba(0, 0, 0, 0.4));
   font-size: 12px;
   font-weight: 700;
+}
+
+.front-site-metric-icon {
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--td-radius-medium, 6px);
+  color: var(--td-brand-color, #0052d9);
+  background: var(--td-brand-color-light, #e8f1ff);
 }
 
 .front-site-metrics dd {
