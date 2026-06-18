@@ -1,5 +1,4 @@
-import { ShieldCheck } from "lucide-react";
-import { redirect } from "next/navigation";
+import { UserPlus } from "lucide-react";
 
 import { BlurText, SpotlightCard } from "@/components/front/react-bits";
 import { SignInForm } from "@/components/signin-form";
@@ -12,19 +11,13 @@ function getSafeNextPath(value: string | undefined, fallback: string) {
   return value;
 }
 
-export default async function SignInPage({
+export default async function SignUpPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ next?: string; mode?: string }>;
+  searchParams?: Promise<{ next?: string }>;
 }) {
   const settings = await getPublicAppSettings();
   const resolvedSearchParams = searchParams ? await searchParams : {};
-  if (resolvedSearchParams.mode === "admin") {
-    const isAdminNext = resolvedSearchParams.next === "/admin" || Boolean(resolvedSearchParams.next?.startsWith("/admin/"));
-    const adminNext = isAdminNext && resolvedSearchParams.next ? resolvedSearchParams.next : "/admin/settings";
-    redirect(`/admin/signin?next=${encodeURIComponent(adminNext)}`);
-  }
-
   const nextPath = getSafeNextPath(resolvedSearchParams.next, "/generate");
 
   if (settings.frontTemplate === "tdesign_workspace") {
@@ -33,15 +26,15 @@ export default async function SignInPage({
         <section className="td-front-card td-signin-card">
           <div className="td-signin-head">
             <div className="td-signin-icon">
-              <ShieldCheck className="h-6 w-6" />
+              <UserPlus className="h-6 w-6" />
             </div>
             <div>
-              <p>ACCOUNT</p>
-              <h1>用户登录</h1>
-              <span>登录后可进入创作工作台、查看历史记录和管理个人积分。</span>
+              <p>REGISTER</p>
+              <h1>注册账号</h1>
+              <span>使用邮箱验证码创建普通用户账号，注册成功后直接进入创作工作台。</span>
             </div>
           </div>
-          <SignInForm nextPath={nextPath} mode="login" variant="tdesign" />
+          <SignInForm nextPath={nextPath} mode="register" variant="tdesign" />
         </section>
       </main>
     );
@@ -51,13 +44,13 @@ export default async function SignInPage({
     <main className="mx-auto max-w-md pb-28">
       <SpotlightCard className="p-6">
         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-ocean-800 text-white shadow-glow">
-          <ShieldCheck className="h-6 w-6" />
+          <UserPlus className="h-6 w-6" />
         </div>
-        <BlurText as="h1" text="账号登录" className="mt-5 text-3xl font-black text-slate-950" delay={0.035} />
+        <BlurText as="h1" text="注册账号" className="mt-5 text-3xl font-black text-slate-950" delay={0.035} />
         <p className="mt-2 text-sm leading-6 text-slate-500">
-          已有账号可直接登录，登录后进入创作工作台、历史记录和个人中心。
+          新用户需要先获取邮箱验证码，再设置登录密码。注册成功后会自动进入创作页。
         </p>
-        <SignInForm nextPath={nextPath} mode="login" />
+        <SignInForm nextPath={nextPath} mode="register" />
       </SpotlightCard>
     </main>
   );

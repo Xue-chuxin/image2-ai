@@ -19,16 +19,17 @@ export async function POST(request: Request) {
     );
   }
 
-  const payload = (await request.json().catch(() => null)) as { email?: string; password?: string; verificationCode?: string } | null;
+  const payload = (await request.json().catch(() => null)) as { email?: string; password?: string; verificationCode?: string; intent?: string } | null;
   const email = payload?.email?.trim().toLowerCase();
   const password = payload?.password || "";
+  const intent = payload?.intent === "login" || payload?.intent === "register" ? payload.intent : "auto";
 
   if (!email || !password) {
     return NextResponse.json({ ok: false, error: "请输入邮箱和密码。" }, { status: 400 });
   }
 
   try {
-    const user = await loginOrCreateUser(email, password, payload?.verificationCode);
+    const user = await loginOrCreateUser(email, password, payload?.verificationCode, intent);
     const credits = await getUserCreditBalance(user.id);
     const response = NextResponse.json({
       ok: true,
@@ -43,6 +44,6 @@ export async function POST(request: Request) {
     setUserSessionCookie(response, { id: user.id, email: user.email || email }, request);
     return response;
   } catch (error) {
-    return jsonError(error, "登录失败，请检查邮箱和密码。");
+    return jsonError(error, intent === "register" ? "注册失败，请检查邮箱验证码。" : "登录失败，请检查邮箱和密码。");
   }
 }

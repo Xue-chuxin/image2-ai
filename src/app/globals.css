@@ -1835,10 +1835,94 @@ textarea {
   margin-bottom: 16px;
 }
 
+.admin-signin-page {
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+  padding: 32px 16px;
+  color: var(--td-text-color-primary, rgba(0, 0, 0, 0.9));
+  background:
+    linear-gradient(180deg, #f8fafc 0%, #eef3f8 100%);
+}
+
+.admin-signin-card {
+  display: grid;
+  gap: 22px;
+  width: min(100%, 460px);
+  border: 1px solid var(--td-border-level-1-color, #e7eaf0);
+  border-radius: var(--td-radius-large, 9px);
+  padding: 28px;
+  background: var(--td-bg-color-container, #fff);
+  box-shadow: var(--td-shadow-2, 0 4px 18px rgba(0, 0, 0, 0.1));
+}
+
+.admin-signin-brand {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.admin-signin-brand > span {
+  display: inline-flex;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--td-radius-large, 9px);
+  color: #fff;
+  background: var(--td-brand-color, #0052d9);
+}
+
+.admin-signin-brand p,
+.admin-signin-brand h1,
+.admin-signin-brand small {
+  margin: 0;
+}
+
+.admin-signin-brand p {
+  color: var(--td-text-color-placeholder, rgba(0, 0, 0, 0.4));
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.admin-signin-brand h1 {
+  margin-top: 4px;
+  color: var(--td-text-color-primary, rgba(0, 0, 0, 0.9));
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 34px;
+}
+
+.admin-signin-brand small {
+  display: block;
+  margin-top: 6px;
+  color: var(--td-text-color-secondary, rgba(0, 0, 0, 0.6));
+  font: var(--td-font-body-medium);
+  line-height: 22px;
+}
+
+.admin-signin-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+  border-top: 1px solid var(--td-border-level-1-color, #e7eaf0);
+  padding-top: 16px;
+}
+
+.admin-signin-links a {
+  color: var(--td-brand-color, #0052d9);
+  font: var(--td-font-body-small);
+  font-weight: 700;
+}
+
 .admin-td-signin-form {
   display: grid;
   gap: 16px;
-  margin-top: 24px;
+  margin-top: 0;
 }
 
 .admin-td-signin-field {
@@ -2934,6 +3018,12 @@ textarea {
   line-height: 20px;
 }
 
+.td-muted-line a {
+  margin-left: 6px;
+  color: var(--td-brand-color, #0052d9);
+  font-weight: 700;
+}
+
 .td-reference-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -3977,6 +4067,19 @@ textarea {
 @media (max-width: 640px) {
   .admin-template-grid {
     grid-template-columns: 1fr;
+  }
+
+  .admin-signin-card {
+    padding: 22px;
+  }
+
+  .admin-signin-brand {
+    display: grid;
+  }
+
+  .admin-signin-brand h1 {
+    font-size: 24px;
+    line-height: 30px;
   }
 
   .front-site-header-inner,

@@ -433,7 +433,7 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
   async function logout() {
     setIsLoggingOut(true);
     await fetch("/api/auth/logout", { method: "POST" }).catch(() => null);
-    window.location.href = "/signin?mode=admin";
+    window.location.href = "/admin/signin";
   }
 
   return (

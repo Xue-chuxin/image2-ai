@@ -80,7 +80,7 @@ export async function sendEmailVerificationCode(emailInput: unknown, purpose: Em
   });
 
   if (existingUser?.role === "ADMIN") {
-    throw new AppError("FORBIDDEN", "管理员账号请切换到管理员登录。", 403);
+    throw new AppError("FORBIDDEN", "管理员账号请前往后台登录。", 403);
   }
   if (existingUser) {
     throw new AppError("CONFLICT", "该邮箱已注册，请直接登录。", 409);

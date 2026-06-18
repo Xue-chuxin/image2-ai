@@ -47,7 +47,8 @@ const pageMeta: Record<string, { title: string; description: string }> = {
   "/prompts": { title: "灵感", description: "浏览公开作品和运营精选，复用描述继续创作。" },
   "/history": { title: "记录", description: "查看当前账号的生图任务、结果和失败原因。" },
   "/account": { title: "账户", description: "查看积分余额、充值套餐和订单状态。" },
-  "/signin": { title: "账号登录", description: "登录普通用户账号，或进入管理员后台。" },
+  "/signin": { title: "用户登录", description: "登录普通用户账号，进入创作工作台。" },
+  "/signup": { title: "注册账号", description: "创建普通用户账号，注册后进入创作工作台。" },
 };
 
 function isActivePath(pathname: string, href: string) {
@@ -80,8 +81,8 @@ export function AppShell({
     return <TDesignMarketingShell settings={settings} user={user}>{children}</TDesignMarketingShell>;
   }
 
-  if (pathname.startsWith("/signin")) {
-    return <TDesignAuthShell settings={settings}>{children}</TDesignAuthShell>;
+  if (pathname.startsWith("/signin") || pathname.startsWith("/signup")) {
+    return <TDesignAuthShell settings={settings} pathname={pathname}>{children}</TDesignAuthShell>;
   }
 
   return <TDesignWorkspaceShell settings={settings} user={user} pathname={pathname}>{children}</TDesignWorkspaceShell>;
@@ -194,10 +195,16 @@ function TDesignMarketingShell({
 function TDesignAuthShell({
   children,
   settings,
+  pathname,
 }: {
   children: ReactNode;
   settings: PublicAppSettings;
+  pathname: string;
 }) {
+  const authAction = pathname.startsWith("/signup")
+    ? { href: "/signin", label: "用户登录" }
+    : { href: "/signup", label: "注册账号" };
+
   return (
     <div className="front-site-shell front-site-shell--auth">
       <header className="front-site-header">
@@ -207,8 +214,8 @@ function TDesignAuthShell({
             <Link href="/" className="front-site-login">
               返回首页
             </Link>
-            <Link href="/generate" className="front-site-primary">
-              进入创作
+            <Link href={authAction.href} className="front-site-primary">
+              {authAction.label}
             </Link>
           </div>
         </div>
@@ -266,7 +273,7 @@ function TDesignWorkspaceShell({
                 <AccountMenu email={user.email} role="user" />
               ) : (
                 <Link href="/signin" className="front-td-login-button">
-                  登录 / 注册
+                  登录
                 </Link>
               )}
             </div>

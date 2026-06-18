@@ -46,7 +46,7 @@ export function AccountMenu({ email, role, variant = "front" }: AccountMenuProps
   async function logout() {
     setPending("logout");
     await fetch("/api/auth/logout", { method: "POST" }).catch(() => null);
-    window.location.href = isAdmin ? "/signin?mode=admin" : "/signin";
+    window.location.href = isAdmin ? "/admin/signin" : "/signin";
   }
 
   async function changePassword() {

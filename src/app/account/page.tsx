@@ -19,7 +19,7 @@ export default async function AccountPage() {
           <BlurText as="h1" text="账户与积分" className="mt-5 w-full justify-center text-center text-3xl font-black text-slate-950" delay={0.035} />
           <p className="mt-3 text-sm leading-7 text-slate-500">登录后可以查看积分余额、在线充值订单和历史记录。</p>
           <Link href="/signin?next=/account" className="mt-5 inline-flex rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white">
-            登录 / 注册
+            登录
           </Link>
         </SpotlightCard>
       </main>

@@ -18,6 +18,7 @@ const DEFAULT_NEW_USER_CREDITS =
     : 0;
 
 type SessionRole = "ADMIN" | "USER";
+type UserAuthIntent = "auto" | "login" | "register";
 
 type BaseSession = {
   userId: string;
@@ -227,7 +228,7 @@ export async function getUserSession(): Promise<UserSession | null> {
 export async function requireAdmin() {
   const session = await getAdminSession();
   if (!session) {
-    redirect("/signin?mode=admin&next=/admin/settings");
+    redirect("/admin/signin?next=/admin/settings");
   }
   return session;
 }
@@ -365,7 +366,12 @@ export async function changePasswordForSession({
   });
 }
 
-export async function loginOrCreateUser(email: string, password: string, verificationCode?: string) {
+export async function loginOrCreateUser(
+  email: string,
+  password: string,
+  verificationCode?: string,
+  intent: UserAuthIntent = "auto",
+) {
   assertDatabaseConfigured();
 
   const normalizedEmail = normalizeEmail(email);
@@ -386,7 +392,11 @@ export async function loginOrCreateUser(email: string, password: string, verific
 
   if (existingUser) {
     if (existingUser.role === "ADMIN") {
-      throw new AppError("FORBIDDEN", "管理员账号请切换到管理员登录。", 403);
+      throw new AppError("FORBIDDEN", "管理员账号请前往后台登录。", 403);
+    }
+
+    if (intent === "register") {
+      throw new AppError("CONFLICT", "该邮箱已注册，请直接登录。", 409);
     }
 
     if (!existingUser.passwordHash) {
@@ -432,6 +442,10 @@ export async function loginOrCreateUser(email: string, password: string, verific
       },
     });
     return user;
+  }
+
+  if (intent === "login") {
+    throw new AppError("NOT_FOUND", "账号不存在，请先注册。", 404);
   }
 
   await verifyEmailCodeForRegistration(normalizedEmail, verificationCode);
