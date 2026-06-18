@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties, SyntheticEvent } from "react";
+import { useState, type CSSProperties } from "react";
 import { Tag } from "tdesign-react";
 import { JumpIcon } from "tdesign-icons-react";
 import type { RelayRecommendation } from "@/lib/relay-recommendations";
@@ -10,11 +10,9 @@ type RelayCardStyle = CSSProperties & {
   "--relay-accent-soft": string;
 };
 
-function hideBrokenLogo(event: SyntheticEvent<HTMLImageElement>) {
-  event.currentTarget.hidden = true;
-}
-
 export function AdminRelayRecommendations({ items }: { items: RelayRecommendation[] }) {
+  const [failedLogoIds, setFailedLogoIds] = useState<Record<string, boolean>>({});
+
   return (
     <section className="admin-td-grid">
       <div className="admin-dashboard-hero admin-relay-hero">
@@ -44,8 +42,16 @@ export function AdminRelayRecommendations({ items }: { items: RelayRecommendatio
             aria-label={`打开 ${item.name}`}
           >
             <div className="admin-relay-logo" aria-hidden="true">
-              <span>{item.initials}</span>
-              <img src={item.logoSrc} alt="" loading="lazy" onError={hideBrokenLogo} />
+              {failedLogoIds[item.id] ? (
+                <span>{item.initials}</span>
+              ) : (
+                <img
+                  src={item.logoSrc}
+                  alt=""
+                  loading="lazy"
+                  onError={() => setFailedLogoIds((current) => ({ ...current, [item.id]: true }))}
+                />
+              )}
             </div>
             <div className="admin-relay-copy">
               <div className="admin-relay-title-row">

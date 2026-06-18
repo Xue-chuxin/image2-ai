@@ -1877,8 +1877,6 @@ textarea {
 }
 
 .admin-relay-logo img {
-  position: absolute;
-  inset: 10px;
   width: 44px;
   height: 44px;
   object-fit: contain;
