@@ -1,7 +1,19 @@
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, ImageDown, PenLine, WandSparkles } from "lucide-react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Clock3,
+  GalleryHorizontalEnd,
+  ImageDown,
+  Images,
+  Layers3,
+  PenLine,
+  ShieldCheck,
+  Sparkles,
+  WandSparkles,
+  WalletCards,
+} from "lucide-react";
 import { GenerateComposer } from "@/components/generate-composer";
-import { GenerateWorkbench } from "@/components/generate-workbench";
 import { BlurText, GlassSurface, SpotlightCard, SplitText } from "@/components/front/react-bits";
 import { HomeWorksShowcase } from "@/components/home-works-showcase";
 import { GALLERY_CATEGORIES, listPublicGalleryImages, type GalleryImageView } from "@/lib/gallery";
@@ -32,6 +44,42 @@ const flowSteps = [
   },
 ];
 
+const enterpriseCapabilities = [
+  {
+    title: "DeepSeek 提示词润色",
+    description: "把口语化描述整理成更清晰的生成提示词，保留原意，降低模板味。",
+    Icon: WandSparkles,
+  },
+  {
+    title: "统一生图任务",
+    description: "通过 Provider 抽象提交任务、轮询状态、保存结果，前台无需直连模型接口。",
+    Icon: Sparkles,
+  },
+  {
+    title: "作品历史与公开展示",
+    description: "生成结果自动归档，满意作品可发布到作品流，用于复用提示词和运营展示。",
+    Icon: GalleryHorizontalEnd,
+  },
+  {
+    title: "积分与后台配置",
+    description: "支持积分消耗、订单记录、模型通道、存储和安全配置，适合持续运营。",
+    Icon: WalletCards,
+  },
+];
+
+const scenarios = [
+  ["电商商品图", "统一生成商品主图、详情素材和场景氛围图。"],
+  ["内容运营", "快速产出封面、配图、活动视觉和社媒素材。"],
+  ["设计提案", "用提示词库沉淀视觉方向，让团队复用稳定风格。"],
+];
+
+const previewNavItems = [
+  { label: "首页", Icon: Images },
+  { label: "创作", Icon: Sparkles },
+  { label: "记录", Icon: Clock3 },
+  { label: "安全", Icon: ShieldCheck },
+];
+
 export default async function HomePage() {
   const settings = await getPublicAppSettings();
   let publicWorks: GalleryImageView[] = [];
@@ -45,15 +93,99 @@ export default async function HomePage() {
 
   if (settings.frontTemplate === "tdesign_workspace") {
     return (
-      <main className="front-td-home">
-        <GenerateWorkbench referenceImagesEnabled={false} variant="tdesign" />
+      <main className="front-site-main">
+        <section className="front-site-hero">
+          <div className="front-site-hero-copy">
+            <span className="front-site-eyebrow">AI Image Studio</span>
+            <h1>{settings.siteTitle}</h1>
+            <p>
+              {settings.siteSubtitle ? `${settings.siteSubtitle}。` : ""}
+              面向团队运营的 AI 生图工作台，从一句中文描述开始，完成提示词整理、生图任务、作品归档和公开展示。
+            </p>
+            <div className="front-site-hero-actions">
+              <Link href="/generate" className="front-site-primary front-site-primary--large">
+                开始创作
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <a href="#showcase" className="front-site-secondary">
+                浏览作品
+              </a>
+            </div>
+            <dl className="front-site-metrics" aria-label="产品能力概览">
+              <div>
+                <dt>Provider</dt>
+                <dd>OpenAI</dd>
+              </div>
+              <div>
+                <dt>Prompt</dt>
+                <dd>DeepSeek</dd>
+              </div>
+              <div>
+                <dt>Workflow</dt>
+                <dd>任务归档</dd>
+              </div>
+            </dl>
+          </div>
 
-        <HomeWorksShowcase
-          categories={GALLERY_CATEGORIES}
-          initialWorks={publicWorks}
-          fallbackPrompts={promptCards}
-          galleryError={galleryError}
-        />
+          <ProductInterfacePreview siteTitle={settings.siteTitle} />
+        </section>
+
+        <section id="features" className="front-site-section">
+          <div className="front-site-section-head">
+            <span className="front-site-eyebrow">Product Capabilities</span>
+            <h2>从生成到运营，前台和后台连成一条线</h2>
+            <p>首页负责介绍产品价值，应用页负责真实创作流程，后台负责通道、存储和内容管理。</p>
+          </div>
+          <div className="front-site-feature-grid">
+            {enterpriseCapabilities.map(({ title, description, Icon }) => (
+              <article key={title} className="front-site-feature-card">
+                <span>
+                  <Icon className="h-5 w-5" />
+                </span>
+                <h3>{title}</h3>
+                <p>{description}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section id="scenarios" className="front-site-section front-site-section--split">
+          <div className="front-site-section-head">
+            <span className="front-site-eyebrow">Use Cases</span>
+            <h2>适合需要持续产图的业务场景</h2>
+            <p>不是一次性玩具，而是能沉淀提示词、作品和运营配置的生产入口。</p>
+          </div>
+          <div className="front-site-scenario-list">
+            {scenarios.map(([title, description], index) => (
+              <article key={title}>
+                <strong>{String(index + 1).padStart(2, "0")}</strong>
+                <div>
+                  <h3>{title}</h3>
+                  <p>{description}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section id="showcase" className="front-site-section front-site-showcase">
+          <div className="front-site-section-head front-site-section-head--row">
+            <div>
+              <span className="front-site-eyebrow">Works</span>
+              <h2>用作品展示真实生成结果</h2>
+              <p>公开作品和运营精选会在这里沉淀，访客可以浏览风格、复用描述并继续创作。</p>
+            </div>
+            <Link href="/prompts" className="front-site-secondary">
+              进入灵感库
+            </Link>
+          </div>
+          <HomeWorksShowcase
+            categories={GALLERY_CATEGORIES}
+            initialWorks={publicWorks}
+            fallbackPrompts={promptCards}
+            galleryError={galleryError}
+          />
+        </section>
       </main>
     );
   }
@@ -150,5 +282,51 @@ export default async function HomePage() {
         </div>
       </SpotlightCard>
     </main>
+  );
+}
+
+function ProductInterfacePreview({ siteTitle }: { siteTitle: string }) {
+  return (
+    <aside className="front-site-product-preview" aria-label="产品界面预览">
+      <div className="front-site-preview-window">
+        <div className="front-site-preview-topbar">
+          <span />
+          <span />
+          <span />
+          <strong>{siteTitle} Studio</strong>
+        </div>
+        <div className="front-site-preview-body">
+          <div className="front-site-preview-sidebar">
+            {previewNavItems.map(({ label, Icon }, index) => {
+              return (
+                <div key={label} className={index === 1 ? "is-active" : ""}>
+                  <Icon className="h-4 w-4" />
+                  <span>{label}</span>
+                </div>
+              );
+            })}
+          </div>
+          <div className="front-site-preview-main">
+            <div className="front-site-preview-composer">
+              <div>
+                <span>画面描述</span>
+                <strong>雨夜街头的人像写真，浅景深，侧光</strong>
+              </div>
+              <div className="front-site-preview-options">
+                <span>1:1</span>
+                <span>标准</span>
+                <span>1 张</span>
+              </div>
+              <button type="button">开始生成</button>
+            </div>
+            <div className="front-site-preview-result">
+              <Layers3 className="h-7 w-7" />
+              <strong>任务进度</strong>
+              <span>润色 / 生成 / 保存</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
   );
 }

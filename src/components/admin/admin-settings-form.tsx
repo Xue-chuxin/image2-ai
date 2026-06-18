@@ -456,9 +456,10 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
                 <div className="admin-template-grid">
                   <TemplatePreviewCard
                     active={settings.frontTemplate === "tdesign_workspace"}
-                    title="TDesign 工作台风"
-                    description="桌面左侧导航，中间直接进入完整创作工作台，整体更克制清爽。"
+                    title="TDesign 企业官网风"
+                    description="首页是企业官网门面，功能页进入左侧导航工作台，适合正式运营。"
                     badge="默认"
+                    previewVariant="site"
                     onClick={() => update("frontTemplate", "tdesign_workspace")}
                   />
                   <TemplatePreviewCard
@@ -761,17 +762,19 @@ function TemplatePreviewCard({
   title,
   description,
   badge,
+  previewVariant = "app",
   onClick,
 }: {
   active: boolean;
   title: string;
   description: string;
   badge: string;
+  previewVariant?: "site" | "app";
   onClick: () => void;
 }) {
   return (
     <button type="button" className={active ? "admin-template-card is-active" : "admin-template-card"} onClick={onClick}>
-      <div className="admin-template-card__preview" aria-hidden="true">
+      <div className={`admin-template-card__preview admin-template-card__preview--${previewVariant}`} aria-hidden="true">
         <span className="admin-template-card__sider" />
         <span className="admin-template-card__header" />
         <span className="admin-template-card__panel" />

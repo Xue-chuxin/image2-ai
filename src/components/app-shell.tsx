@@ -42,7 +42,7 @@ const tdesignNavItems: Array<{
 ];
 
 const pageMeta: Record<string, { title: string; description: string }> = {
-  "/": { title: "创作工作台", description: "直接输入画面描述，整理提示词并提交生图任务。" },
+  "/": { title: "产品首页", description: "了解产品能力、适用场景和公开作品展示。" },
   "/generate": { title: "创作", description: "完整生成流程、任务进度和结果预览。" },
   "/prompts": { title: "灵感", description: "浏览公开作品和运营精选，复用描述继续创作。" },
   "/history": { title: "记录", description: "查看当前账号的生图任务、结果和失败原因。" },
@@ -74,6 +74,14 @@ export function AppShell({
 
   if (settings.frontTemplate === "glass_app") {
     return <GlassAppShell settings={settings} user={user} pathname={pathname}>{children}</GlassAppShell>;
+  }
+
+  if (pathname === "/") {
+    return <TDesignMarketingShell settings={settings} user={user}>{children}</TDesignMarketingShell>;
+  }
+
+  if (pathname.startsWith("/signin")) {
+    return <TDesignAuthShell settings={settings}>{children}</TDesignAuthShell>;
   }
 
   return <TDesignWorkspaceShell settings={settings} user={user} pathname={pathname}>{children}</TDesignWorkspaceShell>;
@@ -140,6 +148,72 @@ function GlassAppShell({
       </div>
 
       <MobileNav pathname={pathname} />
+    </div>
+  );
+}
+
+function TDesignMarketingShell({
+  children,
+  settings,
+  user,
+}: {
+  children: ReactNode;
+  settings: PublicAppSettings;
+  user?: { email: string } | null;
+}) {
+  return (
+    <div className="front-site-shell">
+      <header className="front-site-header">
+        <div className="front-site-header-inner">
+          <FrontTDesignBrand settings={settings} />
+          <nav className="front-site-nav" aria-label="官网导航">
+            <a href="#features">产品能力</a>
+            <a href="#scenarios">适用场景</a>
+            <a href="#showcase">作品展示</a>
+            <Link href="/prompts">灵感库</Link>
+          </nav>
+          <div className="front-site-actions">
+            {user?.email ? (
+              <AccountMenu email={user.email} role="user" />
+            ) : (
+              <Link href="/signin" className="front-site-login">
+                登录
+              </Link>
+            )}
+            <Link href={user?.email ? "/generate" : "/signin?next=/generate"} className="front-site-primary">
+              开始创作
+            </Link>
+          </div>
+        </div>
+      </header>
+      {children}
+    </div>
+  );
+}
+
+function TDesignAuthShell({
+  children,
+  settings,
+}: {
+  children: ReactNode;
+  settings: PublicAppSettings;
+}) {
+  return (
+    <div className="front-site-shell front-site-shell--auth">
+      <header className="front-site-header">
+        <div className="front-site-header-inner">
+          <FrontTDesignBrand settings={settings} />
+          <div className="front-site-actions">
+            <Link href="/" className="front-site-login">
+              返回首页
+            </Link>
+            <Link href="/generate" className="front-site-primary">
+              进入创作
+            </Link>
+          </div>
+        </div>
+      </header>
+      {children}
     </div>
   );
 }
