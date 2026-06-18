@@ -4601,8 +4601,6 @@ textarea {
 }
 
 .td-preview-panel {
-  position: sticky;
-  top: 96px;
   display: grid;
   gap: 14px;
   min-width: 0;
