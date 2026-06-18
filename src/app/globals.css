@@ -5368,6 +5368,10 @@ textarea {
     padding-bottom: 52px;
   }
 
+  .front-site-main--home {
+    padding-bottom: 0;
+  }
+
   .front-site-hero {
     gap: 26px;
     padding: 36px 0 34px;
