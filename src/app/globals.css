@@ -2461,6 +2461,19 @@ textarea {
     max-width: none;
   }
 
+  .admin-user-credit-actions .t-input-number {
+    padding: 0 !important;
+  }
+
+  .admin-user-credit-actions .t-input-number__decrease,
+  .admin-user-credit-actions .t-input-number__increase {
+    display: none !important;
+  }
+
+  .admin-user-credit-actions .t-input-number:not(.t-input-number--column) > .t-input-number__decrease + .t-input__wrap {
+    margin-left: 0 !important;
+  }
+
   .admin-td-user-table-scroll .t-table__cell--fixed-right {
     position: static !important;
     right: auto !important;
