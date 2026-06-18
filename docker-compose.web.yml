@@ -14,8 +14,8 @@ services:
     networks:
       - rhex_default
     volumes:
-      - image2_generated:/app/public/generated
-      - image2_uploads:/app/public/uploads
+      - image2_generated:/app/public/storage/generated
+      - image2_uploads:/app/public/storage/uploads
       - image2_chrome_profile:/app/chrome-profile
 
 volumes:

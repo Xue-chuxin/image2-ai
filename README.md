@@ -257,7 +257,7 @@ bash scripts/update.sh docker      # docker-compose.yml
 bash scripts/update.sh docker-web  # docker-compose.web.yml
 ```
 
-升级脚本会在拉取代码前检查工作区是否有未提交改动；如果用户做过本地二开，需要先提交、合并或备份自己的改动。
+升级脚本会在拉取代码前检查工作区是否有未提交改动；如果用户做过本地二开，需要先提交、合并或备份自己的改动。Docker 升级时，如果脚本检测到旧版图片 volume 仍挂载在 `/app/public/generated` 或 `/app/public/uploads`，会先把旧容器里的 `/app/public/storage` 备份到 `.image2-storage-backups/`，重建后再回填到新的 storage volume。可通过 `IMAGE2_STORAGE_BACKUP_DIR=/path/to/backups` 指定备份根目录。
 
 
 ## 常用脚本
@@ -312,6 +312,8 @@ STORAGE_UPLOADS_PREFIX="uploads"
 ```
 
 生成图、参考图和支付凭证统一通过 `StorageService` 保存。OSS、COS、S3 已预留配置字段，但当前版本尚未接入对应 SDK。
+
+Docker Compose 默认会把生成图和上传图分别持久化到 `/app/public/storage/generated` 和 `/app/public/storage/uploads`。如果你在后台或环境变量里修改了 `STORAGE_LOCAL_BASE_DIR`、`STORAGE_GENERATED_PREFIX` 或 `STORAGE_UPLOADS_PREFIX`，需要同步调整自己的 Compose volume 挂载路径。
 
 
 ## 生产部署建议

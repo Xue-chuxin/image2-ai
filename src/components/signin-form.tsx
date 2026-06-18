@@ -130,7 +130,15 @@ export function SignInForm({
         <form onSubmit={handleSubmit} className="td-signin-form__body">
           <label className="td-field-block">
             <span>用户邮箱</span>
-            <Input value={email} type="email" placeholder="name@example.com" prefixIcon={<Mail className="h-4 w-4" />} onChange={(value) => setEmail(String(value))} />
+            <Input
+              value={email}
+              type="text"
+              name="email"
+              autocomplete="email"
+              placeholder="name@example.com"
+              prefixIcon={<Mail className="h-4 w-4" />}
+              onChange={(value) => setEmail(String(value))}
+            />
           </label>
 
           <label className="td-field-block">

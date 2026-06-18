@@ -4,6 +4,7 @@ docs/
 .next/
 .npm-cache/
 .local/
+.image2-storage-backups/
 .env
 .env.local
 .env.production

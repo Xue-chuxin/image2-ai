@@ -323,23 +323,25 @@ function parseFooterLinksText(value: string) {
 }
 
 function normalizeFriendLinks(value: unknown, fallback: FooterFriendLink[] = []) {
-  let rawLinks: unknown = value;
+  let linkItems: unknown[];
 
-  if (typeof rawLinks === "string") {
+  if (typeof value === "string") {
+    const rawLinksText = value;
     try {
-      rawLinks = rawLinks.trim() ? JSON.parse(rawLinks) : [];
+      const parsedLinks = rawLinksText.trim() ? JSON.parse(rawLinksText) : [];
+      linkItems = Array.isArray(parsedLinks) ? parsedLinks : fallback;
     } catch {
-      rawLinks = parseFooterLinksText(rawLinks);
+      linkItems = parseFooterLinksText(rawLinksText);
     }
-  }
-
-  if (!Array.isArray(rawLinks)) {
-    rawLinks = fallback;
+  } else if (Array.isArray(value)) {
+    linkItems = value;
+  } else {
+    linkItems = fallback;
   }
 
   const seen = new Set<string>();
 
-  return rawLinks
+  return linkItems
     .map((link) => {
       if (!link || typeof link !== "object") {
         return null;

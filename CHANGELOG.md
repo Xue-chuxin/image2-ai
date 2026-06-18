@@ -4,7 +4,9 @@
 
 ## 未发布
 
-- 暂无。
+- 修复 Docker 构建时 TDesign 邮箱输入类型和友情链接解析的 TypeScript 报错。
+- 修正 Docker Compose 图片 volume 挂载路径，使默认本地存储持久化到 `/app/public/storage/generated` 和 `/app/public/storage/uploads`。
+- 升级脚本新增旧版图片目录备份和回填，避免从旧 Compose 路径升级时丢失容器内 `/app/public/storage` 图片。
 
 ## v0.1.2 - 2026-06-18
 
