@@ -5445,11 +5445,12 @@ textarea {
   }
 
   .front-site-footer-grid {
-    grid-template-columns: 1fr;
-    gap: 28px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 28px 22px;
   }
 
   .front-site-footer-brand {
+    grid-column: 1 / -1;
     max-width: none;
   }
 
