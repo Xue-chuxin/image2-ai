@@ -35,7 +35,7 @@ const adminTabs: Array<{
   { key: "billing", href: "/admin/billing", label: "支付", description: "套餐与渠道", icon: <MoneyIcon /> },
   { key: "health", href: "/admin/health", label: "自检", description: "上线状态", icon: <CheckCircleIcon /> },
   { key: "settings", href: "/admin/settings", label: "配置", description: "站点与模型", icon: <SettingIcon /> },
-  { key: "relays", href: "/admin/relays", label: "中转", description: "推荐入口", icon: <InternetIcon /> },
+  { key: "relays", href: "/admin/relays", label: "中转站", description: "推荐入口", icon: <InternetIcon /> },
 ];
 
 const adminMenuGroups = [
@@ -45,7 +45,11 @@ const adminMenuGroups = [
   },
   {
     title: "商业与系统",
-    items: adminTabs.filter((tab) => ["billing", "health", "settings", "relays"].includes(tab.key)),
+    items: adminTabs.filter((tab) => ["billing", "health", "settings"].includes(tab.key)),
+  },
+  {
+    title: "中转站推荐",
+    items: adminTabs.filter((tab) => ["relays"].includes(tab.key)),
   },
 ];
 
