@@ -3168,12 +3168,84 @@ textarea {
   align-items: start;
 }
 
+.front-site-scenarios {
+  gap: 0;
+}
+
+.front-site-scenario-shell {
+  display: grid;
+  grid-template-columns: minmax(230px, 0.34fr) minmax(0, 1fr);
+  gap: 40px;
+  align-items: start;
+}
+
+.front-site-scenario-left {
+  position: sticky;
+  top: 96px;
+  display: grid;
+  gap: 26px;
+  min-width: 0;
+}
+
+.front-site-scenario-left .front-site-section-head {
+  max-width: none;
+}
+
+.front-site-scenario-nav {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.front-site-scenario-nav a {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  min-height: 58px;
+  border-left: 3px solid transparent;
+  border-radius: var(--td-radius-medium, 6px);
+  padding: 0 16px 0 13px;
+  color: var(--td-text-color-secondary, rgba(0, 0, 0, 0.6));
+  background: rgba(255, 255, 255, 0.56);
+  font-weight: 750;
+  transition: border-color 180ms ease, background 180ms ease, color 180ms ease, transform 180ms ease;
+}
+
+.front-site-scenario-nav a:hover,
+.front-site-scenario-nav a.is-active {
+  border-left-color: var(--td-brand-color, #0052d9);
+  color: var(--td-brand-color, #0052d9);
+  background: var(--td-bg-color-container-hover, #f8fafc);
+}
+
+.front-site-scenario-nav a:hover {
+  transform: translateX(2px);
+}
+
+.front-site-scenario-nav span {
+  color: inherit;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.front-site-scenario-nav strong {
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  font-size: 15px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .front-site-scenario-list {
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
 
 .front-site-scenario-list article {
+  scroll-margin-top: 100px;
   display: grid;
   grid-template-columns: 52px minmax(0, 1fr);
   gap: 16px;
@@ -4710,6 +4782,19 @@ textarea {
     grid-template-columns: 1fr;
   }
 
+  .front-site-scenario-shell {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .front-site-scenario-left {
+    position: static;
+  }
+
+  .front-site-scenario-nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .front-site-section-head--row {
     align-items: start;
   }
@@ -4911,6 +4996,7 @@ textarea {
   .front-site-result-grid,
   .front-site-feature-side-grid,
   .front-site-feature-spotlight ul,
+  .front-site-scenario-nav,
   .front-site-scenario-meta {
     grid-template-columns: 1fr;
   }
