@@ -2298,7 +2298,7 @@ textarea {
   min-height: 100dvh;
   color: var(--td-text-color-primary, rgba(0, 0, 0, 0.9));
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(246, 248, 251, 0.78) 48%, rgba(238, 243, 248, 0.92) 100%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.76) 0%, rgba(246, 248, 251, 0.66) 48%, rgba(238, 243, 248, 0.86) 100%),
     url("/home-minimal-bg.svg"),
     linear-gradient(180deg, #ffffff 0%, #f6f8fb 48%, #eef3f8 100%);
   background-position: center top, center top, center;
@@ -2435,7 +2435,28 @@ textarea {
 }
 
 .front-site-main--home {
+  position: relative;
+  isolation: isolate;
   padding-bottom: 0;
+}
+
+.front-site-main--home::before {
+  position: absolute;
+  z-index: 0;
+  inset: 0 calc(50% - 50vw);
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.74) 0%, rgba(255, 255, 255, 0.52) 42%, rgba(244, 248, 253, 0.72) 100%),
+    url("/home-minimal-bg.svg");
+  background-position: center top, center -120px;
+  background-repeat: no-repeat;
+  background-size: auto, 1600px auto;
+  content: "";
+}
+
+.front-site-main--home > * {
+  position: relative;
+  z-index: 1;
 }
 
 .front-site-hero {
@@ -2975,12 +2996,12 @@ textarea {
   border-radius: var(--td-radius-large, 9px);
   padding: 20px;
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(243, 248, 255, 0.9)),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.86), rgba(243, 248, 255, 0.62)),
     url("/home-feature-bg.svg"),
     linear-gradient(135deg, #ffffff, #f3f8ff);
-  background-position: center, right -128px center, center;
+  background-position: center, right -38px center, center;
   background-repeat: no-repeat;
-  background-size: auto, 560px auto, auto;
+  background-size: auto, 640px auto, auto;
 }
 
 .front-site-result-strip__head {
@@ -3113,12 +3134,12 @@ textarea {
   border-radius: var(--td-radius-large, 9px);
   padding: 26px;
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(237, 245, 255, 0.84)),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.82) 0%, rgba(237, 245, 255, 0.58) 64%, rgba(227, 245, 242, 0.5) 100%),
     url("/home-feature-bg.svg"),
     linear-gradient(135deg, #ffffff, #edf5ff);
-  background-position: center, right -92px bottom -108px, center;
+  background-position: center, right -18px bottom -70px, center;
   background-repeat: no-repeat;
-  background-size: auto, min(86%, 620px) auto, auto;
+  background-size: auto, min(100%, 780px) auto, auto;
   box-shadow: 0 18px 38px rgba(0, 82, 217, 0.08);
 }
 
@@ -3470,19 +3491,19 @@ textarea {
 .front-site-operation-card,
 .front-site-scenario-list article {
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.8)),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.9) 42%, rgba(255, 255, 255, 0.54) 100%),
     url("/home-card-bg.svg"),
     rgba(255, 255, 255, 0.86);
-  background-position: center, right -58px top -30px, center;
+  background-position: center, right -16px center, center;
   background-repeat: no-repeat;
-  background-size: auto, 276px auto, auto;
+  background-size: auto, 330px auto, auto;
 }
 
 .front-site-feature-card:nth-child(2),
 .front-site-workflow-card:nth-child(even),
 .front-site-operation-card:nth-child(2n),
 .front-site-scenario-list article:nth-child(even) {
-  background-position: center, right -82px bottom -44px, center;
+  background-position: center, right -52px bottom -18px, center;
 }
 
 .front-site-scenario-panel-head {
@@ -5286,6 +5307,11 @@ textarea {
     background-size: auto, 1180px auto, auto;
   }
 
+  .front-site-main--home::before {
+    background-position: center top, center -70px;
+    background-size: auto, 1180px auto;
+  }
+
   .front-site-header-inner {
     min-height: 64px;
     gap: 10px;
@@ -5434,8 +5460,8 @@ textarea {
   .front-site-feature-spotlight {
     gap: 18px;
     padding: 18px;
-    background-position: center, right -170px bottom -84px, center;
-    background-size: auto, 420px auto, auto;
+    background-position: center, right -96px bottom -64px, center;
+    background-size: auto, 500px auto, auto;
   }
 
   .front-site-feature-spotlight h3 {
@@ -5449,16 +5475,16 @@ textarea {
   }
 
   .front-site-result-strip {
-    background-position: center, right -190px top -32px, center;
-    background-size: auto, 420px auto, auto;
+    background-position: center, right -116px top -36px, center;
+    background-size: auto, 520px auto, auto;
   }
 
   .front-site-feature-card,
   .front-site-workflow-card,
   .front-site-operation-card,
   .front-site-scenario-list article {
-    background-position: center, right -106px top -44px, center;
-    background-size: auto, 230px auto, auto;
+    background-position: center, right -54px top -34px, center;
+    background-size: auto, 290px auto, auto;
   }
 
   .front-site-preview-main {
