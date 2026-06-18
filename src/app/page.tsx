@@ -52,12 +52,13 @@ const flowSteps = [
   },
 ];
 
+const featureSpotlight = {
+  title: "从一句中文到可复用视觉资产",
+  description: "把创意描述、提示词润色、生图任务和作品归档串成同一条生产链路，减少反复复制、截图和人工整理。",
+  points: ["中文想法先保留业务语境", "提示词结构自动变清晰", "结果、参数和描述一起沉淀"],
+};
+
 const enterpriseCapabilities = [
-  {
-    title: "DeepSeek 提示词润色",
-    description: "把口语化描述整理成更清晰的生成提示词，保留原意，降低模板味。",
-    Icon: WandSparkles,
-  },
   {
     title: "统一生图任务",
     description: "通过统一模型通道提交任务、轮询状态、保存结果，前台无需直连模型接口。",
@@ -141,22 +142,30 @@ const scenarios = [
   {
     title: "电商商品图",
     description: "统一生成商品主图、详情素材和场景氛围图。",
-    tags: ["商品主图", "详情页", "场景图"],
+    audience: "电商运营、品牌视觉、店铺设计",
+    input: "商品卖点、质感、拍摄角度",
+    output: "主图、场景图、详情页素材",
   },
   {
     title: "内容运营",
     description: "快速产出封面、活动视觉、社媒配图和栏目素材。",
-    tags: ["封面", "活动图", "社媒"],
+    audience: "新媒体、市场、活动运营",
+    input: "活动主题、栏目调性、发布时间",
+    output: "封面图、活动图、社媒配图",
   },
   {
     title: "设计提案",
     description: "将风格方向、镜头描述和作品样例沉淀成团队资产。",
-    tags: ["风格板", "概念图", "风格复用"],
+    audience: "设计师、创意团队、项目负责人",
+    input: "风格方向、镜头语言、参考情绪",
+    output: "概念图、风格板、提案素材",
   },
   {
     title: "品牌素材库",
     description: "把公开作品、精选图和提示词归档，形成可持续展示入口。",
-    tags: ["图库", "精选", "归档"],
+    audience: "品牌、内容中台、运营管理员",
+    input: "品牌规范、常用场景、精选作品",
+    output: "公开图库、提示词库、复用资产",
   },
 ];
 
@@ -166,6 +175,62 @@ const previewNavItems = [
   { label: "记录", Icon: Clock3 },
   { label: "安全", Icon: ShieldCheck },
 ];
+
+type HeroWork = {
+  id: string;
+  title: string;
+  summary: string;
+  category: string;
+  imageUrl?: string;
+  ratio: string;
+  tone: string;
+};
+
+const workToneMap: Record<string, string> = {
+  商品: "product",
+  写真: "portrait",
+  角色: "character",
+  界面: "interface",
+  建筑: "space",
+  插画: "illustration",
+  国风: "heritage",
+  其他: "default",
+};
+
+function getWorkTone(category: string) {
+  return workToneMap[category] || "default";
+}
+
+function shortSummary(text: string, maxLength = 46) {
+  const clean = text.replace(/\s+/g, " ").trim();
+  if (clean.length <= maxLength) {
+    return clean;
+  }
+
+  return `${clean.slice(0, maxLength)}...`;
+}
+
+function buildHeroWorks(publicWorks: GalleryImageView[]): HeroWork[] {
+  const liveWorks = publicWorks.slice(0, 5).map((work) => ({
+    id: work.id,
+    title: work.title,
+    summary: shortSummary(work.summary || work.promptZh || "公开作品"),
+    category: work.category,
+    imageUrl: work.thumbnailUrl || work.url,
+    ratio: work.ratio,
+    tone: getWorkTone(work.category),
+  }));
+  const fallbackWorks = promptCards.slice(0, Math.max(0, 5 - liveWorks.length)).map((prompt) => ({
+    id: `prompt-${prompt.slug}`,
+    title: prompt.title,
+    summary: shortSummary(prompt.summary),
+    category: prompt.category,
+    ratio: prompt.ratio,
+    tone: getWorkTone(prompt.category),
+  }));
+
+  return [...liveWorks, ...fallbackWorks].slice(0, 5);
+}
 
 export default async function HomePage() {
   const settings = await getPublicAppSettings();
@@ -179,15 +244,17 @@ export default async function HomePage() {
   }
 
   if (settings.frontTemplate === "tdesign_workspace") {
+    const heroWorks = buildHeroWorks(publicWorks);
+
     return (
       <main className="front-site-main">
         <section className="front-site-hero">
           <div className="front-site-hero-copy">
-            <span className="front-site-eyebrow">AI 生图官网</span>
+            <span className="front-site-eyebrow">企业级 AI 生图官网</span>
             <h1>{settings.siteTitle}</h1>
             <p>
               {settings.siteSubtitle ? `${settings.siteSubtitle}。` : ""}
-              面向团队运营的 AI 生图工作台，从一句中文描述开始，完成提示词整理、生图任务、作品归档和公开展示。
+              把团队的 AI 图片生产变成可复用工作流：中文想法进入，提示词自动整理，生成结果沉淀为作品资产。
             </p>
             <div className="front-site-hero-actions">
               <Link href="/generate" className="front-site-primary front-site-primary--large">
@@ -223,8 +290,10 @@ export default async function HomePage() {
             </div>
           </div>
 
-          <ProductInterfacePreview siteTitle={settings.siteTitle} />
+          <ProductInterfacePreview siteTitle={settings.siteTitle} works={heroWorks} />
         </section>
+
+        <HeroResultStrip works={heroWorks} />
 
         <section className="front-site-trust-strip" aria-label="适用团队">
           <span>适合持续产图的团队</span>
@@ -244,16 +313,35 @@ export default async function HomePage() {
             <h2>从生成到运营，前台和后台连成一条线</h2>
             <p>首页负责介绍产品价值，应用页负责真实创作流程，后台负责通道、存储和内容管理。</p>
           </div>
-          <div className="front-site-feature-grid">
-            {enterpriseCapabilities.map(({ title, description, Icon }) => (
-              <article key={title} className="front-site-feature-card">
-                <span>
-                  <Icon className="h-5 w-5" />
-                </span>
-                <h3>{title}</h3>
-                <p>{description}</p>
-              </article>
-            ))}
+          <div className="front-site-feature-layout">
+            <article className="front-site-feature-spotlight">
+              <span className="front-site-feature-spotlight__icon">
+                <WandSparkles className="h-6 w-6" />
+              </span>
+              <div>
+                <h3>{featureSpotlight.title}</h3>
+                <p>{featureSpotlight.description}</p>
+              </div>
+              <ul>
+                {featureSpotlight.points.map((point) => (
+                  <li key={point}>
+                    <CheckCircle2 className="h-4 w-4" />
+                    {point}
+                  </li>
+                ))}
+              </ul>
+            </article>
+            <div className="front-site-feature-side-grid">
+              {enterpriseCapabilities.map(({ title, description, Icon }) => (
+                <article key={title} className="front-site-feature-card">
+                  <span>
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <h3>{title}</h3>
+                  <p>{description}</p>
+                </article>
+              ))}
+            </div>
           </div>
         </section>
 
@@ -319,17 +407,26 @@ export default async function HomePage() {
             <p>不是一次性玩具，而是能沉淀提示词、作品和运营配置的生产入口。</p>
           </div>
           <div className="front-site-scenario-list">
-            {scenarios.map(({ title, description, tags }, index) => (
+            {scenarios.map(({ title, description, audience, input, output }, index) => (
               <article key={title}>
                 <strong>{String(index + 1).padStart(2, "0")}</strong>
                 <div>
                   <h3>{title}</h3>
                   <p>{description}</p>
-                  <span>
-                    {tags.map((tag) => (
-                      <small key={tag}>{tag}</small>
-                    ))}
-                  </span>
+                  <dl className="front-site-scenario-meta">
+                    <div>
+                      <dt>适合谁</dt>
+                      <dd>{audience}</dd>
+                    </div>
+                    <div>
+                      <dt>输入</dt>
+                      <dd>{input}</dd>
+                    </div>
+                    <div>
+                      <dt>产出</dt>
+                      <dd>{output}</dd>
+                    </div>
+                  </dl>
                 </div>
               </article>
             ))}
@@ -470,7 +567,34 @@ export default async function HomePage() {
   );
 }
 
-function ProductInterfacePreview({ siteTitle }: { siteTitle: string }) {
+function HeroResultStrip({ works }: { works: HeroWork[] }) {
+  return (
+    <section className="front-site-result-strip" aria-label="生成结果预览">
+      <div className="front-site-result-strip__head">
+        <span className="front-site-eyebrow">作品结果</span>
+        <h2>先看到产出，再进入工作台继续创作</h2>
+        <p>首页展示公开作品和精选提示词，访客能快速判断风格与质量，登录后再进入完整生成流程。</p>
+        <Link href="/prompts" className="front-site-secondary">
+          进入灵感库
+        </Link>
+      </div>
+      <div className="front-site-result-grid">
+        {works.map((work, index) => (
+          <article key={work.id} className={index === 0 ? "front-site-result-card is-large" : "front-site-result-card"}>
+            <WorkVisual work={work} />
+            <div>
+              <span>{work.category}</span>
+              <strong>{work.title}</strong>
+              <small>{work.summary}</small>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ProductInterfacePreview({ siteTitle, works }: { siteTitle: string; works: HeroWork[] }) {
   return (
     <aside className="front-site-product-preview" aria-label="产品界面预览">
       <div className="front-site-preview-window">
@@ -492,26 +616,56 @@ function ProductInterfacePreview({ siteTitle }: { siteTitle: string }) {
             })}
           </div>
           <div className="front-site-preview-main">
-            <div className="front-site-preview-composer">
-              <div>
-                <span>画面描述</span>
-                <strong>雨夜街头的人像写真，浅景深，侧光</strong>
+            <div className="front-site-preview-panel">
+              <div className="front-site-preview-status-card">
+                <span>当前流程</span>
+                <strong>提示词润色 -> 任务生成 -> 作品归档</strong>
+                <small>面向团队的稳定生产链路</small>
               </div>
-              <div className="front-site-preview-options">
-                <span>1:1</span>
-                <span>标准</span>
-                <span>1 张</span>
+              <div className="front-site-preview-composer">
+                <div>
+                  <span>画面描述</span>
+                  <strong>雨夜街头的人像写真，浅景深，侧光</strong>
+                </div>
+                <div className="front-site-preview-options">
+                  <span>1:1</span>
+                  <span>标准</span>
+                  <span>1 张</span>
+                </div>
+                <button type="button">开始生成</button>
               </div>
-              <button type="button">开始生成</button>
             </div>
-            <div className="front-site-preview-result">
-              <Layers3 className="h-7 w-7" />
-              <strong>任务进度</strong>
-              <span>润色 / 生成 / 保存</span>
+            <div className="front-site-preview-gallery">
+              <div className="front-site-preview-gallery-head">
+                <span>
+                  <Layers3 className="h-4 w-4" />
+                  生成结果
+                </span>
+                <strong>自动进入作品资产库</strong>
+              </div>
+              <div className="front-site-preview-work-grid">
+                {works.slice(0, 4).map((work, index) => (
+                  <article key={work.id} className={index === 0 ? "front-site-preview-work-card is-large" : "front-site-preview-work-card"}>
+                    <WorkVisual work={work} />
+                    <div>
+                      <span>{work.ratio}</span>
+                      <strong>{work.title}</strong>
+                    </div>
+                  </article>
+                ))}
+              </div>
             </div>
           </div>
         </div>
       </div>
     </aside>
   );
+}
+
+function WorkVisual({ work }: { work: HeroWork }) {
+  if (work.imageUrl) {
+    return <img src={work.imageUrl} alt={work.title} loading="lazy" />;
+  }
+
+  return <span className={`front-site-work-fallback tone-${work.tone}`} aria-hidden="true" />;
 }
