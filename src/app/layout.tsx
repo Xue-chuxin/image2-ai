@@ -13,7 +13,12 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return {
     title: settings.browserTitle,
-    description: settings.siteSubtitle
+    description: settings.siteSubtitle,
+    icons: {
+      icon: settings.siteFaviconUrl,
+      shortcut: settings.siteFaviconUrl,
+      apple: settings.siteLogoUrl,
+    },
   };
 }
 

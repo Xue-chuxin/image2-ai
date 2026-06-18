@@ -17,6 +17,8 @@ export type PublicAppSettings = {
   browserTitle: string;
   siteTitle: string;
   siteSubtitle: string;
+  siteLogoUrl: string;
+  siteFaviconUrl: string;
   frontTemplate: FrontTemplateName;
   icpNumber: string;
   friendLinks: FooterFriendLink[];
@@ -175,6 +177,8 @@ const defaultSettings: PublicAppSettings = {
   browserTitle: "Image2 Studio",
   siteTitle: "造图台",
   siteSubtitle: "Image Studio",
+  siteLogoUrl: "/brand-logo.svg",
+  siteFaviconUrl: "/favicon.svg",
   frontTemplate: "tdesign_workspace",
   icpNumber: "",
   friendLinks: [],
@@ -290,6 +294,28 @@ function normalizeFooterLinkHref(value: unknown) {
     return url.protocol === "http:" || url.protocol === "https:" ? clean : "";
   } catch {
     return "";
+  }
+}
+
+function normalizeAssetUrl(value: unknown, fallback: string) {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+
+  const clean = value.trim().slice(0, 500);
+  if (!clean) {
+    return fallback;
+  }
+
+  if (clean.startsWith("/")) {
+    return clean;
+  }
+
+  try {
+    const url = new URL(clean);
+    return url.protocol === "http:" || url.protocol === "https:" ? clean : fallback;
+  } catch {
+    return fallback;
   }
 }
 
@@ -895,6 +921,8 @@ export async function getPublicAppSettings(): Promise<PublicAppSettings> {
     browserTitle: normalizeText(getStoredSetting(map, "browserTitle"), defaultSettings.browserTitle),
     siteTitle: normalizeText(getStoredSetting(map, "siteTitle"), defaultSettings.siteTitle),
     siteSubtitle: normalizeText(getStoredSetting(map, "siteSubtitle"), defaultSettings.siteSubtitle),
+    siteLogoUrl: normalizeAssetUrl(getStoredSetting(map, "siteLogoUrl"), defaultSettings.siteLogoUrl),
+    siteFaviconUrl: normalizeAssetUrl(getStoredSetting(map, "siteFaviconUrl"), defaultSettings.siteFaviconUrl),
     frontTemplate: normalizeFrontTemplate(getStoredSetting(map, "frontTemplate") || defaultSettings.frontTemplate),
     icpNumber: normalizeOptionalText(getStoredSetting(map, "icpNumber"), defaultSettings.icpNumber, 120),
     friendLinks: normalizeFriendLinks(getStoredSetting(map, "friendLinks"), defaultSettings.friendLinks),
@@ -969,6 +997,8 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
   const browserTitle = normalizeText(input.browserTitle, currentPublicSettings.browserTitle);
   const siteTitle = normalizeText(input.siteTitle, currentPublicSettings.siteTitle);
   const siteSubtitle = normalizeText(input.siteSubtitle, currentPublicSettings.siteSubtitle);
+  const siteLogoUrl = normalizeAssetUrl(input.siteLogoUrl, currentPublicSettings.siteLogoUrl);
+  const siteFaviconUrl = normalizeAssetUrl(input.siteFaviconUrl, currentPublicSettings.siteFaviconUrl);
   const frontTemplate = normalizeFrontTemplate(input.frontTemplate || currentPublicSettings.frontTemplate);
   const icpNumber = normalizeOptionalText(input.icpNumber, currentPublicSettings.icpNumber, 120);
   const friendLinks = normalizeFriendLinks(input.friendLinks, currentPublicSettings.friendLinks);
@@ -1045,6 +1075,8 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
     { key: "browserTitle", value: browserTitle },
     { key: "siteTitle", value: siteTitle },
     { key: "siteSubtitle", value: siteSubtitle },
+    { key: "siteLogoUrl", value: siteLogoUrl },
+    { key: "siteFaviconUrl", value: siteFaviconUrl },
     { key: "frontTemplate", value: frontTemplate },
     { key: "icpNumber", value: icpNumber },
     { key: "friendLinks", value: JSON.stringify(friendLinks) },

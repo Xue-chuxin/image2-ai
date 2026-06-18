@@ -113,7 +113,11 @@ function GlassAppShell({
           <div className="flex items-center justify-between gap-4">
             <Link href="/" className="group flex min-w-0 items-center gap-3">
               <div className="front-logo-mark flex h-11 w-11 shrink-0 items-center justify-center text-[#254c73] transition duration-200 group-hover:-translate-y-0.5">
-                <Palette className="h-5 w-5" />
+                {settings.siteLogoUrl ? (
+                  <img src={settings.siteLogoUrl} alt="" className="front-logo-mark__image" />
+                ) : (
+                  <Palette className="h-5 w-5" />
+                )}
               </div>
               <div className="min-w-0">
                 <p className="truncate text-base font-black leading-none text-slate-950">{settings.siteTitle}</p>
@@ -287,7 +291,7 @@ function FrontTDesignBrand({ settings }: { settings: PublicAppSettings }) {
   return (
     <Link href="/" className="front-td-brand">
       <span className="front-td-brand-mark">
-        <AiImageIcon />
+        {settings.siteLogoUrl ? <img src={settings.siteLogoUrl} alt="" /> : <AiImageIcon />}
       </span>
       <span className="front-td-brand-copy">
         <strong>{settings.siteTitle}</strong>

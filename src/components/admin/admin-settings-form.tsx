@@ -214,6 +214,8 @@ function mergeSettingsAfterSave({
     browserTitle: submittedSettings.browserTitle,
     siteTitle: submittedSettings.siteTitle,
     siteSubtitle: submittedSettings.siteSubtitle,
+    siteLogoUrl: returnedSettings.siteLogoUrl,
+    siteFaviconUrl: returnedSettings.siteFaviconUrl,
     frontTemplate: submittedSettings.frontTemplate,
     icpNumber: returnedSettings.icpNumber,
     friendLinks: returnedSettings.friendLinks,
@@ -380,6 +382,8 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
           browserTitle: settings.browserTitle,
           siteTitle: settings.siteTitle,
           siteSubtitle: settings.siteSubtitle,
+          siteLogoUrl: settings.siteLogoUrl,
+          siteFaviconUrl: settings.siteFaviconUrl,
           frontTemplate: settings.frontTemplate,
           icpNumber: settings.icpNumber,
           friendLinks: submittedSettings.friendLinks,
@@ -550,6 +554,18 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
                   <SettingInput label="浏览器标题" value={settings.browserTitle} onChange={(value) => update("browserTitle", value)} />
                   <SettingInput label="网站标题" value={settings.siteTitle} onChange={(value) => update("siteTitle", value)} />
                   <SettingInput label="网站副标题" value={settings.siteSubtitle} onChange={(value) => update("siteSubtitle", value)} />
+                  <SettingInput label="站点 Logo 地址" value={settings.siteLogoUrl} onChange={(value) => update("siteLogoUrl", value)} placeholder="/brand-logo.svg 或 https://example.com/logo.png" />
+                  <SettingInput label="Favicon 地址" value={settings.siteFaviconUrl} onChange={(value) => update("siteFaviconUrl", value)} placeholder="/favicon.svg 或 https://example.com/favicon.ico" />
+                  <div className="admin-site-brand-preview">
+                    <div>
+                      <span>当前 Logo</span>
+                      <img src={settings.siteLogoUrl} alt="当前 Logo 预览" />
+                    </div>
+                    <div>
+                      <span>浏览器图标</span>
+                      <img src={settings.siteFaviconUrl} alt="当前 Favicon 预览" />
+                    </div>
+                  </div>
                   <SettingInput label="ICP备案号" value={settings.icpNumber} onChange={(value) => update("icpNumber", value)} placeholder="例如：粤ICP备xxxxxxxx号" />
                 </Form>
               </Card>

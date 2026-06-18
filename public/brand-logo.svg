@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="造图台">
+  <defs>
+    <linearGradient id="logo-bg" x1="10" y1="8" x2="54" y2="58" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B63F6"/>
+      <stop offset="1" stop-color="#0047C7"/>
+    </linearGradient>
+    <filter id="logo-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="7" stdDeviation="5" flood-color="#0052D9" flood-opacity="0.22"/>
+    </filter>
+  </defs>
+  <rect x="4" y="4" width="56" height="56" rx="15" fill="url(#logo-bg)" filter="url(#logo-shadow)"/>
+  <path d="M46.6 12.7l1.7 3.7 3.7 1.7-3.7 1.7-1.7 3.7-1.7-3.7-3.7-1.7 3.7-1.7 1.7-3.7Z" fill="#DCEBFF"/>
+  <text x="32" y="41.5" text-anchor="middle" font-family="PingFang SC, Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="27" font-weight="800" fill="#FFFFFF">造</text>
+  <path d="M19 47h26" stroke="#DCEBFF" stroke-width="3" stroke-linecap="round" opacity="0.82"/>
+</svg>
