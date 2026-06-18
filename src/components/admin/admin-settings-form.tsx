@@ -5,6 +5,7 @@ import { Alert, Button, Card, Form, Input, InputNumber, Select, Switch, Tabs, Ta
 import type {
   AdminAppSettings,
   AdminDiagnosticStatus,
+  FooterFriendLink,
   GenerationProviderName,
   OpenAICompatibleChannelSetting,
   StorageProviderName,
@@ -73,6 +74,39 @@ function orderOpenAIChannels(channels: EditableOpenAIChannel[]) {
   return channels.map((channel, index) => ({ ...channel, priority: index }));
 }
 
+function formatFriendLinks(links: FooterFriendLink[]) {
+  return links.map((link) => `${link.label} | ${link.href}`).join("\n");
+}
+
+function parseFriendLinksText(value: string): FooterFriendLink[] {
+  const seen = new Set<string>();
+
+  return value
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [rawLabel, ...rawHrefParts] = line.split("|");
+      const label = rawLabel.trim().slice(0, 40);
+      const href = rawHrefParts.join("|").trim().slice(0, 300);
+
+      if (!label || !href) {
+        return null;
+      }
+
+      const key = `${label}|${href}`.toLocaleLowerCase();
+      if (seen.has(key)) {
+        return null;
+      }
+      seen.add(key);
+
+      return { label, href };
+    })
+    .filter((link): link is FooterFriendLink => Boolean(link))
+    .slice(0, 8);
+}
+
 function mergeSavedOpenAIChannels(
   returnedChannels: OpenAICompatibleChannelSetting[],
   submittedChannels: EditableOpenAIChannel[],
@@ -127,6 +161,8 @@ function mergeSettingsAfterSave({
     siteTitle: submittedSettings.siteTitle,
     siteSubtitle: submittedSettings.siteSubtitle,
     frontTemplate: submittedSettings.frontTemplate,
+    icpNumber: returnedSettings.icpNumber,
+    friendLinks: returnedSettings.friendLinks,
     defaultGenerationProvider: submittedSettings.defaultGenerationProvider,
     deepseekBaseUrl: submittedSettings.deepseekBaseUrl,
     deepseekModel: submittedSettings.deepseekModel,
@@ -211,6 +247,7 @@ function diagnosticAlertTheme(status: AdminDiagnosticStatus): "success" | "warni
 export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminAppSettings }) {
   const [settings, setSettings] = useState(initialSettings);
   const [openaiChannels, setOpenaiChannels] = useState<EditableOpenAIChannel[]>(createEditableOpenAIChannels(initialSettings.openaiCompatibleChannels));
+  const [friendLinksText, setFriendLinksText] = useState(formatFriendLinks(initialSettings.friendLinks));
   const [deepseekApiKey, setDeepseekApiKey] = useState("");
   const [openaiApiKey, setOpenaiApiKey] = useState("");
   const [stabilityAiApiKey, setStabilityAiApiKey] = useState("");
@@ -268,7 +305,7 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
     setError("");
     setMessage("");
     setIsSaving(true);
-    const submittedSettings = settings;
+    const submittedSettings = { ...settings, friendLinks: parseFriendLinksText(friendLinksText) };
     const submittedChannels = openaiChannels;
     const submittedDeepseekApiKey = deepseekApiKey;
     const submittedOpenaiApiKey = openaiApiKey;
@@ -284,6 +321,8 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
           siteTitle: settings.siteTitle,
           siteSubtitle: settings.siteSubtitle,
           frontTemplate: settings.frontTemplate,
+          icpNumber: settings.icpNumber,
+          friendLinks: submittedSettings.friendLinks,
           defaultGenerationProvider: settings.defaultGenerationProvider,
           deepseekBaseUrl: settings.deepseekBaseUrl,
           deepseekModel: settings.deepseekModel,
@@ -346,6 +385,7 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
 
       setSettings(mergedSettings);
       setOpenaiChannels(createEditableOpenAIChannels(mergedSettings.openaiCompatibleChannels));
+      setFriendLinksText(formatFriendLinks(mergedSettings.friendLinks));
       setDeepseekApiKey("");
       setOpenaiApiKey("");
       setStabilityAiApiKey("");
@@ -450,6 +490,20 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
                   <SettingInput label="浏览器标题" value={settings.browserTitle} onChange={(value) => update("browserTitle", value)} />
                   <SettingInput label="网站标题" value={settings.siteTitle} onChange={(value) => update("siteTitle", value)} />
                   <SettingInput label="网站副标题" value={settings.siteSubtitle} onChange={(value) => update("siteSubtitle", value)} />
+                  <SettingInput label="ICP备案号" value={settings.icpNumber} onChange={(value) => update("icpNumber", value)} placeholder="例如：粤ICP备xxxxxxxx号" />
+                </Form>
+              </Card>
+              <Card className="admin-td-card" bordered title="页脚链接">
+                <Form labelAlign="top">
+                  <SettingInput
+                    label="友情链接"
+                    value={friendLinksText}
+                    onChange={setFriendLinksText}
+                    placeholder={"AI 工具导航 | https://example.com\n素材资源站 | https://example.com/assets"}
+                    textarea
+                    minRows={5}
+                  />
+                  <p className="admin-td-form-hint">每行一个友情链接，格式为：名称 | 链接。最多展示 8 个，支持 http、https、站内路径和锚点链接。</p>
                 </Form>
               </Card>
               <Card className="admin-td-card" bordered title="前台模板">

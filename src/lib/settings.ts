@@ -8,11 +8,18 @@ export type GenerationProviderName = "openai" | "chatgpt_web" | "stability_ai";
 export type StorageProviderName = "local" | "oss" | "cos" | "s3";
 export type FrontTemplateName = "tdesign_workspace" | "glass_app";
 
+export type FooterFriendLink = {
+  label: string;
+  href: string;
+};
+
 export type PublicAppSettings = {
   browserTitle: string;
   siteTitle: string;
   siteSubtitle: string;
   frontTemplate: FrontTemplateName;
+  icpNumber: string;
+  friendLinks: FooterFriendLink[];
   defaultGenerationProvider: GenerationProviderName;
   deepseekBaseUrl: string;
   deepseekModel: string;
@@ -169,6 +176,8 @@ const defaultSettings: PublicAppSettings = {
   siteTitle: "造图台",
   siteSubtitle: "Image Studio",
   frontTemplate: "tdesign_workspace",
+  icpNumber: "",
+  friendLinks: [],
   defaultGenerationProvider: "openai",
   deepseekBaseUrl: "https://api.deepseek.com",
   deepseekModel: "deepseek-chat",
@@ -257,6 +266,71 @@ function normalizeOptionalText(value: unknown, fallback: string, maxLength = 120
   }
 
   return value.trim().slice(0, maxLength);
+}
+
+function normalizeFooterLinkHref(value: unknown) {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  const clean = value.trim().slice(0, 300);
+  if (!clean) {
+    return "";
+  }
+
+  if (clean.startsWith("/") || clean.startsWith("#")) {
+    return clean;
+  }
+
+  try {
+    const url = new URL(clean);
+    return url.protocol === "http:" || url.protocol === "https:" ? clean : "";
+  } catch {
+    return "";
+  }
+}
+
+function normalizeFriendLinks(value: unknown, fallback: FooterFriendLink[] = []) {
+  let rawLinks: unknown = value;
+
+  if (typeof rawLinks === "string") {
+    try {
+      rawLinks = rawLinks.trim() ? JSON.parse(rawLinks) : [];
+    } catch {
+      rawLinks = [];
+    }
+  }
+
+  if (!Array.isArray(rawLinks)) {
+    rawLinks = fallback;
+  }
+
+  const seen = new Set<string>();
+
+  return rawLinks
+    .map((link) => {
+      if (!link || typeof link !== "object") {
+        return null;
+      }
+
+      const record = link as Record<string, unknown>;
+      const label = normalizeOptionalText(record.label, "", 40);
+      const href = normalizeFooterLinkHref(record.href || record.url);
+
+      if (!label || !href) {
+        return null;
+      }
+
+      const key = `${label}|${href}`.toLocaleLowerCase();
+      if (seen.has(key)) {
+        return null;
+      }
+      seen.add(key);
+
+      return { label, href };
+    })
+    .filter((link): link is FooterFriendLink => Boolean(link))
+    .slice(0, 8);
 }
 
 function normalizeSubmittedSecret(value: unknown) {
@@ -788,6 +862,8 @@ export async function getPublicAppSettings(): Promise<PublicAppSettings> {
     siteTitle: normalizeText(getStoredSetting(map, "siteTitle"), defaultSettings.siteTitle),
     siteSubtitle: normalizeText(getStoredSetting(map, "siteSubtitle"), defaultSettings.siteSubtitle),
     frontTemplate: normalizeFrontTemplate(getStoredSetting(map, "frontTemplate") || defaultSettings.frontTemplate),
+    icpNumber: normalizeOptionalText(getStoredSetting(map, "icpNumber"), defaultSettings.icpNumber, 120),
+    friendLinks: normalizeFriendLinks(getStoredSetting(map, "friendLinks"), defaultSettings.friendLinks),
     defaultGenerationProvider: normalizeProvider(
       getStoredSetting(map, "defaultGenerationProvider") || process.env.DEFAULT_GENERATION_PROVIDER || defaultSettings.defaultGenerationProvider,
     ),
@@ -860,6 +936,8 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
   const siteTitle = normalizeText(input.siteTitle, currentPublicSettings.siteTitle);
   const siteSubtitle = normalizeText(input.siteSubtitle, currentPublicSettings.siteSubtitle);
   const frontTemplate = normalizeFrontTemplate(input.frontTemplate || currentPublicSettings.frontTemplate);
+  const icpNumber = normalizeOptionalText(input.icpNumber, currentPublicSettings.icpNumber, 120);
+  const friendLinks = normalizeFriendLinks(input.friendLinks, currentPublicSettings.friendLinks);
   const deepseekBaseUrl = normalizeText(input.deepseekBaseUrl, currentPublicSettings.deepseekBaseUrl, 200);
   const deepseekModel = normalizeText(input.deepseekModel, currentPublicSettings.deepseekModel);
   const openaiImageModel = normalizeText(input.openaiImageModel, currentPublicSettings.openaiImageModel);
@@ -934,6 +1012,8 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
     { key: "siteTitle", value: siteTitle },
     { key: "siteSubtitle", value: siteSubtitle },
     { key: "frontTemplate", value: frontTemplate },
+    { key: "icpNumber", value: icpNumber },
+    { key: "friendLinks", value: JSON.stringify(friendLinks) },
     { key: "deepseekBaseUrl", value: deepseekBaseUrl },
     { key: "deepseekModel", value: deepseekModel },
     { key: "openaiImageModel", value: openaiImageModel },

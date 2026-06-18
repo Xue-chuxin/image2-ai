@@ -28,7 +28,7 @@ import { HomeWorksShowcase } from "@/components/home-works-showcase";
 import { GALLERY_CATEGORIES, listPublicGalleryImages, type GalleryImageView } from "@/lib/gallery";
 import { promptCards } from "@/lib/mock-data";
 import { toPublicChineseText } from "@/lib/public-display";
-import { getPublicAppSettings } from "@/lib/settings";
+import { getPublicAppSettings, type FooterFriendLink } from "@/lib/settings";
 
 const steps = [
   ["01", "写清画面", "先把主体、场景、镜头和比例写清楚。页面会保留你的原意，不把描述改成模板话术。"],
@@ -194,7 +194,7 @@ const siteFooterColumns = [
       { label: "提示词润色", href: "#features" },
       { label: "统一生图任务", href: "#workflow" },
       { label: "作品资产归档", href: "#showcase" },
-      { label: "后台模板配置", href: "/admin" },
+      { label: "积分与配置", href: "#features" },
     ],
   },
   {
@@ -212,7 +212,6 @@ const siteFooterColumns = [
       { label: "用户中心", href: "/account" },
       { label: "注册账号", href: "/signup" },
       { label: "用户登录", href: "/signin" },
-      { label: "管理后台", href: "/admin" },
     ],
   },
 ];
@@ -455,7 +454,7 @@ export default async function HomePage() {
           />
         </section>
 
-        <SiteFooter siteTitle={settings.siteTitle} />
+        <SiteFooter siteTitle={settings.siteTitle} icpNumber={settings.icpNumber} friendLinks={settings.friendLinks} />
       </main>
     );
   }
@@ -555,11 +554,23 @@ export default async function HomePage() {
   );
 }
 
-function SiteFooter({ siteTitle }: { siteTitle: string }) {
+function SiteFooter({
+  siteTitle,
+  icpNumber,
+  friendLinks,
+}: {
+  siteTitle: string;
+  icpNumber: string;
+  friendLinks: FooterFriendLink[];
+}) {
+  const footerColumns = friendLinks.length
+    ? [...siteFooterColumns, { title: "友情链接", links: friendLinks }]
+    : siteFooterColumns;
+
   return (
     <footer className="front-site-footer">
       <div className="front-site-footer-inner">
-        <div className="front-site-footer-grid">
+        <div className={friendLinks.length ? "front-site-footer-grid front-site-footer-grid--with-friends" : "front-site-footer-grid"}>
           <div className="front-site-footer-brand">
             <strong>{siteTitle}</strong>
             <p>面向团队和运营场景的中文 AI 生图平台，把提示词、作品和生成流程沉淀成可复用资产。</p>
@@ -568,24 +579,41 @@ function SiteFooter({ siteTitle }: { siteTitle: string }) {
               <Link href="/prompts">浏览灵感</Link>
             </div>
           </div>
-          {siteFooterColumns.map((column) => (
+          {footerColumns.map((column) => (
             <nav key={column.title} aria-label={column.title}>
               <strong>{column.title}</strong>
               {column.links.map((link) => (
-                <Link key={link.label} href={link.href}>
-                  {link.label}
-                </Link>
+                <FooterNavLink key={`${link.label}-${link.href}`} label={link.label} href={link.href} />
               ))}
             </nav>
           ))}
         </div>
         <div className="front-site-footer-bottom">
-          <span>版权所有 © 2026 {siteTitle}</span>
+          <div>
+            <span>版权所有 © 2026 {siteTitle}</span>
+            {icpNumber ? (
+              <a href="https://beian.miit.gov.cn/" target="_blank" rel="noreferrer">
+                {icpNumber}
+              </a>
+            ) : null}
+          </div>
           <span>中文 AI 生图工具 · 作品展示 · 提示词资产管理</span>
         </div>
       </div>
     </footer>
   );
+}
+
+function FooterNavLink({ label, href }: { label: string; href: string }) {
+  if (href.startsWith("http://") || href.startsWith("https://")) {
+    return (
+      <a href={href} target="_blank" rel="noreferrer">
+        {label}
+      </a>
+    );
+  }
+
+  return <Link href={href}>{label}</Link>;
 }
 
 function HeroResultStrip({ works }: { works: HeroWork[] }) {

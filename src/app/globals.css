@@ -3438,6 +3438,11 @@ textarea {
   align-items: start;
 }
 
+.front-site-footer-grid--with-friends {
+  grid-template-columns: minmax(240px, 1.1fr) repeat(5, minmax(112px, 0.7fr));
+  gap: 34px;
+}
+
 .front-site-footer-brand {
   display: grid;
   gap: 18px;
@@ -3522,6 +3527,21 @@ textarea {
   color: rgba(255, 255, 255, 0.48);
   font-size: 12px;
   font-weight: 600;
+}
+
+.front-site-footer-bottom div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+}
+
+.front-site-footer-bottom a {
+  color: rgba(255, 255, 255, 0.58);
+  transition: color 180ms ease;
+}
+
+.front-site-footer-bottom a:hover {
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .front-site-shell .account-menu__trigger {
