@@ -3251,13 +3251,20 @@ textarea {
 .front-site-scenario-list article {
   scroll-margin-top: 100px;
   display: grid;
+  gap: 18px;
+  align-items: start;
+  min-height: 392px;
+  border: 1px solid var(--td-border-level-1-color, #e7eaf0);
+  border-radius: var(--td-radius-large, 9px);
+  padding: 22px;
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.front-site-scenario-panel-head {
+  display: grid;
   grid-template-columns: 52px minmax(0, 1fr);
   gap: 16px;
   align-items: start;
-  border: 1px solid var(--td-border-level-1-color, #e7eaf0);
-  border-radius: var(--td-radius-large, 9px);
-  padding: 18px;
-  background: rgba(255, 255, 255, 0.86);
 }
 
 .front-site-scenario-list strong {
@@ -3272,35 +3279,16 @@ textarea {
   font-size: 14px;
 }
 
-.front-site-scenario-list div {
+.front-site-scenario-panel-head > div {
   display: grid;
   gap: 6px;
-}
-
-.front-site-scenario-list span {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-  margin-top: 4px;
-}
-
-.front-site-scenario-list small {
-  display: inline-flex;
-  min-height: 26px;
-  align-items: center;
-  border-radius: var(--td-radius-medium, 6px);
-  padding: 0 9px;
-  color: var(--td-brand-color, #0052d9);
-  background: var(--td-brand-color-light, #e8f1ff);
-  font-size: 12px;
-  font-weight: 700;
 }
 
 .front-site-scenario-meta {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin: 8px 0 0;
+  gap: 10px;
+  margin: 0;
 }
 
 .front-site-scenario-meta div {
@@ -3328,6 +3316,96 @@ textarea {
   font-size: 13px;
   font-weight: 700;
   line-height: 1.45;
+}
+
+.front-site-scenario-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.84fr) minmax(0, 1.16fr);
+  gap: 12px;
+  margin-top: auto;
+}
+
+.front-site-scenario-detail-grid section {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  min-width: 0;
+  border: 1px solid var(--td-border-level-1-color, #e7eaf0);
+  border-radius: var(--td-radius-large, 9px);
+  padding: 16px;
+  background:
+    linear-gradient(135deg, #ffffff, #f8fbff);
+}
+
+.front-site-scenario-detail-grid section > span {
+  color: var(--td-brand-color, #0052d9);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.front-site-scenario-detail-grid ol {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.front-site-scenario-detail-grid li {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  border-radius: var(--td-radius-medium, 6px);
+  padding: 0 10px;
+  color: var(--td-text-color-primary, rgba(0, 0, 0, 0.9));
+  background: var(--td-bg-color-container-hover, #f8fafc);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.front-site-scenario-detail-grid li small {
+  color: var(--td-success-color, #2ba471);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.front-site-scenario-chip-group {
+  display: grid;
+  gap: 12px;
+}
+
+.front-site-scenario-chip-group div {
+  display: grid;
+  gap: 8px;
+}
+
+.front-site-scenario-chip-group small {
+  color: var(--td-text-color-placeholder, rgba(0, 0, 0, 0.4));
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.front-site-scenario-chip-group p {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+}
+
+.front-site-scenario-chip-group em {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  border-radius: var(--td-radius-medium, 6px);
+  padding: 0 10px;
+  color: var(--td-brand-color, #0052d9);
+  background: var(--td-brand-color-light, #e8f1ff);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 750;
 }
 
 .front-site-showcase {
@@ -5001,7 +5079,9 @@ textarea {
   .front-site-feature-side-grid,
   .front-site-feature-spotlight ul,
   .front-site-scenario-nav,
-  .front-site-scenario-meta {
+  .front-site-scenario-meta,
+  .front-site-scenario-detail-grid,
+  .front-site-scenario-detail-grid ol {
     grid-template-columns: 1fr;
   }
 
@@ -5044,6 +5124,10 @@ textarea {
   }
 
   .front-site-scenario-list article {
+    min-height: auto;
+  }
+
+  .front-site-scenario-panel-head {
     grid-template-columns: 44px minmax(0, 1fr);
     gap: 12px;
   }
