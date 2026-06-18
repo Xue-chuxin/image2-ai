@@ -4398,6 +4398,22 @@ textarea {
   min-width: 0;
 }
 
+.td-composer-column,
+.td-task-details-desktop,
+.td-task-details-mobile {
+  min-width: 0;
+}
+
+.td-composer-column,
+.td-task-details-desktop {
+  display: grid;
+  gap: 14px;
+}
+
+.td-task-details-mobile {
+  display: none;
+}
+
 .td-composer-title {
   display: grid;
   gap: 3px;
@@ -5900,11 +5916,13 @@ textarea {
   }
 
   .td-generate-workbench,
+  .td-composer-column,
   .td-composer-panel,
   .td-composer-card,
   .td-composer-stack,
   .td-field-block,
   .td-option-block,
+  .td-task-details-mobile,
   .td-preview-panel {
     min-width: 0;
     width: 100%;
@@ -5917,6 +5935,15 @@ textarea {
 
   .td-preview-panel {
     position: static;
+  }
+
+  .td-task-details-desktop {
+    display: none;
+  }
+
+  .td-task-details-mobile {
+    display: grid;
+    gap: 14px;
   }
 
   .td-field-block .t-textarea,
