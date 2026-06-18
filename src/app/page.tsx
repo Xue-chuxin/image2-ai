@@ -619,7 +619,7 @@ function ProductInterfacePreview({ siteTitle, works }: { siteTitle: string; work
             <div className="front-site-preview-panel">
               <div className="front-site-preview-status-card">
                 <span>当前流程</span>
-                <strong>提示词润色 -> 任务生成 -> 作品归档</strong>
+                <strong>提示词润色 / 任务生成 / 作品归档</strong>
                 <small>面向团队的稳定生产链路</small>
               </div>
               <div className="front-site-preview-composer">
