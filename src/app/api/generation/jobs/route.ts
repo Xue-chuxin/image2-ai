@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import {
-  createAndQueueGenerationJob,
+  createAndRunGenerationJob,
   listRecentGenerationJobs,
   type CreateGenerationJobInput,
 } from "@/lib/generation-jobs";
@@ -10,6 +10,13 @@ import { getUserSession } from "@/lib/auth";
 import { checkModerationText } from "@/lib/moderation";
 import { checkRateLimit } from "@/lib/rate-limit";
 import type { GenerationProviderName } from "@/lib/settings";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+const NO_STORE_HEADERS = {
+  "Cache-Control": "no-store, max-age=0",
+};
 
 function normalizeProvider(value: unknown): GenerationProviderName | undefined {
   if (value === "openai" || value === "chatgpt_web" || value === "stability_ai") {
@@ -42,15 +49,18 @@ function normalizeStringArray(value: unknown) {
 export async function GET() {
   const session = await getUserSession();
   if (!session) {
-    return NextResponse.json({ ok: false, error: "请先登录普通用户账号。" }, { status: 401 });
+    return NextResponse.json({ ok: false, error: "请先登录普通用户账号。" }, { status: 401, headers: NO_STORE_HEADERS });
   }
 
   try {
     const jobs = await listRecentGenerationJobs(session.userId, 20);
-    return NextResponse.json({
-      ok: true,
-      jobs,
-    });
+    return NextResponse.json(
+      {
+        ok: true,
+        jobs,
+      },
+      { headers: NO_STORE_HEADERS },
+    );
   } catch (error) {
     return jsonError(error, "读取生成任务失败");
   }
@@ -133,8 +143,13 @@ export async function POST(request: Request) {
       referenceImageIds,
     };
 
-    const job = await createAndQueueGenerationJob(session.userId, input);
+    const job = await createAndRunGenerationJob(session.userId, input);
+    if (!job) {
+      return NextResponse.json({ ok: false, error: "生成任务不存在或已被移除。" }, { status: 404, headers: NO_STORE_HEADERS });
+    }
+
     const failed = job.status === "FAILED";
+    const completed = job.status === "COMPLETED";
 
     return NextResponse.json(
       {
@@ -143,7 +158,8 @@ export async function POST(request: Request) {
         error: failed ? job.errorMessage || "生成任务失败" : undefined,
       },
       {
-        status: failed ? 409 : 202,
+        status: failed ? 409 : completed ? 200 : 202,
+        headers: NO_STORE_HEADERS,
       },
     );
   } catch (error) {

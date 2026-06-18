@@ -164,6 +164,7 @@ export function GenerateComposer({
       await wait(2000);
       const pollResponse = await fetch(`/api/generation/jobs/${latestJob.id}`, {
         method: "GET",
+        cache: "no-store",
       });
       const pollResult = await readApiJson<GenerationResult>(pollResponse);
 

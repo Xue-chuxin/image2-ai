@@ -113,6 +113,10 @@ export type CreateGenerationJobInput = {
   referenceImageIds?: string[];
 };
 
+type CreateGenerationJobOptions = {
+  schedule?: boolean;
+};
+
 const runningJobIds = new Set<string>();
 let chatGPTWebQueuePump: Promise<void> | null = null;
 const chatGPTWebActiveJobIds = new Set<string>();
@@ -515,21 +519,28 @@ function scheduleChatGPTWebQueue() {
   });
 }
 
+async function runGenerationJobOnce(jobId: string, userId: string) {
+  if (runningJobIds.has(jobId)) {
+    const currentJob = await getJobForExecution(jobId, userId);
+    return currentJob ? serializeJobWithQueueMeta(currentJob) : null;
+  }
+
+  runningJobIds.add(jobId);
+  try {
+    return await executeGenerationJob(jobId, userId);
+  } finally {
+    runningJobIds.delete(jobId);
+  }
+}
+
 function scheduleGenerationJob(jobId: string, userId: string, provider?: GenerationProviderName | string | null) {
   if (isChatGPTWebProvider(provider)) {
     scheduleChatGPTWebQueue();
     return;
   }
 
-  if (runningJobIds.has(jobId)) {
-    return;
-  }
-
-  runningJobIds.add(jobId);
   setTimeout(() => {
-    void executeGenerationJob(jobId, userId).finally(() => {
-      runningJobIds.delete(jobId);
-    });
+    void runGenerationJobOnce(jobId, userId);
   }, 0);
 }
 
@@ -570,7 +581,7 @@ async function rescheduleGenerationJobForAdmin(jobId: string, userId: string) {
   return findAdminGenerationJob(jobId);
 }
 
-export async function createAndQueueGenerationJob(userId: string, input: CreateGenerationJobInput) {
+export async function createAndQueueGenerationJob(userId: string, input: CreateGenerationJobInput, options: CreateGenerationJobOptions = {}) {
   const promptZh = normalizePrompt(input.promptZh);
 
   if (!promptZh) {
@@ -625,18 +636,22 @@ export async function createAndQueueGenerationJob(userId: string, input: CreateG
     throw error;
   }
 
-  scheduleGenerationJob(job.id, userId, providerName);
+  if (options.schedule !== false) {
+    scheduleGenerationJob(job.id, userId, providerName);
+  }
+
   return serializeJobWithQueueMeta(job);
 }
 
 export async function createAndRunGenerationJob(userId: string, input: CreateGenerationJobInput) {
-  const queuedJob = await createAndQueueGenerationJob(userId, input);
+  const queuedJob = await createAndQueueGenerationJob(userId, input, { schedule: false });
 
   if (queuedJob.provider === "chatgpt_web") {
+    scheduleGenerationJob(queuedJob.id, userId, queuedJob.provider);
     return findGenerationJob(userId, queuedJob.id);
   }
 
-  return executeGenerationJob(queuedJob.id, userId);
+  return runGenerationJobOnce(queuedJob.id, userId);
 }
 
 export async function retryGenerationJobForUser(userId: string, jobId: string) {
