@@ -2461,6 +2461,18 @@ textarea {
     max-width: none;
   }
 
+  .admin-td-user-table-scroll .t-table__cell--fixed-right {
+    position: static !important;
+    right: auto !important;
+    z-index: auto !important;
+    box-shadow: none !important;
+  }
+
+  .admin-td-user-table-scroll .t-table__cell--fixed-right-first::before,
+  .admin-td-user-table-scroll .t-table__cell--fixed-right-first::after {
+    display: none !important;
+  }
+
   .admin-td-channel-toolbar {
     align-items: stretch;
     flex-direction: column;

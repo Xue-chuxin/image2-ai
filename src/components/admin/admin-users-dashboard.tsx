@@ -320,7 +320,7 @@ export function AdminUsersDashboard({ initialUsers }: { initialUsers: AdminUserV
         {message ? <Alert className="admin-td-form-section" theme="success" message={message} /> : null}
         {error ? <Alert className="admin-td-form-section" theme="error" message={error} /> : null}
 
-        <div className="admin-td-table-scroll admin-td-table-scroll--lg">
+        <div className="admin-td-table-scroll admin-td-table-scroll--lg admin-td-user-table-scroll">
           <Table
             rowKey="id"
             data={users}
