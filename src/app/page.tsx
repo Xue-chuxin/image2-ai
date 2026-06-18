@@ -178,6 +178,45 @@ const previewNavItems = [
   { label: "安全", Icon: ShieldCheck },
 ];
 
+const siteFooterColumns = [
+  {
+    title: "产品入口",
+    links: [
+      { label: "开始创作", href: "/generate" },
+      { label: "灵感展示", href: "/prompts" },
+      { label: "作品展示", href: "#showcase" },
+      { label: "历史记录", href: "/history" },
+    ],
+  },
+  {
+    title: "核心能力",
+    links: [
+      { label: "提示词润色", href: "#features" },
+      { label: "统一生图任务", href: "#workflow" },
+      { label: "作品资产归档", href: "#showcase" },
+      { label: "后台模板配置", href: "/admin" },
+    ],
+  },
+  {
+    title: "适用场景",
+    links: [
+      { label: "电商商品图", href: "#scenarios" },
+      { label: "内容运营", href: "#scenarios" },
+      { label: "设计提案", href: "#scenarios" },
+      { label: "品牌素材库", href: "#scenarios" },
+    ],
+  },
+  {
+    title: "账户服务",
+    links: [
+      { label: "用户中心", href: "/account" },
+      { label: "注册账号", href: "/signup" },
+      { label: "用户登录", href: "/signin" },
+      { label: "管理后台", href: "/admin" },
+    ],
+  },
+];
+
 type HeroWork = {
   id: string;
   title: string;
@@ -240,7 +279,7 @@ export default async function HomePage() {
     const heroWorks = buildHeroWorks(publicWorks);
 
     return (
-      <main className="front-site-main">
+      <main className="front-site-main front-site-main--home">
         <section className="front-site-hero">
           <div className="front-site-hero-copy">
             <span className="front-site-eyebrow">企业级 AI 生图官网</span>
@@ -416,22 +455,7 @@ export default async function HomePage() {
           />
         </section>
 
-        <section className="front-site-final-cta">
-          <div>
-            <span className="front-site-eyebrow">开始使用</span>
-            <h2>从官网进入产品，从工作台完成创作</h2>
-            <p>访客先理解能力，用户再进入生成流程。前台门面和应用体验各司其职，后续也方便继续扩展模板。</p>
-          </div>
-          <div>
-            <Link href="/generate" className="front-site-primary front-site-primary--large">
-              开始创作
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link href="/signup" className="front-site-secondary">
-              注册账号
-            </Link>
-          </div>
-        </section>
+        <SiteFooter siteTitle={settings.siteTitle} />
       </main>
     );
   }
@@ -528,6 +552,39 @@ export default async function HomePage() {
         </div>
       </SpotlightCard>
     </main>
+  );
+}
+
+function SiteFooter({ siteTitle }: { siteTitle: string }) {
+  return (
+    <footer className="front-site-footer">
+      <div className="front-site-footer-inner">
+        <div className="front-site-footer-grid">
+          <div className="front-site-footer-brand">
+            <strong>{siteTitle}</strong>
+            <p>面向团队和运营场景的中文 AI 生图平台，把提示词、作品和生成流程沉淀成可复用资产。</p>
+            <div>
+              <Link href="/generate">进入工作台</Link>
+              <Link href="/prompts">浏览灵感</Link>
+            </div>
+          </div>
+          {siteFooterColumns.map((column) => (
+            <nav key={column.title} aria-label={column.title}>
+              <strong>{column.title}</strong>
+              {column.links.map((link) => (
+                <Link key={link.label} href={link.href}>
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
+          ))}
+        </div>
+        <div className="front-site-footer-bottom">
+          <span>版权所有 © 2026 {siteTitle}</span>
+          <span>中文 AI 生图工具 · 作品展示 · 提示词资产管理</span>
+        </div>
+      </div>
+    </footer>
   );
 }
 

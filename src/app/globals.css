@@ -2284,6 +2284,10 @@ textarea {
   padding: 0 0 72px;
 }
 
+.front-site-main--home {
+  padding-bottom: 0;
+}
+
 .front-site-hero {
   display: grid;
   grid-template-columns: minmax(0, 0.84fr) minmax(500px, 1.16fr);
@@ -3412,47 +3416,112 @@ textarea {
   padding-bottom: 56px;
 }
 
-.front-site-final-cta {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) max-content;
-  gap: 24px;
-  align-items: center;
-  border: 1px solid var(--td-border-level-1-color, #d7e3f4);
-  border-radius: var(--td-radius-large, 9px);
-  padding: 28px;
+.front-site-footer {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  color: rgba(255, 255, 255, 0.78);
   background:
-    linear-gradient(135deg, #ffffff, #eef5ff);
+    radial-gradient(circle at 18% 0%, rgba(0, 82, 217, 0.2), transparent 28rem),
+    linear-gradient(180deg, #171a1f 0%, #111315 100%);
 }
 
-.front-site-final-cta > div:first-child {
+.front-site-footer-inner {
+  width: min(100% - 48px, 1200px);
+  margin: 0 auto;
+  padding: 58px 0 28px;
+}
+
+.front-site-footer-grid {
   display: grid;
-  gap: 10px;
+  grid-template-columns: minmax(260px, 1.3fr) repeat(4, minmax(120px, 0.7fr));
+  gap: 42px;
+  align-items: start;
 }
 
-.front-site-final-cta h2,
-.front-site-final-cta p {
-  margin: 0;
+.front-site-footer-brand {
+  display: grid;
+  gap: 18px;
+  max-width: 360px;
 }
 
-.front-site-final-cta h2 {
-  color: var(--td-text-color-primary, rgba(0, 0, 0, 0.9));
-  font-size: 30px;
+.front-site-footer-brand > strong {
+  color: #fff;
+  font-size: 22px;
   font-weight: 750;
-  line-height: 1.22;
+  line-height: 1.2;
 }
 
-.front-site-final-cta p {
-  max-width: 720px;
-  color: var(--td-text-color-secondary, rgba(0, 0, 0, 0.6));
+.front-site-footer-brand p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.58);
   font: var(--td-font-body-medium);
   line-height: 24px;
 }
 
-.front-site-final-cta > div:last-child {
+.front-site-footer-brand div {
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
   gap: 10px;
+}
+
+.front-site-footer-brand a {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--td-radius-medium, 6px);
+  padding: 0 12px;
+  color: rgba(255, 255, 255, 0.86);
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 13px;
+  font-weight: 700;
+  transition: border-color 180ms ease, background 180ms ease, color 180ms ease;
+}
+
+.front-site-footer-brand a:hover {
+  border-color: rgba(255, 255, 255, 0.24);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.front-site-footer nav {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.front-site-footer nav strong {
+  margin-bottom: 4px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 750;
+}
+
+.front-site-footer nav a {
+  width: fit-content;
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 20px;
+  transition: color 180ms ease, transform 180ms ease;
+}
+
+.front-site-footer nav a:hover {
+  color: #fff;
+  transform: translateX(2px);
+}
+
+.front-site-footer-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 46px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 22px;
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .front-site-shell .account-menu__trigger {
@@ -4881,12 +4950,13 @@ textarea {
     align-items: start;
   }
 
-  .front-site-final-cta {
-    grid-template-columns: 1fr;
+  .front-site-footer-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .front-site-final-cta > div:last-child {
-    justify-content: flex-start;
+  .front-site-footer-brand {
+    grid-column: 1 / -1;
+    max-width: 620px;
   }
 
   .td-generate-workbench {
@@ -5146,18 +5216,24 @@ textarea {
     padding-bottom: 42px;
   }
 
-  .front-site-final-cta {
-    padding: 20px;
+  .front-site-footer-inner {
+    width: min(100% - 28px, 1200px);
+    padding: 42px 0 24px;
   }
 
-  .front-site-final-cta h2 {
-    font-size: 25px;
-    line-height: 1.28;
-  }
-
-  .front-site-final-cta > div:last-child {
-    display: grid;
+  .front-site-footer-grid {
     grid-template-columns: 1fr;
+    gap: 28px;
+  }
+
+  .front-site-footer-brand {
+    max-width: none;
+  }
+
+  .front-site-footer-bottom {
+    align-items: flex-start;
+    flex-direction: column;
+    margin-top: 32px;
   }
 
   .front-td-header-inner {
