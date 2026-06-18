@@ -5717,12 +5717,24 @@ textarea {
     min-height: 280px;
   }
 
-  .history-meta {
-    grid-template-columns: 1fr;
+  .history-meta,
+  .history-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
   }
 
-  .history-summary-grid {
-    grid-template-columns: 1fr;
+  .history-meta div {
+    min-height: 58px;
+    padding: 8px 10px;
+  }
+
+  .history-summary-grid div {
+    padding: 12px;
+  }
+
+  .history-meta div:last-child,
+  .history-summary-grid div:last-child {
+    grid-column: 1 / -1;
   }
 
   .history-image,
