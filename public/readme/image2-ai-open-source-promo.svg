@@ -1,0 +1,222 @@
+
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#020A2C"/>
+      <stop offset=".45" stop-color="#061B58"/>
+      <stop offset="1" stop-color="#13063D"/>
+    </linearGradient>
+    <radialGradient id="glowCyan" cx="62%" cy="56%" r="58%">
+      <stop offset="0" stop-color="#18E8FF" stop-opacity=".42"/>
+      <stop offset=".46" stop-color="#3478FF" stop-opacity=".14"/>
+      <stop offset="1" stop-color="#020A2C" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowPurple" cx="87%" cy="74%" r="46%">
+      <stop offset="0" stop-color="#B852FF" stop-opacity=".60"/>
+      <stop offset=".5" stop-color="#6335FF" stop-opacity=".17"/>
+      <stop offset="1" stop-color="#020A2C" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="logoGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#22F1FF"/><stop offset=".55" stop-color="#4C7DFF"/><stop offset="1" stop-color="#A855F7"/>
+    </linearGradient>
+    <linearGradient id="titleGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop stop-color="#FFFFFF"/><stop offset=".52" stop-color="#DBF8FF"/><stop offset="1" stop-color="#C9A7FF"/>
+    </linearGradient>
+    <linearGradient id="buttonGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop stop-color="#54C7FF"/><stop offset=".48" stop-color="#4D7CFF"/><stop offset="1" stop-color="#8B5CF6"/>
+    </linearGradient>
+    <linearGradient id="panelGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#12398F" stop-opacity=".82"/><stop offset="1" stop-color="#22105E" stop-opacity=".82"/>
+    </linearGradient>
+    <linearGradient id="cardBg" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#12398F" stop-opacity=".84"/><stop offset="1" stop-color="#2B1C8A" stop-opacity=".80"/>
+    </linearGradient>
+    <filter id="cardShadow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#00C2FF" flood-opacity=".15"/>
+      <feDropShadow dx="0" dy="0" stdDeviation="8" flood-color="#7C3AED" flood-opacity=".24"/>
+    </filter>
+    <filter id="neon" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="bigGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="0" stdDeviation="16" flood-color="#22D3EE" flood-opacity=".6"/>
+      <feDropShadow dx="0" dy="0" stdDeviation="26" flood-color="#8B5CF6" flood-opacity=".42"/>
+    </filter>
+    <pattern id="grid" width="44" height="44" patternUnits="userSpaceOnUse">
+      <path d="M44 0H0V44" fill="none" stroke="#7DD3FC" stroke-opacity=".07" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <rect width="1600" height="900" fill="url(#grid)"/>
+  <rect width="1600" height="900" fill="url(#glowCyan)"/>
+  <rect width="1600" height="900" fill="url(#glowPurple)"/>
+
+  <g opacity=".34" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1110 70h188l52 46h180" stroke="#477BFF" stroke-width="4" opacity=".42"/>
+    <path d="M1180 112h152l38 38h122" stroke="#8B5CF6" stroke-width="2" opacity=".5"/>
+    <circle cx="1298" cy="70" r="5" fill="#477BFF" stroke="none"/><circle cx="1350" cy="116" r="4" fill="#8B5CF6" stroke="none"/>
+    <path d="M64 126h160l34-34h126" stroke="#216CFF" stroke-width="2" opacity=".3"/>
+    <path d="M56 780h240l40-42h180" stroke="#18E8FF" stroke-width="2" opacity=".2"/>
+  </g>
+
+  <g transform="translate(62 54)">
+    <rect x="0" y="0" width="66" height="66" rx="20" fill="url(#logoGrad)" filter="url(#bigGlow)"/>
+    <text x="33" y="45" text-anchor="middle" font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif" font-size="34" font-weight="1000" fill="#FFFFFF">造</text>
+    <text x="86" y="30" font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif" font-size="31" font-weight="1000" fill="#FFFFFF">Image2 AI</text>
+    <text x="88" y="60" font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif" font-size="16" font-weight="700" fill="#A9C8FF">AI 生图系统 · 开源可自部署</text>
+  </g>
+
+  <g transform="translate(360 48)">
+    <rect width="510" height="54" rx="27" fill="#0C2A72" fill-opacity=".62" stroke="#5E9BFF" stroke-opacity=".38"/>
+    <text x="255" y="35" text-anchor="middle" font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif" font-size="22" font-weight="800" fill="#DFF7FF">面向中文创作者的 AI 图片生成 Web 应用</text>
+  </g>
+
+  <g transform="translate(62 214)">
+    <text x="0" y="0" font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif" font-size="78" font-weight="1000" fill="url(#titleGrad)" letter-spacing="0">开源 AI 生图程序</text>
+    <text x="0" y="78" font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif" font-size="33" font-weight="1000" fill="#DFF7FF">提示词库 / DeepSeek 润色 / 图生图 / 作品历史</text>
+    <rect x="0" y="118" width="414" height="5" rx="3" fill="#122B72"/>
+    <rect x="0" y="118" width="128" height="5" rx="3" fill="#66F5FF" filter="url(#neon)"/>
+  </g>
+
+  <g transform="translate(62 368)" filter="url(#cardShadow)">
+    <rect width="196" height="152" rx="24" fill="url(#cardBg)" stroke="#63B7FF" stroke-opacity=".45"/>
+    <rect x="1" y="1" width="194" height="150" rx="23" fill="none" stroke="#C4B5FD" stroke-opacity=".24"/>
+    
+    <rect x="24" y="25" width="70" height="70" rx="18" fill="#0E2E7A" stroke="#74B5FF" stroke-opacity=".65"/>
+    <path d="M45 45h32M45 59h27M45 73h22" stroke="#D8F8FF" stroke-width="6" stroke-linecap="round"/>
+    <path d="M38 38h8M38 52h8M38 66h8" stroke="#74B5FF" stroke-width="4" stroke-linecap="round"/>
+    <text x="112" y="56" font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif" font-size="24" font-weight="900" fill="#FFFFFF">文生图</text>
+    <text x="112" y="88" font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif" font-size="15" font-weight="700" fill="#A9C8FF">中文输入生成图片</text>
+  </g>
+  <g transform="translate(272 368)" filter="url(#cardShadow)">
+    <rect width="196" height="152" rx="24" fill="url(#cardBg)" stroke="#63B7FF" stroke-opacity=".45"/>
+    <rect x="1" y="1" width="194" height="150" rx="23" fill="none" stroke="#C4B5FD" stroke-opacity=".24"/>
+    
+    <rect x="24" y="25" width="70" height="70" rx="18" fill="#0E2E7A" stroke="#74B5FF" stroke-opacity=".65"/>
+    <path d="M40 75l13-15 10 10 8-11 12 16H40Z" fill="#9CE6FF" opacity=".92"/>
+    <circle cx="72" cy="44" r="8" fill="#D8F8FF"/>
+    <text x="112" y="56" font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif" font-size="24" font-weight="900" fill="#FFFFFF">图生图</text>
+    <text x="112" y="88" font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif" font-size="15" font-weight="700" fill="#A9C8FF">参考图上传创作</text>
+  </g>
+  <g transform="translate(482 368)" filter="url(#cardShadow)">
+    <rect width="196" height="152" rx="24" fill="url(#cardBg)" stroke="#63B7FF" stroke-opacity=".45"/>
+    <rect x="1" y="1" width="194" height="150" rx="23" fill="none" stroke="#C4B5FD" stroke-opacity=".24"/>
+    
+    <rect x="24" y="25" width="70" height="70" rx="18" fill="#0E2E7A" stroke="#74B5FF" stroke-opacity=".65"/>
+    <path d="M60 33l6 18 18 6-18 6-6 18-6-18-18-6 18-6 6-18Z" fill="#DBE7FF"/>
+    <path d="M78 35l3 9 9 3-9 3-3 9-3-9-9-3 9-3 3-9Z" fill="#73F3FF"/>
+    <text x="112" y="56" font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif" font-size="24" font-weight="900" fill="#FFFFFF">润色</text>
+    <text x="112" y="88" font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif" font-size="15" font-weight="700" fill="#A9C8FF">DeepSeek 提示词优化</text>
+  </g>
+  <g transform="translate(692 368)" filter="url(#cardShadow)">
+    <rect width="196" height="152" rx="24" fill="url(#cardBg)" stroke="#63B7FF" stroke-opacity=".45"/>
+    <rect x="1" y="1" width="194" height="150" rx="23" fill="none" stroke="#C4B5FD" stroke-opacity=".24"/>
+    
+    <rect x="24" y="25" width="70" height="70" rx="18" fill="#0E2E7A" stroke="#74B5FF" stroke-opacity=".65"/>
+    <rect x="39" y="40" width="40" height="28" rx="8" fill="#D8F8FF" opacity=".92"/>
+    <path d="M47 77h24" stroke="#74B5FF" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="48" cy="54" r="3" fill="#0D2B72"/><circle cx="70" cy="54" r="3" fill="#0D2B72"/>
+    <text x="112" y="56" font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif" font-size="24" font-weight="900" fill="#FFFFFF">后台</text>
+    <text x="112" y="88" font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif" font-size="15" font-weight="700" fill="#A9C8FF">配置与积分</text>
+  </g>
+
+  <g transform="translate(62 548)" filter="url(#cardShadow)">
+    <rect width="860" height="96" rx="28" fill="#06194B" fill-opacity=".72" stroke="#59B6FF" stroke-opacity=".42"/>
+    <text x="30" y="39" font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif" font-size="22" font-weight="900" fill="#CFF8FF">开源地址</text>
+    <text x="30" y="72" font-family="Arial, sans-serif" font-size="28" font-weight="900" fill="#FFFFFF">github.com/Xue-chuxin/image2-ai</text>
+    <rect x="608" y="20" width="222" height="56" rx="28" fill="url(#buttonGrad)"/>
+    <text x="719" y="56" text-anchor="middle" font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif" font-size="24" font-weight="1000" fill="#FFFFFF">GitHub 开源</text>
+  </g>
+
+  <g transform="translate(898 154)" filter="url(#bigGlow)">
+    <path d="M142 418 C260 372 438 374 595 434" fill="none" stroke="#37F2FF" stroke-width="6" opacity=".82"/>
+    <path d="M82 452 C254 350 480 358 712 442" fill="none" stroke="#8A5CFF" stroke-width="8" opacity=".62"/>
+    <path d="M40 482 C220 400 502 396 760 496" fill="none" stroke="#F069FF" stroke-width="10" opacity=".36"/>
+  </g>
+
+  <g transform="translate(918 132) rotate(-4 310 250)" filter="url(#cardShadow)">
+    <rect x="0" y="0" width="530" height="382" rx="28" fill="url(#panelGrad)" stroke="#80C7FF" stroke-opacity=".72"/>
+    <rect x="32" y="32" width="466" height="56" rx="18" fill="#09245F" fill-opacity=".72" stroke="#66B8FF" stroke-opacity=".28"/>
+    <text x="62" y="68" font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif" font-size="25" font-weight="1000" fill="#FFFFFF">Image2 AI 工作台</text>
+    <rect x="388" y="48" width="74" height="10" rx="5" fill="#7BB9FF" opacity=".65"/>
+    <rect x="52" y="120" width="426" height="206" rx="30" fill="#071B54" fill-opacity=".68" stroke="#557CFF" stroke-opacity=".52"/>
+    <text x="265" y="255" text-anchor="middle" font-family="Arial, sans-serif" font-size="132" font-weight="1000" fill="url(#titleGrad)" filter="url(#bigGlow)">AI</text>
+    <ellipse cx="265" cy="230" rx="160" ry="38" fill="none" stroke="#3FE6FF" stroke-width="5" opacity=".9" transform="rotate(-11 265 230)"/>
+    <ellipse cx="265" cy="230" rx="188" ry="48" fill="none" stroke="#8C52FF" stroke-width="4" opacity=".72" transform="rotate(-11 265 230)"/>
+    <circle cx="168" cy="202" r="4" fill="#7FF5FF"/><circle cx="386" cy="180" r="5" fill="#A78BFA"/><circle cx="430" cy="268" r="4" fill="#61E4FF"/>
+  </g>
+
+  <g transform="translate(1312 174) rotate(-3)" filter="url(#cardShadow)">
+    <rect width="230" height="132" rx="22" fill="#112E83" fill-opacity=".86" stroke="#A7C7FF" stroke-opacity=".75"/>
+    <text x="24" y="40" font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif" font-size="22" font-weight="1000" fill="#FFFFFF">图生图</text>
+    <rect x="26" y="56" width="80" height="54" rx="8" fill="#7DD3FC" opacity=".28"/>
+    <path d="M34 98l24-28 17 18 11-13 14 23H34Z" fill="#DDF9FF"/>
+    <path d="M118 83h38" stroke="#DFF7FF" stroke-width="7" stroke-linecap="round"/><path d="M148 66l24 17-24 17" fill="none" stroke="#DFF7FF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="176" y="56" width="34" height="54" rx="8" fill="#DFF7FF" opacity=".8"/>
+  </g>
+
+  <g transform="translate(1250 348) rotate(2)" filter="url(#cardShadow)">
+    <rect width="286" height="152" rx="24" fill="#102B7A" fill-opacity=".9" stroke="#A7C7FF" stroke-opacity=".7"/>
+    <text x="24" y="42" font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif" font-size="22" font-weight="1000" fill="#FFFFFF">OpenAI 兼容通道</text>
+    <rect x="24" y="66" width="112" height="56" rx="14" fill="#091B55" stroke="#64C8FF" stroke-opacity=".55"/>
+    <text x="80" y="101" text-anchor="middle" font-family="Arial" font-size="20" font-weight="900" fill="#9FE8FF">API</text>
+    <rect x="154" y="66" width="108" height="56" rx="14" fill="#E9F7FF" opacity=".9"/>
+    <path d="M178 104h60M178 85h42" stroke="#3155BF" stroke-width="8" stroke-linecap="round"/>
+  </g>
+
+  <g transform="translate(960 504)" filter="url(#cardShadow)">
+    <rect width="252" height="124" rx="22" fill="#102B7A" fill-opacity=".86" stroke="#74B5FF" stroke-opacity=".62"/>
+    <text x="22" y="38" font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif" font-size="22" font-weight="1000" fill="#FFFFFF">本地图片存储</text>
+    <path d="M54 74h44v28H54zM132 58h44v44h-44zM102 88h30M154 58V40h54M176 102v18h32" fill="none" stroke="#65EFFF" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" opacity=".86"/>
+  </g>
+
+  <g transform="translate(1200 556) rotate(5)" filter="url(#cardShadow)">
+    <rect width="268" height="148" rx="24" fill="#102B7A" fill-opacity=".9" stroke="#A7C7FF" stroke-opacity=".7"/>
+    <text x="24" y="42" font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif" font-size="22" font-weight="1000" fill="#FFFFFF">作品历史</text>
+    <rect x="24" y="64" width="84" height="54" rx="12" fill="#59B6FF" opacity=".32"/>
+    <rect x="122" y="64" width="52" height="54" rx="12" fill="#C084FC" opacity=".42"/>
+    <rect x="188" y="64" width="52" height="54" rx="12" fill="#67E8F9" opacity=".35"/>
+    <path d="M42 103l18-21 14 12 13-17 14 26H42Z" fill="#E0F7FF"/>
+  </g>
+
+  <g transform="translate(1016 642)">
+    <rect x="0" y="0" width="104" height="82" rx="38" fill="#DFF7FF" filter="url(#bigGlow)"/>
+    <rect x="18" y="22" width="68" height="38" rx="18" fill="#14266D"/>
+    <circle cx="42" cy="41" r="6" fill="#7FF5FF"/><circle cx="64" cy="41" r="6" fill="#7FF5FF"/>
+    <circle cx="0" cy="39" r="12" fill="#DFF7FF"/><circle cx="104" cy="39" r="12" fill="#DFF7FF"/>
+    <path d="M52 0v-22" stroke="#DFF7FF" stroke-width="6" stroke-linecap="round"/><circle cx="52" cy="-26" r="6" fill="#DFF7FF"/>
+  </g>
+  <g transform="translate(1114 678)" filter="url(#cardShadow)">
+    <rect width="194" height="48" rx="24" fill="url(#buttonGrad)" opacity=".92"/>
+    <text x="97" y="31" text-anchor="middle" font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif" font-size="18" font-weight="900" fill="#FFFFFF">你的生图助手</text>
+  </g>
+
+  <g transform="translate(0 754)">
+    <rect width="1600" height="146" fill="#020A2C" fill-opacity=".58" stroke="#405DFF" stroke-opacity=".28"/>
+    <g transform="translate(126 0)">
+    <text x="0" y="35" font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif" font-size="38" font-weight="900" fill="#9FE8FF">↯</text>
+    <text x="58" y="24" font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif" font-size="22" font-weight="900" fill="#FFFFFF">快速生成</text>
+    <text x="58" y="55" font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif" font-size="15" font-weight="700" fill="#9DB8E9">任务轮询 · 失败返还积分</text>
+  </g>
+    <path d="M380 34v72" stroke="#7EA7FF" stroke-opacity=".25"/>
+    <g transform="translate(446 0)">
+    <text x="0" y="35" font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif" font-size="38" font-weight="900" fill="#9FE8FF">◎</text>
+    <text x="58" y="24" font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif" font-size="22" font-weight="900" fill="#FFFFFF">二开友好</text>
+    <text x="58" y="55" font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif" font-size="15" font-weight="700" fill="#9DB8E9">Next.js 15 · React 19</text>
+  </g>
+    <path d="M714 34v72" stroke="#7EA7FF" stroke-opacity=".25"/>
+    <g transform="translate(780 0)">
+    <text x="0" y="35" font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif" font-size="38" font-weight="900" fill="#9FE8FF">▰</text>
+    <text x="58" y="24" font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif" font-size="22" font-weight="900" fill="#FFFFFF">多通道支持</text>
+    <text x="58" y="55" font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif" font-size="15" font-weight="700" fill="#9DB8E9">OpenAI 官方 / 兼容接口</text>
+  </g>
+    <path d="M1050 34v72" stroke="#7EA7FF" stroke-opacity=".25"/>
+    <g transform="translate(1114 0)">
+    <text x="0" y="35" font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif" font-size="38" font-weight="900" fill="#9FE8FF">◇</text>
+    <text x="58" y="24" font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif" font-size="22" font-weight="900" fill="#FFFFFF">自部署优先</text>
+    <text x="58" y="55" font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif" font-size="15" font-weight="700" fill="#9DB8E9">Docker · PostgreSQL · 本地存储</text>
+  </g>
+  </g>
+</svg>
