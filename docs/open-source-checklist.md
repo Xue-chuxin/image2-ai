@@ -6,8 +6,11 @@
 
 - README 顶部保持一句话定位、演示站、截图、快速开始和部署入口。
 - README 首屏优先回答：项目做什么、适合谁、为什么值得自部署。
+- `README_EN.md` 保持英文快速入口，覆盖项目定位、亮点、Docker Compose、本地开发和安全说明。
+- `docs/faq.md` 持续沉淀部署、Provider、存储、升级和移动端常见问题。
 - 保持 `LICENSE`、`CONTRIBUTING.md`、`SUPPORT.md`、`SECURITY.md`、`CODE_OF_CONDUCT.md` 可见。
 - Issue 和 PR 模板保持可用，避免维护者反复追问环境信息。
+- `.github/FUNDING.yml` 保持可用，让 GitHub 显示 Sponsor 入口。
 
 ## GitHub 仓库设置
 
@@ -45,6 +48,7 @@ public/readme/image2-ai-social-preview.png
 - `CHANGELOG.md` 已整理“未发布”内容到新版本段。
 - `package.json` version 与发布版本一致。
 - 如有升级影响，`UPGRADE.md` 已更新。
+- 可复制 `docs/release-template.md` 中的模板作为 GitHub Release Notes 初稿。
 - 已打 tag，例如 `v0.1.4`。
 - GitHub Release Notes 说明新增能力、修复点、升级注意事项和已知限制。
 
@@ -63,6 +67,8 @@ Image2 AI v0.1.x - 中文 AI 生图 WebUI 自部署更新
 - 优化一个移动端页面的截图问题。
 - 补充 Provider 配置示例。
 - 整理常见部署错误和解决办法。
+
+候选 issue 文案见 `docs/good-first-issues.md`。
 
 ## 传播文案
 

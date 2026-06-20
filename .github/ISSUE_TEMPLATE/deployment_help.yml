@@ -1,0 +1,70 @@
+name: 部署求助
+description: 反馈 Docker、源码部署、数据库连接、图片存储或升级问题
+title: "[Deploy] "
+labels:
+  - deployment
+  - question
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请不要粘贴 API Key、Cookie、Token、数据库密码、支付密钥或真实用户隐私。日志中如包含敏感信息，请先打码。
+  - type: dropdown
+    id: deploy_method
+    attributes:
+      label: 部署方式
+      options:
+        - Docker Compose，使用项目自带 PostgreSQL
+        - Docker Compose，使用已有 PostgreSQL
+        - 源码部署
+        - 二次开发环境
+        - 其他
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: 遇到的问题
+      placeholder: 例如：docker compose up 后 Web 容器不断重启，日志提示数据库连接失败。
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 已执行的步骤
+      placeholder: |
+        1. cp .env.example .env.production
+        2. 修改 DATABASE_URL / APP_PORT / NEXT_PUBLIC_SITE_URL
+        3. docker compose --env-file .env.production up -d --build
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 环境信息
+      placeholder: |
+        - OS：
+        - Node.js：
+        - npm：
+        - PostgreSQL：
+        - Docker：
+        - Docker Compose：
+        - 项目版本或 commit：
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: 相关配置
+      description: 只保留变量名和非敏感信息，密码、密钥、Token 必须打码。
+      render: env
+      placeholder: |
+        APP_PORT="3000"
+        NEXT_PUBLIC_SITE_URL="https://your-domain.com"
+        DATABASE_URL="postgresql://***:***@postgres:5432/image2_app"
+  - type: textarea
+    id: logs
+    attributes:
+      label: 关键日志
+      description: 请只贴关键片段，并确认已删除密钥、Cookie、Token、数据库密码和支付凭证。
+      render: shell
