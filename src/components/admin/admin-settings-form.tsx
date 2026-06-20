@@ -7,6 +7,7 @@ import type {
   AdminDiagnosticStatus,
   FooterFriendLink,
   GenerationProviderName,
+  HomePopupContentFormat,
   OpenAICompatibleChannelSetting,
   StorageProviderName,
 } from "@/lib/settings";
@@ -327,6 +328,16 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
     setSettings((current) => ({ ...current, [key]: value }));
   }
 
+  function updateHomePopup<K extends keyof AdminAppSettings["homePopup"]>(key: K, value: AdminAppSettings["homePopup"][K]) {
+    setSettings((current) => ({
+      ...current,
+      homePopup: {
+        ...current.homePopup,
+        [key]: value,
+      },
+    }));
+  }
+
   function updateOpenAIChannel<K extends keyof EditableOpenAIChannel>(id: string, key: K, value: EditableOpenAIChannel[K]) {
     setOpenaiChannels((current) => current.map((channel) => (channel.id === id ? { ...channel, [key]: value } : channel)));
   }
@@ -385,6 +396,7 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
           siteLogoUrl: settings.siteLogoUrl,
           siteFaviconUrl: settings.siteFaviconUrl,
           frontTemplate: settings.frontTemplate,
+          homePopup: settings.homePopup,
           icpNumber: settings.icpNumber,
           friendLinks: submittedSettings.friendLinks,
           defaultGenerationProvider: settings.defaultGenerationProvider,
@@ -580,6 +592,39 @@ export function AdminSettingsForm({ initialSettings }: { initialSettings: AdminA
                     minRows={5}
                   />
                   <p className="admin-td-form-hint">每行一个友情链接，推荐格式：名称 | 链接。也支持“名称｜链接”“名称，链接”或“名称 https://example.com”。最多展示 8 个。</p>
+                </Form>
+              </Card>
+              <Card className="admin-td-card" bordered title="首页弹窗">
+                <Form labelAlign="top">
+                  <SettingField label="启用首页弹窗">
+                    <Switch value={settings.homePopup.enabled} onChange={(value) => updateHomePopup("enabled", Boolean(value))} />
+                  </SettingField>
+                  <SettingInput label="弹窗标题" value={settings.homePopup.title} onChange={(value) => updateHomePopup("title", value)} placeholder="例如：平台公告" />
+                  <SettingField label="内容格式">
+                    <Select
+                      value={settings.homePopup.contentFormat}
+                      options={[
+                        { value: "markdown", label: "Markdown" },
+                        { value: "html", label: "HTML5" },
+                      ]}
+                      onChange={(value) => updateHomePopup("contentFormat", String(value) as HomePopupContentFormat)}
+                    />
+                  </SettingField>
+                  <SettingInput
+                    label="弹窗内容"
+                    value={settings.homePopup.content}
+                    onChange={(value) => updateHomePopup("content", value)}
+                    placeholder={
+                      settings.homePopup.contentFormat === "html"
+                        ? "<section><h2>活动公告</h2><p>这里填写 HTML5 内容。</p></section>"
+                        : "## 活动公告\n这里填写 Markdown 内容，支持链接、列表、图片等常用格式。"
+                    }
+                    textarea
+                    minRows={9}
+                  />
+                  <p className="admin-td-form-hint">
+                    弹窗只在首页展示；用户关闭后，本次浏览器会话内不再重复弹出。HTML5 内容会过滤脚本、事件属性和不安全链接。
+                  </p>
                 </Form>
               </Card>
               <Card className="admin-td-card" bordered title="前台模板">

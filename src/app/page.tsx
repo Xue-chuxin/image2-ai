@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { GenerateComposer } from "@/components/generate-composer";
 import { BlurText, GlassSurface, SpotlightCard, SplitText } from "@/components/front/react-bits";
+import { HomeAnnouncementModal } from "@/components/home-announcement-modal";
 import { HomeScenarioTabs } from "@/components/home-scenario-tabs";
 import { HomeWorksShowcase } from "@/components/home-works-showcase";
 import { GALLERY_CATEGORIES, listPublicGalleryImages, type GalleryImageView } from "@/lib/gallery";
@@ -276,6 +277,7 @@ export default async function HomePage() {
 
     return (
       <main className="front-site-main front-site-main--home">
+        <HomeAnnouncementModal settings={settings.homePopup} />
         <section className="front-site-hero">
           <div className="front-site-hero-copy">
             <span className="front-site-eyebrow">企业级 AI 生图官网</span>
@@ -465,6 +467,7 @@ export default async function HomePage() {
 
   return (
     <main className="space-y-8 pb-28">
+      <HomeAnnouncementModal settings={settings.homePopup} />
       <section className="grid gap-5 lg:grid-cols-[0.86fr_1.14fr] lg:items-stretch">
         <GlassSurface className="order-2 rounded-[28px] px-6 py-7 text-slate-950 md:px-8 md:py-8 lg:order-1 lg:h-full">
           <div className="absolute -right-24 top-10 h-72 w-72 rounded-full bg-sky-100/80 blur-3xl" />

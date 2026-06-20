@@ -7,10 +7,18 @@ import { decryptSecret, encryptSecret, hasSettingsEncryptionKey } from "@/lib/ap
 export type GenerationProviderName = "openai" | "chatgpt_web" | "stability_ai";
 export type StorageProviderName = "local" | "oss" | "cos" | "s3";
 export type FrontTemplateName = "tdesign_workspace" | "glass_app";
+export type HomePopupContentFormat = "markdown" | "html";
 
 export type FooterFriendLink = {
   label: string;
   href: string;
+};
+
+export type HomePopupSettings = {
+  enabled: boolean;
+  title: string;
+  contentFormat: HomePopupContentFormat;
+  content: string;
 };
 
 export type PublicAppSettings = {
@@ -20,6 +28,7 @@ export type PublicAppSettings = {
   siteLogoUrl: string;
   siteFaviconUrl: string;
   frontTemplate: FrontTemplateName;
+  homePopup: HomePopupSettings;
   icpNumber: string;
   friendLinks: FooterFriendLink[];
   defaultGenerationProvider: GenerationProviderName;
@@ -180,6 +189,12 @@ const defaultSettings: PublicAppSettings = {
   siteLogoUrl: "/brand-logo.svg",
   siteFaviconUrl: "/favicon.svg",
   frontTemplate: "tdesign_workspace",
+  homePopup: {
+    enabled: false,
+    title: "公告",
+    contentFormat: "markdown",
+    content: "",
+  },
   icpNumber: "",
   friendLinks: [],
   defaultGenerationProvider: "openai",
@@ -247,6 +262,12 @@ function normalizeProvider(value?: string): GenerationProviderName {
 function normalizeFrontTemplate(value?: string): FrontTemplateName {
   if (value === "glass_app") return "glass_app";
   return "tdesign_workspace";
+}
+
+function normalizeHomePopupContentFormat(value: unknown, fallback: HomePopupContentFormat): HomePopupContentFormat {
+  if (value === "html") return "html";
+  if (value === "markdown") return "markdown";
+  return fallback;
 }
 
 function normalizeStorageProvider(value?: string): StorageProviderName {
@@ -391,6 +412,32 @@ function normalizeFriendLinks(value: unknown, fallback: FooterFriendLink[] = [])
     })
     .filter((link): link is FooterFriendLink => Boolean(link))
     .slice(0, 8);
+}
+
+function normalizeHomePopupSettings(value: unknown, fallback: HomePopupSettings): HomePopupSettings {
+  let record: Record<string, unknown> | null = null;
+
+  if (typeof value === "string") {
+    try {
+      const parsed = value.trim() ? JSON.parse(value) : null;
+      record = parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : null;
+    } catch {
+      record = null;
+    }
+  } else if (value && typeof value === "object" && !Array.isArray(value)) {
+    record = value as Record<string, unknown>;
+  }
+
+  if (!record) {
+    return fallback;
+  }
+
+  return {
+    enabled: normalizeBoolean(record.enabled, fallback.enabled),
+    title: normalizeOptionalText(record.title, fallback.title, 80),
+    contentFormat: normalizeHomePopupContentFormat(record.contentFormat, fallback.contentFormat),
+    content: normalizeOptionalText(record.content, fallback.content, 20000),
+  };
 }
 
 function normalizeSubmittedSecret(value: unknown) {
@@ -924,6 +971,7 @@ export async function getPublicAppSettings(): Promise<PublicAppSettings> {
     siteLogoUrl: normalizeAssetUrl(getStoredSetting(map, "siteLogoUrl"), defaultSettings.siteLogoUrl),
     siteFaviconUrl: normalizeAssetUrl(getStoredSetting(map, "siteFaviconUrl"), defaultSettings.siteFaviconUrl),
     frontTemplate: normalizeFrontTemplate(getStoredSetting(map, "frontTemplate") || defaultSettings.frontTemplate),
+    homePopup: normalizeHomePopupSettings(getStoredSetting(map, "homePopup"), defaultSettings.homePopup),
     icpNumber: normalizeOptionalText(getStoredSetting(map, "icpNumber"), defaultSettings.icpNumber, 120),
     friendLinks: normalizeFriendLinks(getStoredSetting(map, "friendLinks"), defaultSettings.friendLinks),
     defaultGenerationProvider: normalizeProvider(
@@ -1000,6 +1048,7 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
   const siteLogoUrl = normalizeAssetUrl(input.siteLogoUrl, currentPublicSettings.siteLogoUrl);
   const siteFaviconUrl = normalizeAssetUrl(input.siteFaviconUrl, currentPublicSettings.siteFaviconUrl);
   const frontTemplate = normalizeFrontTemplate(input.frontTemplate || currentPublicSettings.frontTemplate);
+  const homePopup = normalizeHomePopupSettings(input.homePopup, currentPublicSettings.homePopup);
   const icpNumber = normalizeOptionalText(input.icpNumber, currentPublicSettings.icpNumber, 120);
   const friendLinks = normalizeFriendLinks(input.friendLinks, currentPublicSettings.friendLinks);
   const deepseekBaseUrl = normalizeText(input.deepseekBaseUrl, currentPublicSettings.deepseekBaseUrl, 200);
@@ -1078,6 +1127,7 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
     { key: "siteLogoUrl", value: siteLogoUrl },
     { key: "siteFaviconUrl", value: siteFaviconUrl },
     { key: "frontTemplate", value: frontTemplate },
+    { key: "homePopup", value: JSON.stringify(homePopup) },
     { key: "icpNumber", value: icpNumber },
     { key: "friendLinks", value: JSON.stringify(friendLinks) },
     { key: "deepseekBaseUrl", value: deepseekBaseUrl },
