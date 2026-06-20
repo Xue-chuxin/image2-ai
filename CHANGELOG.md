@@ -4,12 +4,17 @@
 
 ## 未发布
 
+## v0.1.4 - 2026-06-20
+
 - 后台新增首页弹窗配置，可开启/关闭并填写 Markdown 或 HTML5 公告内容，首页会弹窗展示。
 - 修复 Docker 构建时 TDesign 邮箱输入类型和友情链接解析的 TypeScript 报错。
 - 修正 Docker Compose 图片 volume 挂载路径，使默认本地存储持久化到 `/app/public/storage/generated` 和 `/app/public/storage/uploads`。
 - 升级脚本新增旧版图片目录备份和回填，避免从旧 Compose 路径升级时丢失容器内 `/app/public/storage` 图片。
 - 修复创作页移动端生成失败后错误提示、选项控件和底部导航可能错位或溢出的问题。
 - 修复创作页桌面端失败态右侧结果预览栏因 sticky 定位导致与左侧表单错位的问题。
+- 完善 GitHub 开源展示材料，新增 README 首屏预览图、Social Preview、Topics 建议和开源传播清单。
+- 新增贡献指南、安全策略、支持说明、行为准则、Issue 模板、PR 模板和部署求助模板。
+- 新增英文 README、常见问题、Release 模板和 Good First Issue 候选清单，降低新用户试用和贡献门槛。
 
 ## v0.1.3 - 2026-06-18
 
