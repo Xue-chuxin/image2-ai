@@ -1,12 +1,46 @@
 # Image2 AI 生图系统
 
-Image2 AI 生图系统是一个面向中文用户的 AI 生图 Web 应用，目标是提供类似 image2 的轻量化创作体验。项目内置提示词库、DeepSeek 提示词润色、生图任务、作品历史、积分账户、后台配置和拟 App 风格 WebUI，适合用于学习、二次开发或搭建自己的 AI 图片生成站点。
+[![License: MIT](https://img.shields.io/github/license/Xue-chuxin/image2-ai?color=1677ff)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/Xue-chuxin/image2-ai?style=social)](https://github.com/Xue-chuxin/image2-ai/stargazers)
+[![Next.js](https://img.shields.io/badge/Next.js-15-111827)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19-1677ff)](https://react.dev/)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ed)](docker-compose.yml)
+
+面向中文用户的开源 AI 生图 WebUI，支持提示词库、DeepSeek 提示词润色、OpenAI 官方 / 兼容图像接口、生图历史、积分账户、管理后台和 Docker Compose 自部署。
+
+![Image2 AI 生图系统开源预览](public/readme/image2-ai-github-promo.png)
+
+## 快速入口
+
+- 在线演示：[https://www.zaotutai.com/](https://www.zaotutai.com/)
+- 快速部署：[Docker Compose 部署](#docker-compose-部署)
+- 本地开发：[本地开发](#本地开发)
+- 版本记录：[CHANGELOG.md](CHANGELOG.md)
+- 升级说明：[UPGRADE.md](UPGRADE.md)
+- 贡献指南：[CONTRIBUTING.md](CONTRIBUTING.md)
+- 开源发布清单：[docs/open-source-checklist.md](docs/open-source-checklist.md)
+
+## 适合谁
+
+- 想快速搭建中文 AI 生图站点的自部署用户。
+- 想学习 Next.js、Prisma、Provider 抽象和 AI 产品后台的开发者。
+- 想二开提示词库、积分账户、作品库、支付或模型中转配置的团队。
+- 想从一个轻量项目开始验证 AI 图片生成产品形态的独立开发者。
 
 当前项目默认采用 `openai` 生图 Provider，第三方 API Key 统一通过环境变量或后台加密配置读取，前端不会直接调用模型接口。
 
 ## 在线演示
 
 演示站地址：[https://www.zaotutai.com/](https://www.zaotutai.com/)
+
+## 30 秒体验 Docker 部署
+
+```bash
+cp .env.example .env.production
+docker compose --env-file .env.production up -d --build
+```
+
+正式启动前请先修改 `.env.production` 中的数据库密码、登录密钥、后台管理员账号、站点地址和模型 API Key。完整说明见 [Docker Compose 部署](#docker-compose-部署)。
 
 ## 功能特性
 
@@ -327,6 +361,25 @@ Docker Compose 默认会把生成图和上传图分别持久化到 `/app/public/
 - 正式上线前先确认 `NEXT_PUBLIC_SITE_URL` 是公网 HTTPS 域名。
 - 图片文件建议后续接入对象存储或 CDN。
 - `chatgpt_web` 不建议放在普通云服务器无人值守运行。
+
+## 参与开源
+
+欢迎提交 Bug、部署经验、文档补充和小范围功能改进。为了让问题更快被定位，请优先使用仓库内置的 GitHub Issue 模板。
+
+- 贡献流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+- 使用支持见 [SUPPORT.md](SUPPORT.md)。
+- 安全问题见 [SECURITY.md](SECURITY.md)。
+- 社区行为准则见 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)。
+- 开源质量、Release 和传播清单见 [docs/open-source-checklist.md](docs/open-source-checklist.md)。
+
+如果你想参与但不知道从哪里开始，可以优先关注文档、部署兼容、移动端布局和 Provider 配置说明，这些方向最容易帮助到自部署用户。
+
+## 仓库展示素材
+
+- README 和文章配图：`public/readme/image2-ai-github-promo.png`
+- GitHub Social Preview：`public/readme/image2-ai-social-preview.png`
+
+建议在 GitHub 仓库设置中上传 Social Preview 图片，并添加 `ai-image-generation`、`self-hosted`、`nextjs`、`openai`、`deepseek`、`docker`、`tdesign` 等 Topics，提升搜索和分享时的可见度。
 
 ## 技术支持与赞助
 

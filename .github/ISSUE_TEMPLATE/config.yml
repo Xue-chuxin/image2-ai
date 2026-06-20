@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 部署和使用支持
+    url: https://github.com/Xue-chuxin/image2-ai#技术支持与赞助
+    about: 非公开日志、部署咨询或紧急协助可查看 README 中的支持方式。
+  - name: 在线演示
+    url: https://www.zaotutai.com/
+    about: 先体验公开演示站，确认功能表现后再反馈问题。

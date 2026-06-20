@@ -1,0 +1,89 @@
+name: Bug 反馈
+description: 报告可复现的问题、部署失败、构建失败或页面异常
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈。请不要粘贴 API Key、Cookie、Token、数据库密码、支付密钥或真实用户隐私。
+  - type: textarea
+    id: summary
+    attributes:
+      label: 问题描述
+      description: 简要说明你遇到了什么问题。
+      placeholder: 例如：Docker Compose 启动后上传图片无法持久化。
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 请列出可以稳定复现问题的步骤。
+      placeholder: |
+        1. 执行 ...
+        2. 打开 ...
+        3. 点击 ...
+        4. 看到 ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期结果
+      placeholder: 你原本期望系统如何表现？
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际结果
+      placeholder: 实际发生了什么？如果有截图或录屏，可以拖到这里。
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: 影响范围
+      options:
+        - Docker / 部署
+        - 构建 / 依赖
+        - 移动端布局
+        - 生图 Provider
+        - DeepSeek 润色
+        - 登录 / 注册
+        - 积分 / 支付
+        - 管理后台
+        - 图片存储
+        - 其他
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 项目版本或 commit
+      placeholder: v0.1.3 / main 最新 / commit hash
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 环境信息
+      description: 请填写与你的问题相关的环境信息。
+      placeholder: |
+        - 部署方式：Docker Compose / 源码部署 / 其他
+        - OS：
+        - Node.js：
+        - npm：
+        - PostgreSQL：
+        - Docker：
+        - 浏览器：
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 关键日志
+      description: 只粘贴必要片段，并确认已删除密钥、Cookie、Token、数据库密码和支付凭证。
+      render: shell
