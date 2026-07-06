@@ -145,14 +145,14 @@ export function AccountMenu({ email, role, variant = "front" }: AccountMenuProps
           <div className="p-1.5">
             {!isAdmin ? (
               <>
-                <Link
+                <a
                   className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-ink-secondary transition hover:bg-brand-50 hover:text-brand-600"
-                  href="/account"
+                  href="/console#/account/overview"
                   onClick={() => setOpen(false)}
                 >
                   <WalletCards size={15} />
                   账户与积分
-                </Link>
+                </a>
                 <Link
                   className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-ink-secondary transition hover:bg-brand-50 hover:text-brand-600"
                   href="/history"

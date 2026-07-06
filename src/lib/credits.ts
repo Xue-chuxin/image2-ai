@@ -28,6 +28,41 @@ export async function getUserCreditBalance(userId: string) {
   };
 }
 
+export type CreditTransactionView = {
+  id: string;
+  type: string;
+  amount: number;
+  balance: number;
+  memo: string | null;
+  jobId: string | null;
+  orderId: string | null;
+  createdAt: string;
+};
+
+export async function listUserCreditTransactions(userId: string, limit = 50): Promise<CreditTransactionView[]> {
+  const normalizedLimit = Math.min(Math.max(Math.floor(limit) || 50, 1), 200);
+  const rows = await prisma.creditTransaction.findMany({
+    where: {
+      userId,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+    take: normalizedLimit,
+  });
+
+  return rows.map((row) => ({
+    id: row.id,
+    type: row.type,
+    amount: row.amount,
+    balance: row.balance,
+    memo: row.memo,
+    jobId: row.jobId,
+    orderId: row.orderId,
+    createdAt: row.createdAt.toISOString(),
+  }));
+}
+
 export async function reserveCreditsForJob(userId: string, amount: number, jobId: string) {
   if (amount <= 0) {
     return;

@@ -1,5 +1,21 @@
 import { NextResponse } from "next/server";
 
+import { getAdminSession, getUserSession } from "@/lib/auth";
+
+/** 控制台会话：管理员或普通用户任一 Cookie 会话均可访问用户中心能力 */
+export async function getConsoleSession() {
+  const [adminSession, userSession] = await Promise.all([getAdminSession(), getUserSession()]);
+  const session = adminSession || userSession;
+  if (!session) {
+    return null;
+  }
+  return {
+    userId: session.userId,
+    email: session.email,
+    isAdmin: Boolean(adminSession),
+  };
+}
+
 /**
  * vben (@vben/request defaultResponseInterceptor) 约定的响应信封：
  * 成功 { code: 0, data }，失败按 HTTP 状态码 + error 文案处理。

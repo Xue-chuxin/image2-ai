@@ -15,7 +15,8 @@
         "prisma:seed": "tsx prisma/seed.ts",
         "chatgpt:login": "tsx scripts/chatgpt-login.ts",
         "chatgpt:check": "tsx scripts/chatgpt-check.ts",
-        "chatgpt:generate": "tsx scripts/chatgpt-generate.ts"
+        "chatgpt:generate": "tsx scripts/chatgpt-generate.ts",
+        "build:console": "cd console && npx -y pnpm@11.10.0 install --frozen-lockfile && npx -y pnpm@11.10.0 run build:antd && rm -rf ../public/console && cp -R apps/web-antd/dist ../public/console"
     },
     "dependencies": {
         "@prisma/client": "^5.22.0",

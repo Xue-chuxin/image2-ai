@@ -217,15 +217,15 @@ function WorkspaceShell({
               </button>
 
               {user ? (
-                <Link
-                  href="/account"
+                <a
+                  href="/console#/account/recharge"
                   className="flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1.5 text-[13px] font-bold text-brand-600 transition hover:bg-brand-100"
                 >
                   <Zap size={14} className="text-brand-500" />
                   {typeof user.credits === "number" ? user.credits : "--"}
                   <span className="text-ink-faint">·</span>
                   充值
-                </Link>
+                </a>
               ) : null}
 
               <button
