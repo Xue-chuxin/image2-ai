@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import "tdesign-react/es/style/index.css";
 import "./globals.css";
-import "./admin-legacy.css";
 import { AppShell, type ShellUser } from "@/components/app-shell";
 import { getUserSession } from "@/lib/auth";
 import { getUserCreditBalance } from "@/lib/credits";

@@ -17,9 +17,8 @@ export default async function SignInPage({
 }) {
   const resolvedSearchParams = searchParams ? await searchParams : {};
   if (resolvedSearchParams.mode === "admin") {
-    const isAdminNext = resolvedSearchParams.next === "/admin" || Boolean(resolvedSearchParams.next?.startsWith("/admin/"));
-    const adminNext = isAdminNext && resolvedSearchParams.next ? resolvedSearchParams.next : "/admin/settings";
-    redirect(`/admin/signin?next=${encodeURIComponent(adminNext)}`);
+    // 管理员登录已并入控制台统一登录页。
+    redirect("/console");
   }
 
   const nextPath = getSafeNextPath(resolvedSearchParams.next, "/generate");

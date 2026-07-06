@@ -72,7 +72,7 @@ export function AccountMenu({ email, role, variant = "front" }: AccountMenuProps
   async function logout() {
     setPending("logout");
     await fetch("/api/auth/logout", { method: "POST" }).catch(() => null);
-    window.location.href = isAdmin ? "/admin/signin" : "/signin";
+    window.location.href = isAdmin ? "/console" : "/signin";
   }
 
   async function changePassword() {
@@ -163,14 +163,14 @@ export function AccountMenu({ email, role, variant = "front" }: AccountMenuProps
                 </Link>
               </>
             ) : (
-              <Link
+              <a
                 className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-ink-secondary transition hover:bg-brand-50 hover:text-brand-600"
-                href="/admin"
+                href="/console"
                 onClick={() => setOpen(false)}
               >
                 <Settings size={15} />
-                后台首页
-              </Link>
+                管理控制台
+              </a>
             )}
             <button
               type="button"

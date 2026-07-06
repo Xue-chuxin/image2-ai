@@ -228,7 +228,7 @@ export async function getUserSession(): Promise<UserSession | null> {
 export async function requireAdmin() {
   const session = await getAdminSession();
   if (!session) {
-    redirect("/admin/signin?next=/admin/settings");
+    redirect("/console");
   }
   return session;
 }

@@ -34,6 +34,7 @@ type NavItem = {
   label: string;
   icon: typeof Images;
   placeholder?: boolean;
+  external?: boolean;
 };
 
 const navItems: NavItem[] = [
@@ -43,7 +44,7 @@ const navItems: NavItem[] = [
   { href: "/generate", label: "专业绘画", icon: Palette },
   { href: "/tools", label: "更多工具", icon: Wrench, placeholder: true },
   { href: "/history", label: "生成历史", icon: Clock3 },
-  { href: "/admin", label: "后台管理", icon: Settings2 },
+  { href: "/console", label: "后台管理", icon: Settings2, external: true },
 ];
 
 const mobileNavItems = [
@@ -152,17 +153,25 @@ function WorkspaceShell({
         <nav className="mt-6 flex flex-1 flex-col gap-1" aria-label="主导航">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const active = isActivePath(pathname, item.href);
+            const active = !item.external && isActivePath(pathname, item.href);
+            const itemClass = clsx(
+              "group flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-[14.5px] font-semibold transition",
+              active ? "bg-brand-500 text-white shadow-chip" : "text-ink-secondary hover:bg-brand-50 hover:text-brand-600",
+            );
+            const iconClass = clsx(active ? "text-white" : "text-ink-faint group-hover:text-brand-500");
+
+            if (item.external) {
+              return (
+                <a key={item.href} href={item.href} className={itemClass}>
+                  <Icon size={18} className={iconClass} />
+                  {item.label}
+                </a>
+              );
+            }
+
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={clsx(
-                  "group flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-[14.5px] font-semibold transition",
-                  active ? "bg-brand-500 text-white shadow-chip" : "text-ink-secondary hover:bg-brand-50 hover:text-brand-600",
-                )}
-              >
-                <Icon size={18} className={clsx(active ? "text-white" : "text-ink-faint group-hover:text-brand-500")} />
+              <Link key={item.href} href={item.href} className={itemClass}>
+                <Icon size={18} className={iconClass} />
                 {item.label}
               </Link>
             );

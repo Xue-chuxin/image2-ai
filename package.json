@@ -27,9 +27,7 @@
         "react": "^19.0.0",
         "react-dom": "^19.0.0",
         "sharp": "^0.34.5",
-        "tailwind-merge": "^2.5.5",
-        "tdesign-icons-react": "^0.6.4",
-        "tdesign-react": "^1.17.1"
+        "tailwind-merge": "^2.5.5"
     },
     "devDependencies": {
         "@types/node": "^22.10.1",
