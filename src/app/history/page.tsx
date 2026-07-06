@@ -1,12 +1,14 @@
 import Link from "next/link";
+import { ImageOff, Loader2, LockKeyhole, Palette } from "lucide-react";
 
 import { GeneratedImagePreview } from "@/components/generated-image-preview";
 import { HistoryJobActions } from "@/components/history-job-actions";
-import { BlurText, GlassSurface, SpotlightCard } from "@/components/front/react-bits";
 import { getUserSession } from "@/lib/auth";
 import { listRecentGenerationJobs, type GenerationJobView } from "@/lib/generation-jobs";
 
 export const dynamic = "force-dynamic";
+
+const RUNNING_STATUSES = ["QUEUED", "POLISHING", "GENERATING", "UPLOADING"];
 
 function getStatusLabel(status: string) {
   if (status === "QUEUED") {
@@ -82,61 +84,89 @@ function formatTime(value: string) {
   }).format(new Date(value));
 }
 
+function getStatusBadgeClass(status: string) {
+  if (status === "COMPLETED") {
+    return "bg-emerald-50 text-emerald-600";
+  }
+
+  if (status === "FAILED") {
+    return "bg-rose-50 text-rose-500";
+  }
+
+  if (status === "CANCELED") {
+    return "bg-slate-100 text-slate-500";
+  }
+
+  if (RUNNING_STATUSES.includes(status)) {
+    return "bg-brand-50 text-brand-600";
+  }
+
+  return "bg-slate-100 text-slate-500";
+}
+
 function HistoryItem({ job }: { job: GenerationJobView }) {
   const firstImage = job.images[0];
+  const isRunning = RUNNING_STATUSES.includes(job.status);
+  const metaItems = [
+    { label: "比例", value: job.ratio },
+    { label: "质量", value: getQualityLabel(job.quality) },
+    { label: "张数", value: `${job.imageCount} 张` },
+    { label: "积分", value: String(job.creditCost) },
+    { label: "时间", value: formatTime(job.createdAt) },
+  ];
 
   return (
-    <SpotlightCard className="history-card">
-      <div className="history-card-layout">
-        <div className="history-image">
+    <article className="rounded-2xl border border-line bg-white p-4 shadow-card md:p-5">
+      <div className="grid gap-4 md:grid-cols-[240px_1fr] md:gap-5">
+        <div className="overflow-hidden rounded-xl border border-line bg-page">
           {firstImage ? (
             <GeneratedImagePreview
               image={firstImage}
               alt={job.promptZh}
+              className="h-full min-h-[210px]"
               loadingLabel="图片加载中"
               originalLoadingLabel="图片加载中"
             />
           ) : (
-            <div className="history-placeholder">
-              <span>{getQueueStatusLabel(job)}</span>
+            <div className="flex h-full min-h-[210px] flex-col items-center justify-center gap-2.5 px-4 text-center">
+              {isRunning ? (
+                <Loader2 className="h-5 w-5 animate-spin text-brand-400" />
+              ) : (
+                <ImageOff className="h-5 w-5 text-ink-faint" />
+              )}
+              <span className="text-sm font-semibold text-ink-secondary">{getQueueStatusLabel(job)}</span>
             </div>
           )}
         </div>
 
-        <div className="history-body">
-          <div className="history-title-row">
-            <div>
-              <span className="eyebrow">{job.provider}</span>
-              <h2>{job.promptZh}</h2>
-            </div>
-            <span className={`status-pill ${job.status.toLowerCase()}`}>{getQueueStatusLabel(job)}</span>
+        <div className="min-w-0 space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={`inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-bold ${getStatusBadgeClass(job.status)}`}>
+              {getQueueStatusLabel(job)}
+            </span>
+            <span className="rounded-lg bg-page px-2.5 py-1 text-xs font-medium text-ink-faint">{job.provider}</span>
           </div>
 
-          {job.promptEn ? <p className="history-prompt">{job.promptEn}</p> : null}
-          {shouldShowQueueHint(job) ? <p className="history-prompt">{getQueueStatusLabel(job)}</p> : null}
-          {job.errorMessage ? <p className="history-error">{job.errorMessage}</p> : null}
+          <h2 className="line-clamp-2 text-[15px] font-bold leading-6 text-ink md:text-base">{job.promptZh}</h2>
+          {job.promptEn ? <p className="line-clamp-1 text-[13px] text-ink-faint">{job.promptEn}</p> : null}
 
-          <dl className="history-meta">
-            <div>
-              <dt>比例</dt>
-              <dd>{job.ratio}</dd>
-            </div>
-            <div>
-              <dt>质量</dt>
-              <dd>{getQualityLabel(job.quality)}</dd>
-            </div>
-            <div>
-              <dt>张数</dt>
-              <dd>{job.imageCount}</dd>
-            </div>
-            <div>
-              <dt>积分</dt>
-              <dd>{job.creditCost}</dd>
-            </div>
-            <div>
-              <dt>时间</dt>
-              <dd>{formatTime(job.createdAt)}</dd>
-            </div>
+          {shouldShowQueueHint(job) ? (
+            <p className="flex items-center gap-2 rounded-xl bg-brand-50 px-3.5 py-2.5 text-sm font-medium text-brand-600">
+              <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+              {getQueueStatusLabel(job)}
+            </p>
+          ) : null}
+          {job.errorMessage ? (
+            <p className="rounded-xl bg-rose-50 px-3.5 py-2.5 text-sm font-medium text-rose-500">{job.errorMessage}</p>
+          ) : null}
+
+          <dl className="flex flex-wrap gap-1.5">
+            {metaItems.map((item) => (
+              <div key={item.label} className="flex items-center gap-1.5 rounded-lg bg-page px-2.5 py-1 text-xs">
+                <dt className="font-medium text-ink-faint">{item.label}</dt>
+                <dd className="font-semibold text-ink-secondary">{item.value}</dd>
+              </div>
+            ))}
           </dl>
 
           <HistoryJobActions
@@ -153,7 +183,7 @@ function HistoryItem({ job }: { job: GenerationJobView }) {
           />
         </div>
       </div>
-    </SpotlightCard>
+    </article>
   );
 }
 
@@ -162,19 +192,24 @@ export default async function HistoryPage() {
 
   if (!session) {
     return (
-      <main className="history-page">
-        <GlassSurface className="section-heading">
-          <span className="eyebrow">History</span>
-          <BlurText as="h1" text="生成历史" delay={0.035} />
-          <p>登录普通用户账号后，只会看到你自己的生图任务和图片结果。</p>
-        </GlassSurface>
-        <SpotlightCard className="empty-state">
-          <span>请先登录</span>
-          <p>用户历史记录已按账号隔离，未登录时不会读取任何任务。</p>
-          <Link className="primary-button mt-3 px-6" href="/signin?next=/history">
-            去登录
-          </Link>
-        </SpotlightCard>
+      <main className="mx-auto w-full max-w-[1200px] space-y-5">
+        <div className="flex justify-center py-10 md:py-16">
+          <div className="w-full max-w-md rounded-2xl border border-line bg-white p-8 text-center shadow-card">
+            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-50 text-brand-500">
+              <LockKeyhole className="h-6 w-6" />
+            </span>
+            <h1 className="mt-4 text-lg font-bold text-ink">请先登录</h1>
+            <p className="mt-2 text-sm leading-6 text-ink-secondary">
+              历史记录已按账号隔离，登录后只会看到你自己的生图任务和图片结果。
+            </p>
+            <Link
+              href="/signin?next=/history"
+              className="mt-5 inline-flex items-center justify-center rounded-xl bg-brand-500 px-5 py-2.5 text-sm font-bold text-white shadow-chip transition hover:bg-brand-600"
+            >
+              去登录
+            </Link>
+          </div>
+        </div>
       </main>
     );
   }
@@ -192,53 +227,49 @@ export default async function HistoryPage() {
   const runningCount = jobs.filter((job) => ["QUEUED", "POLISHING", "GENERATING", "UPLOADING"].includes(job.status)).length;
   const creditTotal = jobs.reduce((sum, job) => sum + job.creditCost, 0);
 
-  return (
-    <main className="history-page">
-      <GlassSurface className="section-heading">
-        <span className="eyebrow">History</span>
-        <BlurText as="h1" text="生成历史" delay={0.035} />
-        <p>这里展示当前账号最近创建的生图任务，包括成功图片、失败原因、Provider 和积分记录。</p>
-      </GlassSurface>
+  const stats = [
+    { label: "全部任务", value: jobs.length, valueClass: "text-ink" },
+    { label: "已完成", value: completedCount, valueClass: "text-emerald-600" },
+    { label: "进行中", value: runningCount, valueClass: "text-brand-600" },
+    { label: "失败", value: failedCount, valueClass: "text-rose-500" },
+    { label: "积分记录", value: creditTotal, valueClass: "text-ink" },
+  ];
 
+  return (
+    <main className="mx-auto w-full max-w-[1200px] space-y-5">
       {jobs.length ? (
         <>
-          <section className="history-summary-grid" aria-label="历史概览">
-            <div>
-              <span>全部任务</span>
-              <strong>{jobs.length}</strong>
-            </div>
-            <div>
-              <span>已完成</span>
-              <strong>{completedCount}</strong>
-            </div>
-            <div>
-              <span>进行中</span>
-              <strong>{runningCount}</strong>
-            </div>
-            <div>
-              <span>失败</span>
-              <strong>{failedCount}</strong>
-            </div>
-            <div>
-              <span>积分记录</span>
-              <strong>{creditTotal}</strong>
-            </div>
+          <section aria-label="历史概览" className="grid grid-cols-2 gap-3 md:grid-cols-5">
+            {stats.map((item) => (
+              <div key={item.label} className="rounded-2xl border border-line bg-white px-4 py-3.5 shadow-card">
+                <p className={`text-2xl font-extrabold leading-tight ${item.valueClass}`}>{item.value}</p>
+                <p className="mt-1 text-xs font-medium text-ink-faint">{item.label}</p>
+              </div>
+            ))}
           </section>
 
-          <section className="history-list">
+          <section aria-label="任务列表" className="space-y-4">
             {jobs.map((job) => (
               <HistoryItem key={job.id} job={job} />
             ))}
           </section>
         </>
       ) : (
-        <SpotlightCard className="empty-state">
-          <span>暂无生成记录</span>
-          <p>去创作页提交第一个生图任务后，结果会出现在这里。</p>
-          <Link className="primary-button mt-3 px-6" href="/generate">
-            去创作
-          </Link>
-        </SpotlightCard>
+        <div className="flex justify-center py-10 md:py-16">
+          <div className="w-full max-w-md rounded-2xl border border-line bg-white p-8 text-center shadow-card">
+            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-50 text-brand-500">
+              <Palette className="h-6 w-6" />
+            </span>
+            <h2 className="mt-4 text-lg font-bold text-ink">暂无生成记录</h2>
+            <p className="mt-2 text-sm leading-6 text-ink-secondary">去创作页提交第一个生图任务后，结果会出现在这里。</p>
+            <Link
+              href="/generate"
+              className="mt-5 inline-flex items-center justify-center rounded-xl bg-brand-500 px-5 py-2.5 text-sm font-bold text-white shadow-chip transition hover:bg-brand-600"
+            >
+              去创作
+            </Link>
+          </div>
+        </div>
       )}
     </main>
   );

@@ -1,6 +1,8 @@
 import { GenerateWorkbench } from "@/components/generate-workbench";
-import { BlurText, SpotlightCard } from "@/components/front/react-bits";
-import { getPublicAppSettings } from "@/lib/settings";
+
+const validRatios = new Set(["1:1", "3:4", "16:9", "9:16"]);
+const validQualities = new Set(["standard", "high", "low"]);
+const validImageCounts = new Set([1, 2, 4]);
 
 function toArray(value?: string | string[]) {
   if (!value) {
@@ -10,18 +12,40 @@ function toArray(value?: string | string[]) {
   return Array.isArray(value) ? value : [value];
 }
 
+function firstValue(value?: string | string[]) {
+  if (Array.isArray(value)) {
+    return value[0] || "";
+  }
+
+  return value || "";
+}
+
 export default async function GeneratePage({
   searchParams,
 }: {
   searchParams?: Promise<{
-    prompt?: string;
+    prompt?: string | string[];
+    promptEn?: string | string[];
+    negativePrompt?: string | string[];
+    ratio?: string | string[];
+    quality?: string | string[];
+    imageCount?: string | string[];
     referenceImageIds?: string | string[];
     referenceImageUrls?: string | string[];
   }>;
 }) {
-  const settings = await getPublicAppSettings();
   const resolvedSearchParams = searchParams ? await searchParams : {};
-  const initialPrompt = resolvedSearchParams.prompt || "";
+  const initialPrompt = firstValue(resolvedSearchParams.prompt);
+  const initialPromptEn = firstValue(resolvedSearchParams.promptEn);
+  const initialNegativePrompt = firstValue(resolvedSearchParams.negativePrompt);
+
+  const ratioParam = firstValue(resolvedSearchParams.ratio);
+  const qualityParam = firstValue(resolvedSearchParams.quality);
+  const imageCountParam = Number.parseInt(firstValue(resolvedSearchParams.imageCount), 10);
+  const initialRatio = validRatios.has(ratioParam) ? ratioParam : "1:1";
+  const initialQuality = validQualities.has(qualityParam) ? qualityParam : "standard";
+  const initialImageCount = validImageCounts.has(imageCountParam) ? imageCountParam : 1;
+
   const referenceIds = toArray(resolvedSearchParams.referenceImageIds);
   const referenceUrls = toArray(resolvedSearchParams.referenceImageUrls);
   const initialReferenceImages = referenceIds.slice(0, 4).map((id, index) => ({
@@ -34,24 +58,18 @@ export default async function GeneratePage({
     height: null,
   }));
 
-  if (settings.frontTemplate === "tdesign_workspace") {
-    return (
-      <main className="front-td-page-stack">
-        <GenerateWorkbench initialPrompt={initialPrompt} initialReferenceImages={initialReferenceImages.filter((image) => image.id)} referenceImagesEnabled={false} variant="tdesign" />
-      </main>
-    );
-  }
-
   return (
-    <main className="space-y-5 pb-28">
-      <SpotlightCard className="p-5" spotlightColor="rgba(14, 165, 233, 0.16)">
-        <p className="text-xs font-bold uppercase tracking-[0.24em] text-slate-400">Create</p>
-        <BlurText as="h1" text="创作工作台" className="mt-2 text-3xl font-black text-slate-950" delay={0.04} />
-        <p className="mt-2 text-sm leading-6 text-slate-500">
-          先用 DeepSeek 整理画面描述，再提交图片生成任务。正式版首发先开放文字生图。
-        </p>
-      </SpotlightCard>
-      <GenerateWorkbench initialPrompt={initialPrompt} initialReferenceImages={initialReferenceImages.filter((image) => image.id)} referenceImagesEnabled={false} />
+    <main className="mx-auto w-full max-w-[1200px] space-y-5">
+      <GenerateWorkbench
+        initialPrompt={initialPrompt}
+        initialPromptEn={initialPromptEn}
+        initialNegativePrompt={initialNegativePrompt}
+        initialRatio={initialRatio}
+        initialQuality={initialQuality}
+        initialImageCount={initialImageCount}
+        initialReferenceImages={initialReferenceImages.filter((image) => image.id)}
+        referenceImagesEnabled={false}
+      />
     </main>
   );
 }

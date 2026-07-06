@@ -458,7 +458,7 @@ export function AccountBillingPanel({
             <div key={label as string} className="rounded-[24px] border border-slate-200 bg-white/90 p-5 shadow-card backdrop-blur">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">{label as string}</p>
-                <TypedIcon className="h-5 w-5 text-ocean-700" />
+                <TypedIcon className="h-5 w-5 text-brand-600" />
               </div>
               <p className="mt-3 text-4xl font-black text-slate-950">{value as number}</p>
             </div>
@@ -475,7 +475,7 @@ export function AccountBillingPanel({
               <p className="mt-2 text-sm font-bold leading-6 text-slate-600">{returnNotice.message}</p>
               {returnNotice.orderNo ? <p className="mt-1 text-xs font-black text-slate-400">订单号：{returnNotice.orderNo}</p> : null}
             </div>
-            <button type="button" onClick={() => void refreshPendingOrders(true)} className="rounded-full bg-slate-950 px-4 py-2 text-xs font-black text-white">
+            <button type="button" onClick={() => void refreshPendingOrders(true)} className="rounded-full bg-brand-500 px-4 py-2 text-xs font-bold text-white shadow-chip">
               刷新订单
             </button>
           </div>
@@ -499,7 +499,7 @@ export function AccountBillingPanel({
                 value={selectedChannel?.provider || ""}
                 disabled={availableChannels.length === 0}
                 onChange={(event) => setSelectedProvider(event.target.value as PaymentProviderName)}
-                className="h-11 w-full appearance-none rounded-full border border-slate-200 bg-white px-4 pr-10 text-sm font-black text-slate-700 shadow-card outline-none transition focus:border-ocean-400 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                className="h-11 w-full appearance-none rounded-full border border-slate-200 bg-white px-4 pr-10 text-sm font-black text-slate-700 shadow-card outline-none transition focus:border-brand-400 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
               >
                 {availableChannels.length === 0 ? <option value="">暂无可用渠道</option> : null}
                 {availableChannels.map((channel) => (
@@ -514,10 +514,10 @@ export function AccountBillingPanel({
         </div>
 
         {activePendingOrder ? (
-          <div className="mb-5 rounded-[24px] border border-ocean-100 bg-ocean-50/70 p-4">
+          <div className="mb-5 rounded-[24px] border border-brand-100 bg-brand-50/70 p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-start gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-ocean-700 shadow-card">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-brand-600 shadow-card">
                   {polling ? <Loader2 className="h-5 w-5 animate-spin" /> : <ShieldCheck className="h-5 w-5" />}
                 </div>
                 <div>
@@ -525,13 +525,13 @@ export function AccountBillingPanel({
                   <p className="mt-1 text-sm leading-6 text-slate-500">
                     当前有 {pendingOrders} 个待支付订单，创建后前 2 分钟每 3 秒自动确认一次，之后降低频率。支付完成后如余额未立即变化，请点击刷新。
                   </p>
-                  <p className="mt-2 inline-flex items-center gap-2 rounded-full border border-ocean-100 bg-white px-3 py-1 text-xs font-black text-ocean-700">
+                  <p className="mt-2 inline-flex items-center gap-2 rounded-full border border-brand-100 bg-white px-3 py-1 text-xs font-black text-brand-600">
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     正在向支付平台确认支付
                   </p>
                 </div>
               </div>
-              <button type="button" onClick={() => void refreshPendingOrders(true)} disabled={polling} className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white disabled:opacity-60">
+              <button type="button" onClick={() => void refreshPendingOrders(true)} disabled={polling} className="inline-flex items-center gap-2 rounded-2xl bg-brand-500 px-4 py-3 text-sm font-bold text-white shadow-chip disabled:opacity-60">
                 <RefreshCw className={`h-4 w-4 ${polling ? "animate-spin" : ""}`} />
                 刷新待支付
               </button>
@@ -541,8 +541,8 @@ export function AccountBillingPanel({
 
         <div className="grid gap-4 md:grid-cols-3">
           {packages.map((pkg) => (
-            <article key={pkg.id} className="relative overflow-hidden rounded-[26px] border border-ocean-100 bg-gradient-to-br from-white via-ocean-50/60 to-slate-50 p-5 shadow-card">
-              <div className="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-ocean-100 blur-3xl" />
+            <article key={pkg.id} className="relative overflow-hidden rounded-[26px] border border-brand-100 bg-gradient-to-br from-white via-brand-50/60 to-slate-50 p-5 shadow-card">
+              <div className="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-brand-100 blur-3xl" />
               <div className="relative space-y-4">
                 <div>
                   <h3 className="text-xl font-black text-slate-950">{pkg.name}</h3>
@@ -555,12 +555,12 @@ export function AccountBillingPanel({
                   </p>
                 </div>
                 <div className="flex items-end justify-between gap-3">
-                  <p className="text-2xl font-black text-ocean-800">{formatCurrency(pkg.priceCents, pkg.currency)}</p>
+                  <p className="text-2xl font-black text-brand-600">{formatCurrency(pkg.priceCents, pkg.currency)}</p>
                   <button
                     type="button"
                     onClick={() => createOrder(pkg.id)}
                     disabled={availableChannels.length === 0 || pending === `create:${pkg.id}`}
-                    className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white disabled:opacity-60"
+                    className="inline-flex items-center gap-2 rounded-2xl bg-brand-500 px-4 py-3 text-sm font-bold text-white shadow-chip disabled:opacity-60"
                   >
                     {pending === `create:${pkg.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
                     去支付
@@ -608,7 +608,7 @@ export function AccountBillingPanel({
                 {order.status === "PENDING" ? (
                   <div className="flex flex-wrap gap-2">
                     {order.paymentUrl ? (
-                      <a href={order.paymentUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white">
+                      <a href={order.paymentUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-2xl bg-brand-500 px-4 py-3 text-sm font-bold text-white shadow-chip">
                         <ExternalLink className="h-4 w-4" />
                         打开支付
                       </a>
@@ -639,7 +639,7 @@ export function AccountBillingPanel({
                 <div className="mt-4 flex flex-wrap items-center gap-4 rounded-[20px] border border-slate-200 bg-white/80 p-4">
                   <img src={qrImageUrl(order.qrCodeUrl)} alt="支付二维码" className="h-36 w-36 rounded-2xl border border-slate-200 bg-white p-2" />
                   <div>
-                    <div className="inline-flex items-center gap-2 rounded-full border border-ocean-100 bg-ocean-50 px-3 py-2 text-xs font-black text-ocean-700">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-brand-100 bg-brand-50 px-3 py-2 text-xs font-black text-brand-600">
                       <QrCode className="h-4 w-4" />
                       扫码支付
                     </div>

@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Loader2, LockKeyhole, Mail, ShieldCheck } from "lucide-react";
-import { Alert, Button, Input } from "tdesign-react";
 
 type UserAuthMode = "login" | "register";
 
@@ -30,11 +29,9 @@ async function readApiResponse(response: Response): Promise<ApiResponse> {
 export function SignInForm({
   nextPath = "/generate",
   mode = "login",
-  variant = "glass",
 }: {
   nextPath?: string;
   mode?: UserAuthMode;
-  variant?: "glass" | "tdesign";
 }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -124,154 +121,86 @@ export function SignInForm({
     }
   }
 
-  if (variant === "tdesign") {
-    return (
-      <div className="td-signin-form">
-        <form onSubmit={handleSubmit} className="td-signin-form__body">
-          <label className="td-field-block">
-            <span>用户邮箱</span>
-            <Input
-              value={email}
-              type="text"
-              name="email"
-              autocomplete="email"
-              placeholder="name@example.com"
-              prefixIcon={<Mail className="h-4 w-4" />}
-              onChange={(value) => setEmail(String(value))}
-            />
-          </label>
-
-          <label className="td-field-block">
-            <span>{isRegister ? "设置密码" : "登录密码"}</span>
-            <Input
-              value={password}
-              type="password"
-              placeholder={isRegister ? "至少 6 位，用于后续登录" : "请输入登录密码"}
-              prefixIcon={<LockKeyhole className="h-4 w-4" />}
-              onChange={(value) => setPassword(String(value))}
-            />
-          </label>
-
-          {isRegister ? (
-            <div className="td-signin-code-row">
-              <label className="td-field-block">
-                <span>注册验证码</span>
-                <Input
-                  value={verificationCode}
-                  placeholder="新用户填写 6 位验证码"
-                  prefixIcon={<ShieldCheck className="h-4 w-4" />}
-                  maxlength={6}
-                  onChange={(value) => setVerificationCode(String(value).replace(/\D/g, "").slice(0, 6))}
-                />
-              </label>
-              <Button
-                type="button"
-                variant="outline"
-                loading={isSendingCode}
-                disabled={isSubmitting || codeCooldown > 0 || !email.trim()}
-                onClick={() => void sendVerificationCode()}
-              >
-                {codeCooldown > 0 ? `${codeCooldown} 秒后重发` : "发送验证码"}
-              </Button>
-            </div>
-          ) : null}
-
-          {message ? <Alert theme="success" message={message} /> : null}
-          {error ? <Alert theme="error" message={error} /> : null}
-
-          <Button type="submit" theme="primary" size="large" block loading={isSubmitting}>
-            {isRegister ? "注册并登录" : "登录"}
-          </Button>
-          <p className="td-muted-line">
-            {isRegister ? "已有账号？" : "还没有账号？"}
-            <Link href={switchHref}>{isRegister ? "去登录" : "去注册"}</Link>
-          </p>
-        </form>
-      </div>
-    );
-  }
-
   return (
-    <div className="mt-6">
-      <form onSubmit={handleSubmit} className="mt-5 space-y-4">
-        <label className="block">
-          <span className="text-sm font-bold text-slate-700">用户邮箱</span>
-          <div className="mt-2 flex items-center gap-3 rounded-2xl border border-ocean-100 bg-ocean-50/60 px-4 py-3">
-            <Mail className="h-4 w-4 text-ocean-700" />
-            <input
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
-              placeholder="name@example.com"
-              type="email"
-            />
-          </div>
-        </label>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <label className="block">
+        <span className="text-sm font-semibold text-ink-secondary">用户邮箱</span>
+        <div className="mt-1.5 flex items-center gap-2.5 rounded-xl border border-line bg-page/60 px-3.5 py-2.5 transition focus-within:border-brand-400 focus-within:bg-white focus-within:ring-2 focus-within:ring-brand-100">
+          <Mail size={15} className="shrink-0 text-ink-faint" />
+          <input
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            className="w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink-faint"
+            placeholder="name@example.com"
+            type="email"
+            name="email"
+            autoComplete="email"
+          />
+        </div>
+      </label>
 
-        <label className="block">
-          <span className="text-sm font-bold text-slate-700">{isRegister ? "设置密码" : "登录密码"}</span>
-          <div className="mt-2 flex items-center gap-3 rounded-2xl border border-ocean-100 bg-ocean-50/60 px-4 py-3">
-            <LockKeyhole className="h-4 w-4 text-ocean-700" />
-            <input
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
-              placeholder={isRegister ? "至少 6 位，用于后续登录" : "请输入登录密码"}
-              type="password"
-            />
-          </div>
-        </label>
+      <label className="block">
+        <span className="text-sm font-semibold text-ink-secondary">{isRegister ? "设置密码" : "登录密码"}</span>
+        <div className="mt-1.5 flex items-center gap-2.5 rounded-xl border border-line bg-page/60 px-3.5 py-2.5 transition focus-within:border-brand-400 focus-within:bg-white focus-within:ring-2 focus-within:ring-brand-100">
+          <LockKeyhole size={15} className="shrink-0 text-ink-faint" />
+          <input
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            className="w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink-faint"
+            placeholder={isRegister ? "至少 6 位，用于后续登录" : "请输入登录密码"}
+            type="password"
+            autoComplete={isRegister ? "new-password" : "current-password"}
+          />
+        </div>
+      </label>
 
-        {isRegister ? (
-          <div className="block">
-            <span className="text-sm font-bold text-slate-700">注册验证码</span>
-            <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-              <div className="flex flex-1 items-center gap-3 rounded-2xl border border-ocean-100 bg-ocean-50/60 px-4 py-3">
-                <ShieldCheck className="h-4 w-4 text-ocean-700" />
-                <input
-                  value={verificationCode}
-                  onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
-                  className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
-                  placeholder="新用户填写 6 位验证码"
-                  inputMode="numeric"
-                  maxLength={6}
-                />
-              </div>
-              <button
-                type="button"
-                onClick={() => void sendVerificationCode()}
-                disabled={isSendingCode || isSubmitting || codeCooldown > 0 || !email.trim()}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-ocean-100 bg-white px-4 py-3 text-sm font-black text-ocean-800 shadow-card disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isSendingCode ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                {isSendingCode ? "发送中" : codeCooldown > 0 ? `${codeCooldown} 秒后重发` : "发送验证码"}
-              </button>
+      {isRegister ? (
+        <div className="block">
+          <span className="text-sm font-semibold text-ink-secondary">注册验证码</span>
+          <div className="mt-1.5 flex items-stretch gap-2">
+            <div className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-line bg-page/60 px-3.5 py-2.5 transition focus-within:border-brand-400 focus-within:bg-white focus-within:ring-2 focus-within:ring-brand-100">
+              <ShieldCheck size={15} className="shrink-0 text-ink-faint" />
+              <input
+                value={verificationCode}
+                onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                className="w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink-faint"
+                placeholder="6 位验证码"
+                inputMode="numeric"
+                maxLength={6}
+              />
             </div>
-            <p className="mt-2 text-xs font-bold leading-5 text-slate-500">新用户注册需要邮箱验证码，验证码 10 分钟内有效。</p>
+            <button
+              type="button"
+              onClick={() => void sendVerificationCode()}
+              disabled={isSendingCode || isSubmitting || codeCooldown > 0 || !email.trim()}
+              className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-line bg-white px-4 py-2.5 text-sm font-semibold text-ink-secondary transition hover:bg-page disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isSendingCode ? <Loader2 size={15} className="animate-spin" /> : null}
+              {isSendingCode ? "发送中" : codeCooldown > 0 ? `${codeCooldown} 秒后重发` : "发送验证码"}
+            </button>
           </div>
-        ) : null}
+          <p className="mt-2 text-xs leading-5 text-ink-faint">新用户注册需要邮箱验证码，验证码 10 分钟内有效。</p>
+        </div>
+      ) : null}
 
-        {message ? (
-          <p className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">
-            {message}
-          </p>
-        ) : null}
-        {error ? <p className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">{error}</p> : null}
+      {message ? <p className="rounded-xl bg-emerald-50 px-3.5 py-2.5 text-sm font-medium text-emerald-600">{message}</p> : null}
+      {error ? <p className="rounded-xl bg-rose-50 px-3.5 py-2.5 text-sm font-medium text-rose-500">{error}</p> : null}
 
-        <button
-          disabled={isSubmitting}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-ocean-800 px-4 py-3 text-sm font-black text-white shadow-glow disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <LockKeyhole className="h-4 w-4" />}
-          {isSubmitting ? (isRegister ? "注册中" : "登录中") : isRegister ? "注册并登录" : "登录"}
-        </button>
-        <p className="text-center text-sm font-bold text-slate-500">
-          {isRegister ? "已有账号？" : "还没有账号？"}
-          <Link href={switchHref} className="ml-1 text-ocean-800 underline-offset-4 hover:underline">
-            {isRegister ? "去登录" : "去注册"}
-          </Link>
-        </p>
-      </form>
-    </div>
+      <button
+        type="submit"
+        disabled={isSubmitting}
+        className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-500 px-4 py-2.5 text-sm font-bold text-white shadow-chip transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        {isSubmitting ? <Loader2 size={15} className="animate-spin" /> : null}
+        {isSubmitting ? (isRegister ? "注册中" : "登录中") : isRegister ? "注册并登录" : "登录"}
+      </button>
+
+      <p className="pt-1 text-center text-sm font-medium text-ink-secondary">
+        {isRegister ? "已有账号？" : "还没有账号？"}
+        <Link href={switchHref} className="ml-1 font-semibold text-brand-600 transition hover:text-brand-500">
+          {isRegister ? "去登录" : "去注册"}
+        </Link>
+      </p>
+    </form>
   );
 }

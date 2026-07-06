@@ -4,7 +4,6 @@ import { type ChangeEvent, type DragEvent, useMemo, useRef, useState } from "rea
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { Loader2, RotateCcw, Send, UploadCloud, Wand2, X } from "lucide-react";
-import { Alert, Button, Card, Radio, Select, Tag, Textarea } from "tdesign-react";
 import { IMAGE_STYLE_CATEGORIES, type ImageStyleCategory } from "@/lib/image-categories";
 
 type ReferenceImageResult = {
@@ -73,12 +72,16 @@ type UploadResult = {
 
 type GenerateComposerProps = {
   initialPrompt?: string;
+  initialPromptEn?: string;
+  initialNegativePrompt?: string;
+  initialRatio?: string;
+  initialQuality?: string;
+  initialImageCount?: number;
   initialReferenceImages?: ReferenceImageResult[];
   onJobChange?: (job: GenerationJobResult | null) => void;
   compact?: boolean;
   referenceImagesEnabled?: boolean;
   redirectOnTerminal?: string;
-  variant?: "glass" | "tdesign";
 };
 
 const ratios = ["1:1", "3:4", "16:9", "9:16"] as const;
@@ -91,6 +94,22 @@ const imageCounts = [1, 2, 4] as const;
 const MAX_REFERENCE_IMAGES = 4;
 const MAX_REFERENCE_IMAGE_BYTES = 8 * 1024 * 1024;
 const allowedTypes = new Set(["image/png", "image/jpeg", "image/webp"]);
+
+type RatioOption = (typeof ratios)[number];
+type QualityOption = (typeof qualities)[number]["value"];
+type ImageCountOption = (typeof imageCounts)[number];
+
+function toRatioOption(value?: string): RatioOption {
+  return (ratios as readonly string[]).includes(value || "") ? (value as RatioOption) : "1:1";
+}
+
+function toQualityOption(value?: string): QualityOption {
+  return qualities.some((item) => item.value === value) ? (value as QualityOption) : "standard";
+}
+
+function toImageCountOption(value?: number): ImageCountOption {
+  return (imageCounts as readonly number[]).includes(value ?? Number.NaN) ? (value as ImageCountOption) : 1;
+}
 
 async function readApiJson<T>(response: Response): Promise<ApiResult<T>> {
   const contentType = response.headers.get("content-type") || "";
@@ -124,24 +143,37 @@ function formatSize(bytes: number) {
   return `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
 
+function chipClass(active: boolean) {
+  return clsx(
+    "rounded-lg border px-3.5 py-2 text-[13px] font-semibold transition",
+    active
+      ? "border-brand-500 bg-brand-500 text-white shadow-chip"
+      : "border-line bg-white text-ink-secondary hover:border-brand-200 hover:bg-brand-50/50 hover:text-brand-600",
+  );
+}
+
 export function GenerateComposer({
   initialPrompt = "",
+  initialPromptEn = "",
+  initialNegativePrompt = "",
+  initialRatio,
+  initialQuality,
+  initialImageCount,
   initialReferenceImages = [],
   onJobChange,
   compact = false,
   referenceImagesEnabled = false,
   redirectOnTerminal,
-  variant = "glass",
 }: GenerateComposerProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [prompt, setPrompt] = useState(initialPrompt);
   const [selectedStyle, setSelectedStyle] = useState<ImageStyleCategory>("写真");
-  const [ratio, setRatio] = useState<(typeof ratios)[number]>("1:1");
-  const [quality, setQuality] = useState<(typeof qualities)[number]["value"]>("standard");
-  const [imageCount, setImageCount] = useState<(typeof imageCounts)[number]>(1);
-  const [polishedPromptEn, setPolishedPromptEn] = useState("");
-  const [negativePrompt, setNegativePrompt] = useState("");
+  const [ratio, setRatio] = useState<RatioOption>(() => toRatioOption(initialRatio));
+  const [quality, setQuality] = useState<QualityOption>(() => toQualityOption(initialQuality));
+  const [imageCount, setImageCount] = useState<ImageCountOption>(() => toImageCountOption(initialImageCount));
+  const [polishedPromptEn, setPolishedPromptEn] = useState(initialPromptEn);
+  const [negativePrompt, setNegativePrompt] = useState(initialNegativePrompt);
   const [polishProvider, setPolishProvider] = useState("DeepSeek");
   const [referenceImages, setReferenceImages] = useState<ReferenceImageResult[]>(referenceImagesEnabled ? initialReferenceImages.slice(0, MAX_REFERENCE_IMAGES) : []);
   const [isDragging, setIsDragging] = useState(false);
@@ -387,192 +419,18 @@ export function GenerateComposer({
     setReferenceImages((current) => current.filter((image) => image.id !== id));
   }
 
-  if (variant === "tdesign") {
-    return (
-      <section className={clsx("td-composer-panel", compact && "td-composer-panel--compact")}>
-        <Card
-          className="td-front-card td-composer-card"
-          bordered
-          title={
-            <div className="td-composer-title">
-              <span>CREATE</span>
-              <strong>把一句描述整理成画面</strong>
-            </div>
-          }
-          actions={
-            <Button type="button" variant="outline" onClick={resetComposer}>
-              <RotateCcw size={16} />
-              重置
-            </Button>
-          }
-        >
-          <div className="td-composer-stack">
-            {referenceImagesEnabled ? (
-              <div
-                className={clsx("td-upload-card", isDragging && "is-dragging")}
-                onDragOver={(event) => {
-                  event.preventDefault();
-                  setIsDragging(true);
-                }}
-                onDragLeave={() => setIsDragging(false)}
-                onDrop={onReferenceDrop}
-              >
-                <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" multiple className="hidden" onChange={onReferenceInputChange} />
-                <Button type="button" variant="text" loading={isUploadingReference} onClick={() => fileInputRef.current?.click()}>
-                  <UploadCloud size={18} />
-                  {isUploadingReference ? "参考图上传中" : "拖入参考图，或点击上传"}
-                </Button>
-                <p>PNG / JPG / WEBP，单张不超过 8MB，最多 4 张</p>
-              </div>
-            ) : null}
-
-            {referenceImages.length > 0 ? (
-              <div className="td-reference-grid">
-                {referenceImages.map((image) => (
-                  <div key={image.id} className="td-reference-card">
-                    <img src={image.thumbnailUrl || image.url} alt="参考图" />
-                    <button type="button" onClick={() => removeReferenceImage(image.id)} aria-label="移除参考图">
-                      <X size={14} />
-                    </button>
-                    <div>
-                      <strong>{image.mimeType.replace("image/", "").toUpperCase()}</strong>
-                      <span>{formatSize(image.fileSize)}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-
-            <label className="td-field-block">
-              <span>画面描述</span>
-              <Textarea
-                value={prompt}
-                placeholder="例如：雨夜街头的人像写真，浅景深，侧光，35mm 镜头，背景干净，真实皮肤质感。"
-                autosize={{ minRows: 5, maxRows: 8 }}
-                onChange={(nextValue) => {
-                  setPrompt(String(nextValue));
-                  setPolishedPromptEn("");
-                  setNegativePrompt("");
-                }}
-              />
-            </label>
-
-            <div className="td-option-row">
-              <div className="td-option-block td-option-block--wide">
-                <span>风格方向</span>
-                <Select
-                  value={selectedStyle}
-                  options={IMAGE_STYLE_CATEGORIES.map((style) => ({ label: style, value: style }))}
-                  onChange={(value) => setSelectedStyle(String(value) as ImageStyleCategory)}
-                />
-              </div>
-              <div className="td-option-block">
-                <span>画幅比例</span>
-                <Radio.Group value={ratio} theme="button" variant="default-filled" options={ratios.map((item) => ({ label: item, value: item }))} onChange={(value) => setRatio(value as typeof ratio)} />
-              </div>
-              <div className="td-option-block">
-                <span>质量</span>
-                <Radio.Group value={quality} theme="button" variant="default-filled" options={qualities.map((item) => ({ label: item.label, value: item.value }))} onChange={(value) => setQuality(value as typeof quality)} />
-              </div>
-              <div className="td-option-block">
-                <span>张数</span>
-                <Radio.Group value={imageCount} theme="button" variant="default-filled" options={imageCounts.map((item) => ({ label: `${item} 张`, value: item }))} onChange={(value) => setImageCount(Number(value) as typeof imageCount)} />
-              </div>
-            </div>
-
-            {polishedPromptEn || negativePrompt ? (
-              <div className="td-prompt-preview">
-                <div>
-                  <Tag theme="primary" variant="light">{polishProvider}</Tag>
-                  <strong>已回填整理结果</strong>
-                </div>
-                {polishedPromptEn ? <p>{polishedPromptEn}</p> : null}
-                {negativePrompt ? <small>避免：{negativePrompt}</small> : null}
-              </div>
-            ) : null}
-
-            {notice ? <Alert theme="success" message={notice} /> : null}
-            {error ? <Alert theme="error" message={error} /> : null}
-
-            <div className="td-composer-actions">
-              <Button type="button" variant="outline" loading={isPolishing} disabled={isGenerating} onClick={polishPrompt}>
-                {!isPolishing ? <Wand2 size={17} /> : null}
-                整理描述
-              </Button>
-              <Button type="button" theme="primary" loading={isGenerating} disabled={!canGenerate} onClick={startGeneration}>
-                {!isGenerating ? <Send size={17} /> : null}
-                开始生成
-              </Button>
-            </div>
-
-            {referenceImagesEnabled && referenceImages.length > 0 ? <p className="td-muted-line">参考图会保存到任务记录中。</p> : null}
-          </div>
-        </Card>
-      </section>
-    );
-  }
-
   return (
-    <section className={clsx("composer-panel", compact && "composer-panel-compact")}>
-      <div className="composer-head">
-        <div>
-          <span className="eyebrow">Create</span>
-          <h1>把一句描述整理成画面</h1>
-          <p>写下画面、选择比例和张数。需要时可以先整理文字，再提交生成。</p>
+    <section className="space-y-4 rounded-2xl border border-line bg-white p-5 shadow-card">
+      {/* 画面描述 */}
+      <div>
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <label htmlFor="generate-prompt" className="text-[17px] font-bold text-ink">
+            画面描述
+          </label>
+          <span className="text-xs text-ink-faint">字数不限，写清主体、场景与光线效果更好</span>
         </div>
-        <button className="icon-button" type="button" onClick={resetComposer} aria-label="重置">
-          <RotateCcw size={18} />
-        </button>
-      </div>
-
-      {referenceImagesEnabled ? (
-        <div
-          className={clsx("upload-card", isDragging && "ring-2 ring-slate-300")}
-          onDragOver={(event) => {
-            event.preventDefault();
-            setIsDragging(true);
-          }}
-          onDragLeave={() => setIsDragging(false)}
-          onDrop={onReferenceDrop}
-        >
-          <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" multiple className="hidden" onChange={onReferenceInputChange} />
-          <button type="button" onClick={() => fileInputRef.current?.click()} className="flex w-full flex-col items-center gap-2 text-center">
-            {isUploadingReference ? <Loader2 className="animate-spin" size={24} /> : <UploadCloud size={24} />}
-            <span>{isUploadingReference ? "参考图上传中" : "拖入参考图，或点击上传"}</span>
-            <small>PNG / JPG / WEBP，单张不超过 8MB，最多 4 张</small>
-          </button>
-        </div>
-      ) : !compact ? (
-        <div className="rounded-[24px] border border-amber-100 bg-amber-50/80 px-4 py-3 text-sm font-bold leading-6 text-amber-700">
-          当前正式版先开放文字生图，参考图生图暂未开放。
-        </div>
-      ) : null}
-
-      {referenceImages.length > 0 ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {referenceImages.map((image) => (
-            <div key={image.id} className="group relative overflow-hidden rounded-[18px] border border-slate-200 bg-white/85 shadow-card">
-              <img src={image.thumbnailUrl || image.url} alt="参考图" className="h-28 w-full object-cover" />
-              <button
-                type="button"
-                onClick={() => removeReferenceImage(image.id)}
-                className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-slate-950/70 text-white backdrop-blur"
-                aria-label="移除参考图"
-              >
-                <X size={14} />
-              </button>
-              <div className="p-2">
-                <p className="truncate text-xs font-black text-slate-700">{image.mimeType.replace("image/", "").toUpperCase()}</p>
-                <p className="mt-1 text-xs font-bold text-slate-400">{formatSize(image.fileSize)}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : null}
-
-      <label className="field-block">
-        <span>画面描述</span>
         <textarea
+          id="generate-prompt"
           value={prompt}
           onChange={(event) => {
             setPrompt(event.target.value);
@@ -581,48 +439,98 @@ export function GenerateComposer({
           }}
           placeholder="例如：雨夜街头的人像写真，浅景深，侧光，35mm 镜头，背景干净，真实皮肤质感。"
           rows={5}
+          className="mt-2.5 w-full resize-y rounded-xl border border-line bg-page/60 px-3.5 py-2.5 text-sm leading-6 text-ink outline-none transition placeholder:text-ink-faint focus:border-brand-400 focus:bg-white focus:ring-2 focus:ring-brand-100"
         />
-      </label>
+      </div>
 
-      <div className="option-group">
-        <span>风格方向</span>
-        <div className="chip-row">
+      {/* 参考图上传（当前未开放，代码保留） */}
+      {referenceImagesEnabled ? (
+        <div
+          className={clsx(
+            "rounded-xl border border-dashed px-4 py-6 transition",
+            isDragging ? "border-brand-400 bg-brand-50/60" : "border-line bg-page/60",
+          )}
+          onDragOver={(event) => {
+            event.preventDefault();
+            setIsDragging(true);
+          }}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={onReferenceDrop}
+        >
+          <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" multiple className="hidden" onChange={onReferenceInputChange} />
+          <button type="button" onClick={() => fileInputRef.current?.click()} className="flex w-full flex-col items-center gap-1.5 text-center">
+            {isUploadingReference ? <Loader2 className="animate-spin text-brand-500" size={22} /> : <UploadCloud size={22} className="text-brand-400" />}
+            <span className="text-sm font-semibold text-ink-secondary">{isUploadingReference ? "参考图上传中" : "拖入参考图，或点击上传"}</span>
+            <span className="text-xs text-ink-faint">PNG / JPG / WEBP，单张不超过 8MB，最多 4 张</span>
+          </button>
+        </div>
+      ) : !compact ? (
+        <div className="rounded-xl bg-amber-50 px-3.5 py-2.5 text-sm font-medium text-amber-600">当前正式版先开放文字生图，参考图生图暂未开放。</div>
+      ) : null}
+
+      {referenceImages.length > 0 ? (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {referenceImages.map((image) => (
+            <div key={image.id} className="relative overflow-hidden rounded-xl border border-line bg-white shadow-card">
+              <img src={image.thumbnailUrl || image.url} alt="参考图" className="h-24 w-full object-cover" />
+              <button
+                type="button"
+                onClick={() => removeReferenceImage(image.id)}
+                className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-slate-900/70 text-white transition hover:bg-slate-900"
+                aria-label="移除参考图"
+              >
+                <X size={12} />
+              </button>
+              <div className="px-2.5 py-1.5">
+                <p className="truncate text-xs font-semibold text-ink-secondary">{image.mimeType.replace("image/", "").toUpperCase()}</p>
+                <p className="mt-0.5 text-[11px] text-ink-faint">{formatSize(image.fileSize)}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {/* 风格方向 */}
+      <div>
+        <p className="text-[13px] font-semibold text-ink-secondary">风格方向</p>
+        <div className="mt-2 flex flex-wrap gap-2">
           {IMAGE_STYLE_CATEGORIES.map((style) => (
-            <button key={style} className={clsx("chip", selectedStyle === style && "active")} type="button" onClick={() => setSelectedStyle(style)}>
+            <button key={style} type="button" className={chipClass(selectedStyle === style)} onClick={() => setSelectedStyle(style)}>
               {style}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="option-grid">
-        <div className="option-group">
-          <span>画幅比例</span>
-          <div className="chip-row">
+      {/* 画幅比例 / 质量 / 张数 */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div>
+          <p className="text-[13px] font-semibold text-ink-secondary">画幅比例</p>
+          <div className="mt-2 flex flex-wrap gap-2">
             {ratios.map((item) => (
-              <button key={item} className={clsx("chip", ratio === item && "active")} type="button" onClick={() => setRatio(item)}>
+              <button key={item} type="button" className={chipClass(ratio === item)} onClick={() => setRatio(item)}>
                 {item}
               </button>
             ))}
           </div>
         </div>
 
-        <div className="option-group">
-          <span>质量</span>
-          <div className="chip-row">
+        <div>
+          <p className="text-[13px] font-semibold text-ink-secondary">质量</p>
+          <div className="mt-2 flex flex-wrap gap-2">
             {qualities.map((item) => (
-              <button key={item.value} className={clsx("chip", quality === item.value && "active")} type="button" onClick={() => setQuality(item.value)}>
+              <button key={item.value} type="button" className={chipClass(quality === item.value)} onClick={() => setQuality(item.value)}>
                 {item.label}
               </button>
             ))}
           </div>
         </div>
 
-        <div className="option-group">
-          <span>张数</span>
-          <div className="chip-row">
+        <div>
+          <p className="text-[13px] font-semibold text-ink-secondary">张数</p>
+          <div className="mt-2 flex flex-wrap gap-2">
             {imageCounts.map((item) => (
-              <button key={item} className={clsx("chip", imageCount === item && "active")} type="button" onClick={() => setImageCount(item)}>
+              <button key={item} type="button" className={chipClass(imageCount === item)} onClick={() => setImageCount(item)}>
                 {item} 张
               </button>
             ))}
@@ -630,32 +538,53 @@ export function GenerateComposer({
         </div>
       </div>
 
+      {/* 润色回填预览 */}
       {polishedPromptEn || negativePrompt ? (
-        <div className="prompt-preview">
-          <div>
-            <span>{polishProvider}</span>
-            <strong>已回填整理结果</strong>
+        <div className="space-y-2 rounded-xl border border-brand-100 bg-brand-50/60 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <span className="rounded-full bg-brand-500 px-2 py-0.5 text-[11px] font-bold text-white">{polishProvider}</span>
+            <span className="text-[13px] font-bold text-ink">已回填整理结果</span>
           </div>
-          {polishedPromptEn ? <p>{polishedPromptEn}</p> : null}
-          {negativePrompt ? <small>避免：{negativePrompt}</small> : null}
+          {polishedPromptEn ? <p className="break-words text-[13px] leading-5 text-ink-secondary">{polishedPromptEn}</p> : null}
+          {negativePrompt ? <p className="text-xs leading-5 text-ink-faint">避免：{negativePrompt}</p> : null}
         </div>
       ) : null}
 
-      {notice ? <div className="notice success">{notice}</div> : null}
-      {error ? <div className="notice error">{error}</div> : null}
+      {notice ? <div className="rounded-xl bg-emerald-50 px-3.5 py-2.5 text-sm font-medium text-emerald-600">{notice}</div> : null}
+      {error ? <div className="rounded-xl bg-rose-50 px-3.5 py-2.5 text-sm font-medium text-rose-500">{error}</div> : null}
 
-      <div className="composer-actions">
-        <button type="button" onClick={polishPrompt} disabled={isPolishing || isGenerating} className="secondary-action">
-          {isPolishing ? <Loader2 className="animate-spin" size={18} /> : <Wand2 size={18} />}
+      {/* 操作行 */}
+      <div className="flex items-center gap-2.5">
+        <button
+          type="button"
+          onClick={polishPrompt}
+          disabled={isPolishing || isGenerating}
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-line bg-white px-4 py-2.5 text-sm font-semibold text-ink-secondary transition hover:bg-page disabled:opacity-60"
+        >
+          {isPolishing ? <Loader2 className="animate-spin" size={16} /> : <Wand2 size={16} />}
           整理描述
         </button>
-        <button type="button" onClick={startGeneration} disabled={!canGenerate} className="primary-action">
-          {isGenerating ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
+        <button
+          type="button"
+          onClick={startGeneration}
+          disabled={!canGenerate}
+          className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-500 px-4 py-2.5 text-sm font-bold text-white shadow-chip transition hover:bg-brand-600 disabled:opacity-60"
+        >
+          {isGenerating ? <Loader2 className="animate-spin" size={16} /> : <Send size={16} />}
           开始生成
+        </button>
+        <button
+          type="button"
+          onClick={resetComposer}
+          aria-label="重置"
+          title="重置"
+          className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-xl border border-line bg-white text-ink-faint transition hover:bg-page hover:text-ink-secondary"
+        >
+          <RotateCcw size={16} />
         </button>
       </div>
 
-      {referenceImagesEnabled && referenceImages.length > 0 ? <p className="text-xs font-bold leading-6 text-slate-400">参考图会保存到任务记录中。</p> : null}
+      {referenceImagesEnabled && referenceImages.length > 0 ? <p className="text-xs leading-5 text-ink-faint">参考图会保存到任务记录中。</p> : null}
     </section>
   );
 }

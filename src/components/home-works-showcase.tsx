@@ -5,7 +5,6 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { Download, Search, X } from "lucide-react";
 import { CopyPromptButton } from "@/components/copy-prompt-button";
-import { AnimatedContent, MasonryShowcase, SpotlightCard } from "@/components/front/react-bits";
 import type { GalleryImageView } from "@/lib/gallery";
 import type { PromptCardData } from "@/lib/mock-data";
 import { hasChineseText, toPublicChineseTags, toPublicChineseText } from "@/lib/public-display";
@@ -21,7 +20,7 @@ type ShowcaseItem = {
   imageUrl?: string;
   thumbnailUrl?: string;
   gradient: string;
-  heightClass: string;
+  aspectClass: string;
   promptZh: string;
   authorName: string;
   createdAt?: string;
@@ -35,23 +34,27 @@ type GalleryResponse = {
 };
 
 const categoryGradient: Record<string, string> = {
-  写真: "from-slate-100 via-white to-slate-50",
-  商品: "from-blue-50 via-white to-slate-50",
-  角色: "from-slate-50 via-blue-50 to-white",
-  界面: "from-white via-slate-50 to-blue-50",
-  建筑: "from-slate-100 via-white to-blue-50",
-  插画: "from-blue-50 via-slate-50 to-white",
-  国风: "from-slate-50 via-white to-blue-50",
-  其他: "from-white via-slate-50 to-blue-50",
+  写真: "from-slate-200 via-slate-100 to-white",
+  商品: "from-brand-100 via-brand-50 to-white",
+  角色: "from-violet-100 via-violet-50 to-white",
+  界面: "from-cyan-100 via-cyan-50 to-white",
+  建筑: "from-stone-200 via-stone-100 to-white",
+  插画: "from-rose-100 via-rose-50 to-white",
+  国风: "from-emerald-100 via-emerald-50 to-white",
+  其他: "from-slate-100 via-white to-brand-50",
 };
 
-const ratioHeight: Record<string, string> = {
-  "1:1": "h-64",
-  "3:4": "h-80",
-  "4:3": "h-60",
-  "9:16": "h-96",
-  "16:9": "h-56",
+const ratioAspect: Record<string, string> = {
+  "1:1": "aspect-square",
+  "2:3": "aspect-[2/3]",
+  "3:4": "aspect-[3/4]",
+  "3:2": "aspect-[3/2]",
+  "4:3": "aspect-[4/3]",
+  "9:16": "aspect-[9/16]",
+  "16:9": "aspect-[16/9]",
 };
+
+const DEFAULT_ASPECT = "aspect-[3/4]";
 
 function normalizeCategory(value: string) {
   if (value === "鍐欑湡") return "写真";
@@ -60,7 +63,7 @@ function normalizeCategory(value: string) {
   if (value === "鐣岄潰") return "界面";
   if (value === "寤虹瓚") return "建筑";
   if (value === "鎻掔敾") return "插画";
-  if (value === "鍥介") return "国风";
+  if (value === "鍥介") return "国风";
   if (value === "鍏ㄩ儴") return "全部";
   return hasChineseText(value) ? value : "其他";
 }
@@ -79,7 +82,7 @@ function workToItem(work: GalleryImageView): ShowcaseItem {
     imageUrl: work.url,
     thumbnailUrl: work.thumbnailUrl || work.url,
     gradient: categoryGradient[category] || categoryGradient.其他,
-    heightClass: ratioHeight[work.ratio] || "h-64",
+    aspectClass: ratioAspect[work.ratio] || DEFAULT_ASPECT,
     promptZh: displayPrompt,
     authorName: toPublicChineseText([work.authorName], "创作者", 12),
     createdAt: work.publishedAt || work.createdAt,
@@ -98,8 +101,8 @@ function promptToItem(prompt: PromptCardData): ShowcaseItem {
     category,
     tags: toPublicChineseTags(prompt.tags, [category]),
     ratio: prompt.ratio,
-    gradient: categoryGradient[category] || prompt.gradient,
-    heightClass: prompt.heightClass,
+    gradient: categoryGradient[category] || categoryGradient.其他,
+    aspectClass: ratioAspect[prompt.ratio] || DEFAULT_ASPECT,
     promptZh: displayPrompt,
     authorName: toPublicChineseText([prompt.authorName], "造图台", 12),
     isFallback: true,
@@ -133,6 +136,7 @@ export function HomeWorksShowcase({
   initialWorks,
   fallbackPrompts,
   galleryError,
+  initialQuery = "",
   eyebrow = "作品",
   title = "作品展示",
   realDescription = "来自用户发布的公开作品。",
@@ -148,6 +152,7 @@ export function HomeWorksShowcase({
   initialWorks: GalleryImageView[];
   fallbackPrompts: PromptCardData[];
   galleryError?: string | null;
+  initialQuery?: string;
   eyebrow?: string;
   title?: string;
   realDescription?: string;
@@ -163,9 +168,9 @@ export function HomeWorksShowcase({
     () => Array.from(new Set(["全部", ...categories.map(normalizeCategory)])),
     [categories],
   );
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const deferredQuery = useDeferredValue(query);
-  const [requestQuery, setRequestQuery] = useState("");
+  const [requestQuery, setRequestQuery] = useState(initialQuery);
   const [category, setCategory] = useState("全部");
   const [works, setWorks] = useState(initialWorks);
   const [loading, setLoading] = useState(false);
@@ -177,6 +182,11 @@ export function HomeWorksShowcase({
   const usingFallback = allowFallbackSamples && !hasGalleryError && initialWorks.length === 0 && works.length === 0 && fallbackPrompts.length > 0;
   const visibleItems = usingFallback ? filterItems(fallbackItems, deferredQuery, category) : filterItems(realItems, deferredQuery, category);
   const isLibraryEmpty = !hasGalleryError && !usingFallback && realItems.length === 0 && !query.trim() && category === "全部";
+
+  useEffect(() => {
+    setQuery(initialQuery);
+    setRequestQuery(initialQuery);
+  }, [initialQuery]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setRequestQuery(query), 220);
@@ -224,155 +234,201 @@ export function HomeWorksShowcase({
 
   return (
     <>
-      <SpotlightCard className="p-4 md:p-5" spotlightColor="rgba(14, 116, 144, 0.16)">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">{eyebrow}</p>
-            <h2 className="mt-1 text-3xl font-black text-slate-950">{title}</h2>
-            <p className="mt-2 text-sm font-bold text-slate-500">{galleryError || (usingFallback ? fallbackDescription : realDescription)}</p>
+      <section className="rounded-2xl border border-line bg-white p-5 shadow-card" aria-label={eyebrow}>
+        <div className="min-w-0">
+          <h2 className="text-[17px] font-bold text-ink">{title}</h2>
+          <p className="mt-1 text-sm text-ink-faint">{galleryError || (usingFallback ? fallbackDescription : realDescription)}</p>
+        </div>
+
+        <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center">
+          <div className="no-scrollbar flex min-w-0 flex-1 gap-2 overflow-x-auto pb-0.5">
+            {normalizedCategories.map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => setCategory(item)}
+                className={`shrink-0 rounded-lg border px-3.5 py-2 text-[13px] font-semibold transition ${
+                  category === item
+                    ? "border-brand-500 bg-brand-500 text-white shadow-chip"
+                    : "border-line bg-white text-ink-secondary hover:border-brand-200 hover:bg-brand-50 hover:text-brand-600"
+                }`}
+              >
+                {item}
+              </button>
+            ))}
           </div>
-          <label className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 lg:max-w-md">
-            <Search className="h-4 w-4 shrink-0 text-slate-500" />
+
+          <label className="flex w-full items-center gap-2.5 rounded-xl border border-line bg-page/60 px-3.5 py-2.5 transition focus-within:border-brand-400 focus-within:bg-white focus-within:ring-2 focus-within:ring-brand-100 md:w-64 md:shrink-0">
+            <Search size={15} className="shrink-0 text-ink-faint" />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              className="w-full bg-transparent text-sm font-bold text-slate-700 outline-none placeholder:text-slate-400"
+              className="w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink-faint"
               placeholder="搜索风格、场景或用途"
             />
-            {loading ? <span className="h-2 w-2 rounded-full bg-[#254c73]" /> : null}
+            {loading ? <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-brand-500" /> : null}
           </label>
         </div>
-        <div className="mt-5 flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-          {normalizedCategories.map((item) => (
+      </section>
+
+      {visibleItems.length > 0 ? (
+        <div className="columns-2 gap-4 md:columns-3 xl:columns-4">
+          {visibleItems.map((item, index) => (
             <button
-              key={item}
+              key={item.id}
               type="button"
-              onClick={() => setCategory(item)}
-              className={`shrink-0 rounded-full border px-4 py-2 text-sm font-black transition ${category === item ? "border-slate-950 bg-slate-950 text-white shadow-card" : "border-slate-200 bg-white text-slate-600 hover:-translate-y-0.5 hover:text-slate-950"}`}
+              onClick={() => setSelectedItem(item)}
+              className="group relative mb-4 block w-full animate-float-in break-inside-avoid overflow-hidden rounded-2xl border border-line bg-white text-left shadow-card transition duration-300 hover:-translate-y-1 hover:shadow-pop"
+              style={{ animationDelay: `${Math.min(index * 40, 320)}ms` }}
             >
-              {item}
+              <span className={`relative block w-full overflow-hidden ${item.aspectClass}`}>
+                {item.thumbnailUrl || item.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={item.thumbnailUrl || item.imageUrl}
+                    alt={item.title}
+                    loading="lazy"
+                    className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
+                  />
+                ) : (
+                  <span className={`flex h-full w-full items-center justify-center bg-gradient-to-br ${item.gradient} p-4`}>
+                    <span className="text-4xl font-extrabold text-ink/10">{item.title.slice(0, 1)}</span>
+                  </span>
+                )}
+                <span className="pointer-events-none absolute inset-x-0 bottom-0 block bg-gradient-to-t from-slate-950/70 via-slate-950/25 to-transparent px-3.5 pb-3 pt-12">
+                  <span className="block truncate text-sm font-bold text-white">{item.title}</span>
+                  <span className="mt-0.5 block text-xs font-medium text-white/80">
+                    {item.category}
+                    {item.isFallback ? ` · ${fallbackBadgeLabel}` : ""}
+                  </span>
+                </span>
+              </span>
             </button>
           ))}
         </div>
-      </SpotlightCard>
-
-      {visibleItems.length > 0 ? (
-        <AnimatedContent>
-          <MasonryShowcase
-            items={visibleItems.map((item) => ({
-              id: item.id,
-              title: item.title,
-              summary: item.summary,
-              category: item.category,
-              ratio: item.ratio,
-              imageUrl: item.imageUrl,
-              thumbnailUrl: item.thumbnailUrl,
-              heightClass: item.heightClass,
-              isFallback: item.isFallback,
-            }))}
-            onSelect={(item) => {
-              const fullItem = visibleItems.find((visibleItem) => visibleItem.id === item.id);
-              if (fullItem) {
-                setSelectedItem(fullItem);
-              }
-            }}
-          />
-        </AnimatedContent>
       ) : (
-        <SpotlightCard className="p-8 text-center">
-          <p className="text-lg font-black text-slate-950">{galleryError ? "作品库暂时不可用" : isLibraryEmpty ? "暂无公开作品" : emptyTitle}</p>
-          <p className="mt-2 text-sm text-slate-500">
-            {galleryError ? "这里原本展示用户发布到首页广场的作品，数据库恢复后会自动显示。" : isLibraryEmpty ? "用户发布作品或后台添加运营精选后，这里会自动显示。" : emptyDescription}
+        <div className="rounded-2xl border border-line bg-white p-10 text-center shadow-card">
+          <p className="text-[17px] font-bold text-ink">
+            {galleryError ? "作品库暂时不可用" : isLibraryEmpty ? "暂无公开作品" : emptyTitle}
           </p>
-        </SpotlightCard>
+          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-ink-faint">
+            {galleryError
+              ? "这里原本展示用户发布到首页广场的作品，数据库恢复后会自动显示。"
+              : isLibraryEmpty
+                ? "用户发布作品或后台添加运营精选后，这里会自动显示。"
+                : emptyDescription}
+          </p>
+        </div>
       )}
 
       {selectedItem
         ? createPortal(
-            <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/18 p-3 backdrop-blur-[3px]" onClick={() => setSelectedItem(null)}>
+            <div
+              className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/40 p-3 backdrop-blur-[2px]"
+              role="dialog"
+              aria-modal="true"
+              aria-label={selectedItem.title}
+              onClick={() => setSelectedItem(null)}
+            >
               <div
-                className="relative grid max-h-[calc(100dvh-24px)] w-[min(980px,calc(100vw-24px))] overflow-hidden rounded-[28px] border border-white/80 bg-white shadow-app md:grid-cols-[1.25fr_.9fr]"
+                className="relative flex max-h-[calc(100dvh-24px)] w-[min(960px,calc(100vw-24px))] animate-float-in flex-col overflow-hidden rounded-2xl bg-white shadow-pop md:grid md:grid-cols-[1.15fr_0.85fr]"
                 onClick={(event) => event.stopPropagation()}
               >
-                <button type="button" onClick={() => setSelectedItem(null)} className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-slate-950/60 text-white backdrop-blur">
-                  <X className="h-4 w-4" />
+                <button
+                  type="button"
+                  onClick={() => setSelectedItem(null)}
+                  aria-label="关闭详情"
+                  className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-slate-950/55 text-white backdrop-blur transition hover:bg-slate-950/70"
+                >
+                  <X size={16} />
                 </button>
 
-                <div className="flex min-h-[420px] items-center justify-center bg-slate-50 p-0">
+                <div className="flex h-[38dvh] shrink-0 items-center justify-center overflow-hidden bg-page md:h-auto md:max-h-[calc(100dvh-24px)] md:min-h-[460px]">
                   {selectedItem.imageUrl ? (
-                    <img src={selectedItem.imageUrl} alt={selectedItem.title} className="h-full max-h-[calc(100dvh-24px)] w-full object-contain bg-slate-50" />
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={selectedItem.imageUrl} alt={selectedItem.title} className="h-full w-full object-contain" />
                   ) : (
-                    <div className={`h-full min-h-[420px] w-full bg-gradient-to-br ${selectedItem.gradient} p-6`}>
-                      <div className="flex h-full min-h-[420px] items-end rounded-[24px] border border-white/80 bg-white/54 p-6 shadow-inner backdrop-blur-sm">
-                        <div>
-                          <p className="text-sm font-black tracking-[0.18em] text-slate-400">预览</p>
-                          <h3 className="mt-2 text-4xl font-black tracking-[-0.05em] text-slate-950">{selectedItem.title}</h3>
-                        </div>
+                    <div className={`flex h-full w-full items-end bg-gradient-to-br ${selectedItem.gradient} p-6`}>
+                      <div>
+                        <p className="text-xs font-semibold text-ink-faint">预览</p>
+                        <h3 className="mt-1.5 text-2xl font-extrabold leading-tight text-ink">{selectedItem.title}</h3>
                       </div>
                     </div>
                   )}
                 </div>
 
-                <aside className="max-h-[calc(100dvh-24px)] space-y-4 overflow-y-auto p-5">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-[18px] bg-slate-100 text-sm font-black text-[#254c73]">
+                <aside className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5 md:max-h-[calc(100dvh-24px)]">
+                  <div className="flex items-center gap-3 pr-10">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-400 to-brand-600 text-sm font-bold text-white">
                       {selectedItem.authorName.slice(0, 1).toUpperCase()}
-                    </div>
-                    <div>
-                      <p className="font-black text-slate-950">{selectedItem.authorName}</p>
-                      <p className="text-xs font-bold text-slate-400">
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold text-ink">{selectedItem.authorName}</p>
+                      <p className="mt-0.5 text-xs text-ink-faint">
                         {selectedItem.isFallback ? fallbackTypeLabel : selectedItem.sourceType === "curated" ? "运营精选" : "公开作品"}
                       </p>
                     </div>
                   </div>
 
-                  <div className="rounded-[20px] border border-slate-200 bg-white p-4">
-                    <p className="text-sm font-black text-slate-950">作品详情</p>
-                    <h3 className="mt-2 text-2xl font-black leading-tight text-slate-950">{selectedItem.title}</h3>
-                    <p className="mt-3 text-sm leading-7 text-slate-500">{selectedItem.summary}</p>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      {selectedItem.tags.map((tag) => (
-                        <span key={tag} className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-black text-slate-500">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
+                  <div>
+                    <h3 className="text-xl font-bold leading-snug text-ink">{selectedItem.title}</h3>
+                    <p className="mt-2 text-sm leading-6 text-ink-secondary">{selectedItem.summary}</p>
+                    {selectedItem.tags.length > 0 ? (
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        {selectedItem.tags.map((tag) => (
+                          <span key={tag} className="rounded-full bg-page px-3 py-1 text-xs font-medium text-ink-secondary">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <Link href={`/generate?prompt=${encodeURIComponent(selectedItem.promptZh)}`} className="rounded-2xl bg-slate-950 px-4 py-3 text-center text-sm font-black text-white">
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <Link
+                      href={`/generate?prompt=${encodeURIComponent(selectedItem.promptZh)}`}
+                      className="rounded-xl bg-brand-500 px-4 py-2.5 text-center text-sm font-bold text-white shadow-chip transition hover:bg-brand-600"
+                    >
                       复用描述
                     </Link>
                     {selectedItem.imageUrl ? (
-                      <a href={selectedItem.imageUrl} download className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-600">
-                        <Download className="h-4 w-4" />
+                      <a
+                        href={selectedItem.imageUrl}
+                        download
+                        className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-line bg-white px-4 py-2.5 text-sm font-semibold text-ink-secondary transition hover:bg-page"
+                      >
+                        <Download size={15} />
                         下载
                       </a>
                     ) : (
-                      <button type="button" className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-500">
+                      <span className="inline-flex cursor-default items-center justify-center rounded-xl border border-line bg-white px-4 py-2.5 text-sm font-semibold text-ink-faint">
                         作为参考
-                      </button>
+                      </span>
                     )}
                   </div>
 
-                  <div className="rounded-[20px] border border-slate-200 bg-slate-50 p-4">
-                    <div className="mb-3 flex items-center justify-between">
-                      <p className="text-sm font-black text-slate-950">提示词</p>
-                      <CopyPromptButton text={selectedItem.promptZh} label="复制" className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-black text-slate-600" />
+                  <div className="rounded-xl border border-line bg-page/60 p-4">
+                    <div className="mb-2.5 flex items-center justify-between">
+                      <p className="text-sm font-bold text-ink">提示词</p>
+                      <CopyPromptButton
+                        text={selectedItem.promptZh}
+                        label="复制"
+                        className="inline-flex items-center gap-1 rounded-lg border border-line bg-white px-2.5 py-1.5 text-xs font-semibold text-ink-secondary transition hover:bg-page"
+                      />
                     </div>
-                    <p className="text-sm leading-7 text-slate-600">{selectedItem.promptZh}</p>
+                    <p className="text-sm leading-6 text-ink-secondary">{selectedItem.promptZh}</p>
                   </div>
 
-                  <div className="space-y-2 rounded-[20px] border border-slate-200 bg-white p-4">
+                  <div className="space-y-1.5">
                     {[
                       ["类别", selectedItem.category],
                       ["画幅比例", selectedItem.ratio],
                       ["来源", selectedItem.isFallback ? fallbackSourceLabel : selectedItem.sourceType === "curated" ? "运营精选" : "真实生成"],
                       ["时间", selectedItem.isFallback ? "示例数据" : formatDate(selectedItem.createdAt)],
                     ].map(([label, value]) => (
-                      <div key={label} className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold">
-                        <span className="text-slate-400">{label}</span>
-                        <span className="text-slate-700">{value}</span>
+                      <div key={label} className="flex items-center justify-between rounded-xl bg-page px-3.5 py-2 text-xs">
+                        <span className="font-medium text-ink-faint">{label}</span>
+                        <span className="font-semibold text-ink-secondary">{value}</span>
                       </div>
                     ))}
                   </div>
@@ -383,7 +439,7 @@ export function HomeWorksShowcase({
                       setCategory(selectedItem.category);
                       setSelectedItem(null);
                     }}
-                    className="inline-flex w-full items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-600"
+                    className="inline-flex w-full items-center justify-center rounded-xl border border-line bg-white px-4 py-2.5 text-sm font-semibold text-ink-secondary transition hover:bg-page"
                   >
                     查看同类作品
                   </button>
