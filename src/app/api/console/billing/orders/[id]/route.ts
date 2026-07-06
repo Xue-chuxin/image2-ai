@@ -1,3 +1,4 @@
+import { getAppErrorMessage } from "@/lib/app-error";
 import { consoleError, consoleOk, getConsoleSession } from "@/app/api/console/_lib/envelope";
 import { prisma } from "@/lib/db";
 import { syncRechargeOrderFromProviderForUser } from "@/lib/payment-sync";
@@ -65,6 +66,6 @@ export async function GET(request: Request, context: RouteContext) {
       totalCredits: order.credits + order.bonusCredits,
     });
   } catch (error) {
-    return consoleError(error instanceof Error ? error.message : "读取充值订单失败。", 500);
+    return consoleError(getAppErrorMessage(error, "读取充值订单失败。"), 500);
   }
 }

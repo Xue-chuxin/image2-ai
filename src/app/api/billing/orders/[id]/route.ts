@@ -1,3 +1,4 @@
+import { getAppErrorMessage } from "@/lib/app-error";
 import { NextResponse } from "next/server";
 
 import { getUserSession } from "@/lib/auth";
@@ -83,7 +84,7 @@ export async function GET(request: Request, context: RouteContext) {
     return NextResponse.json(
       {
         ok: false,
-        error: error instanceof Error ? error.message : "读取充值订单失败。",
+        error: getAppErrorMessage(error, "读取充值订单失败。"),
       },
       {
         status: 500,

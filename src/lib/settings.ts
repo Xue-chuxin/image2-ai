@@ -803,7 +803,7 @@ function toMap(rows: SettingRow[]) {
 
 async function upsertSettings(settings: SettingWrite[]) {
   if (!process.env.DATABASE_URL) {
-    throw new Error("缺少 DATABASE_URL，无法保存后台配置。");
+    throw new AppError("PROVIDER_CONFIG", "缺少 DATABASE_URL，无法保存后台配置。", 500);
   }
 
   const { Prisma } = await import("@prisma/client");

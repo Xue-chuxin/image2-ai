@@ -150,6 +150,25 @@ export async function getAdminHealthReport(originValue?: string | null): Promise
     }),
   );
 
+  if (storageConfig.provider === "local") {
+    const paymentsDir = path.join(storageConfig.localBaseDir, storageConfig.uploadsPrefix, "payments");
+    const publicDir = path.resolve(process.cwd(), "public");
+    const localBaseResolved = path.resolve(storageConfig.localBaseDir);
+    const insidePublic =
+      localBaseResolved === publicDir || localBaseResolved.startsWith(`${publicDir}${path.sep}`);
+    const paymentsHasFiles = existsSync(paymentsDir);
+    if (insidePublic && paymentsHasFiles) {
+      items.push(
+        makeItem({
+          id: "payment-proof-exposure",
+          label: "支付凭证保护",
+          status: "error",
+          description: `存储目录位于 public/ 内且存在支付凭证目录（${paymentsDir}），静态服务会绕过鉴权直接暴露凭证文件。建议把 STORAGE_LOCAL_BASE_DIR 移出 public/，或删除历史遗留的凭证文件。`,
+        }),
+      );
+    }
+  }
+
   const appSettings = await getPublicAppSettings();
   const moderation = await getModerationRuntimeConfig();
   const openAIChannels = await getOpenAICompatibleChannelSettings();

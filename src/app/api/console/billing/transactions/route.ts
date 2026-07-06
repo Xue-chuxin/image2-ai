@@ -1,3 +1,4 @@
+import { getAppErrorMessage } from "@/lib/app-error";
 import { consoleError, consoleOk, getConsoleSession } from "@/app/api/console/_lib/envelope";
 import { listUserCreditTransactions } from "@/lib/credits";
 
@@ -16,6 +17,6 @@ export async function GET(request: Request) {
     const transactions = await listUserCreditTransactions(session.userId, limit);
     return consoleOk(transactions);
   } catch (error) {
-    return consoleError(error instanceof Error ? error.message : "读取积分流水失败。", 500);
+    return consoleError(getAppErrorMessage(error, "读取积分流水失败。"), 500);
   }
 }

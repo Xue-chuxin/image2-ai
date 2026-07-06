@@ -1,3 +1,4 @@
+import { getAppErrorMessage } from "@/lib/app-error";
 import { NextResponse } from "next/server";
 
 import { getUserSession } from "@/lib/auth";
@@ -56,7 +57,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         ok: false,
-        error: error instanceof Error ? error.message : "上传参考图失败",
+        error: getAppErrorMessage(error, "上传参考图失败"),
       },
       {
         status: 400,

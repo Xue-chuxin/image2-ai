@@ -117,9 +117,13 @@ export async function spendReservedCreditsForJob(userId: string, amount: number,
   }
 
   await prisma.$transaction(async (tx) => {
-    await tx.creditAccount.update({
+    // 条件更新：仅当冻结额足够时才扣减，防止重复结算把 frozen 减成负数。
+    const updated = await tx.creditAccount.updateMany({
       where: {
         userId,
+        frozen: {
+          gte: amount,
+        },
       },
       data: {
         frozen: {
@@ -127,6 +131,12 @@ export async function spendReservedCreditsForJob(userId: string, amount: number,
         },
       },
     });
+
+    if (updated.count === 0) {
+      // 冻结额不足，通常意味着该任务已被结算过。幂等跳过，不再写流水以免污染台账。
+      console.error(`[credits] spend 冻结不足，疑似重复结算：user=${userId} job=${jobId} amount=${amount}`);
+      return;
+    }
 
     const account = await tx.creditAccount.findUniqueOrThrow({
       where: {
@@ -153,9 +163,13 @@ export async function refundReservedCreditsForJob(userId: string, amount: number
   }
 
   await prisma.$transaction(async (tx) => {
-    await tx.creditAccount.update({
+    // 条件更新：仅当冻结额足够时才返还，防止重复退款把 frozen 减成负数、available 双倍返还。
+    const updated = await tx.creditAccount.updateMany({
       where: {
         userId,
+        frozen: {
+          gte: amount,
+        },
       },
       data: {
         available: {
@@ -166,6 +180,11 @@ export async function refundReservedCreditsForJob(userId: string, amount: number
         },
       },
     });
+
+    if (updated.count === 0) {
+      console.error(`[credits] refund 冻结不足，疑似重复退款：user=${userId} job=${jobId} amount=${amount}`);
+      return;
+    }
 
     const account = await tx.creditAccount.findUniqueOrThrow({
       where: {

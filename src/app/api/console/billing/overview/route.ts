@@ -1,3 +1,4 @@
+import { getAppErrorMessage } from "@/lib/app-error";
 import { consoleError, consoleOk, getConsoleSession } from "@/app/api/console/_lib/envelope";
 import { getUserBillingOverview } from "@/lib/billing";
 import { syncPendingRechargeOrdersFromProviderForUser, syncRechargeOrdersFromProviderForUser } from "@/lib/payment-sync";
@@ -39,6 +40,6 @@ export async function GET(request: Request) {
 
     return consoleOk(overview);
   } catch (error) {
-    return consoleError(error instanceof Error ? error.message : "读取账户概览失败。", 500);
+    return consoleError(getAppErrorMessage(error, "读取账户概览失败。"), 500);
   }
 }

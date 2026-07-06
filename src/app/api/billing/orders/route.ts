@@ -1,3 +1,4 @@
+import { getAppErrorMessage } from "@/lib/app-error";
 import { NextResponse } from "next/server";
 
 import { getUserSession } from "@/lib/auth";
@@ -43,7 +44,7 @@ export async function GET() {
     return NextResponse.json(
       {
         ok: false,
-        error: error instanceof Error ? error.message : "读取充值订单失败",
+        error: getAppErrorMessage(error, "读取充值订单失败"),
       },
       {
         status: 500,
@@ -98,7 +99,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         ok: false,
-        error: error instanceof Error ? error.message : "创建充值订单失败",
+        error: getAppErrorMessage(error, "创建充值订单失败"),
       },
       {
         status: 400,

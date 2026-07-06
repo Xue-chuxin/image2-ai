@@ -344,15 +344,28 @@ async function findAdminGenerationJob(jobId: string) {
 }
 
 async function failGenerationJob(jobId: string, userId: string, creditCost: number, error: unknown) {
-  await refundReservedCreditsForJob(userId, creditCost, jobId).catch(() => null);
-
-  const failedJob = await prisma.generationJob.update({
+  // 状态守卫：仅当任务仍处于活跃态时才翻转为 FAILED，避免 stale 回收与真实失败并发时
+  // 对同一任务重复退款（配合 credits 的 frozen 下限保护形成双保险）。
+  const transitioned = await prisma.generationJob.updateMany({
     where: {
       id: jobId,
+      status: {
+        in: [...ACTIVE_GENERATION_STATUSES],
+      },
     },
     data: {
       status: "FAILED",
       errorMessage: getErrorMessage(error),
+    },
+  });
+
+  if (transitioned.count > 0) {
+    await refundReservedCreditsForJob(userId, creditCost, jobId).catch(() => null);
+  }
+
+  const failedJob = await prisma.generationJob.findUniqueOrThrow({
+    where: {
+      id: jobId,
     },
     include: generationJobInclude,
   });

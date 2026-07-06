@@ -1,3 +1,4 @@
+import { getAppErrorMessage } from "@/lib/app-error";
 import { consoleError, consoleOk, getConsoleSession } from "@/app/api/console/_lib/envelope";
 import { createRechargeOrder } from "@/lib/billing";
 import { scheduleRechargeOrderAutoSync } from "@/lib/payment-sync";
@@ -40,6 +41,6 @@ export async function POST(request: Request) {
     }
     return consoleOk(order);
   } catch (error) {
-    return consoleError(error instanceof Error ? error.message : "创建充值订单失败。", 400);
+    return consoleError(getAppErrorMessage(error, "创建充值订单失败。"), 400);
   }
 }

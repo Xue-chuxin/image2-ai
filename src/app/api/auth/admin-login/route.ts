@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jsonError } from "@/lib/app-error";
 import { ensureInitialAdmin, findAdminByEmail, markAdminLoggedIn, setAdminSessionCookie, verifyPassword } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 
@@ -37,9 +38,7 @@ export async function POST(request: Request) {
     setAdminSessionCookie(response, { id: user.id, email: user.email }, request);
     return response;
   } catch (error) {
-    return NextResponse.json(
-      { ok: false, error: error instanceof Error ? error.message : "登录失败，请检查数据库和管理员配置。" },
-      { status: 500 }
-    );
+    // AppError（如管理员初始化的配置提示）会透传文案，其余异常返回通用文案 + 记日志。
+    return jsonError(error, "登录失败，请检查数据库和管理员配置。");
   }
 }

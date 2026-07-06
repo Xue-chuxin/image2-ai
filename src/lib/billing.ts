@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "crypto";
 import type { RechargeOrderStatus } from "@prisma/client";
 
+import { AppError } from "@/lib/app-error";
 import { prisma } from "@/lib/db";
 import { getUserCreditBalance } from "@/lib/credits";
 import {
@@ -243,15 +244,15 @@ export async function upsertCreditPackage(input: {
   const priceCents = Math.floor(Number(input.priceCents));
 
   if (!name) {
-    throw new Error("请输入套餐名称。");
+    throw new AppError("BAD_REQUEST", "请输入套餐名称。", 400);
   }
 
   if (!Number.isFinite(credits) || credits <= 0) {
-    throw new Error("套餐积分必须大于 0。");
+    throw new AppError("BAD_REQUEST", "套餐积分必须大于 0。", 400);
   }
 
   if (!Number.isFinite(priceCents) || priceCents <= 0) {
-    throw new Error("套餐价格必须大于 0。");
+    throw new AppError("BAD_REQUEST", "套餐价格必须大于 0。", 400);
   }
 
   const data = {
@@ -284,7 +285,7 @@ export async function createRechargeOrder(userId: string, packageId: string, pro
 
   const channels = await listPublicPaymentChannels();
   if (!channels.some((channel) => channel.provider === provider)) {
-    throw new Error("该支付渠道未启用或尚未配置完整。");
+    throw new AppError("BAD_REQUEST", "该支付渠道未启用或尚未配置完整。", 400);
   }
 
   const pkg = await prisma.creditPackage.findFirst({
@@ -295,7 +296,7 @@ export async function createRechargeOrder(userId: string, packageId: string, pro
   });
 
   if (!pkg) {
-    throw new Error("套餐不存在或已下架。");
+    throw new AppError("NOT_FOUND", "套餐不存在或已下架。", 404);
   }
 
   const order = await prisma.rechargeOrder.create({
@@ -536,23 +537,34 @@ export async function markRechargeOrderPaidByPayment(input: {
   });
 
   if (!order) {
-    throw new Error("订单不存在。");
+    throw new AppError("NOT_FOUND", "订单不存在。", 404);
   }
 
   if (order.status === "PAID") {
     return serializeOrder(order);
   }
 
-  if (order.status !== "PENDING") {
-    throw new Error("订单不是待支付状态。");
+  if (order.status === "CANCELED") {
+    // 用户已主动取消却又收到成功支付：不自动入账（避免与退款流程冲突），
+    // 抛错让调用方（notify / payment-sync）落一条支付诊断事件，由管理员人工核对退款或补发。
+    throw new AppError(
+      "CONFLICT",
+      `订单 ${order.orderNo} 已被用户取消，但收到成功支付，请在支付事件中人工核对并退款或补发积分。`,
+      409,
+    );
+  }
+
+  // 允许 PENDING 或 EXPIRED（超时过期）入账——迟到支付不能"钱付了积分不发"。
+  if (order.status !== "PENDING" && order.status !== "EXPIRED") {
+    throw new AppError("CONFLICT", "订单不是待支付状态。", 409);
   }
 
   if (order.amountCents !== input.amountCents) {
-    throw new Error("支付金额与订单金额不一致。");
+    throw new AppError("BAD_REQUEST", "支付金额与订单金额不一致。", 400);
   }
 
   if (input.currency && order.currency !== input.currency) {
-    throw new Error("支付币种与订单币种不一致。");
+    throw new AppError("BAD_REQUEST", "支付币种与订单币种不一致。", 400);
   }
 
   const totalCredits = order.credits + order.bonusCredits;
@@ -561,7 +573,9 @@ export async function markRechargeOrderPaidByPayment(input: {
     const updatedOrder = await tx.rechargeOrder.updateMany({
       where: {
         id: order.id,
-        status: "PENDING",
+        status: {
+          in: ["PENDING", "EXPIRED"],
+        },
       },
       data: {
         status: "PAID",
@@ -640,6 +654,18 @@ export async function markRechargeOrderPaidByPayment(input: {
 }
 
 export async function cancelRechargeOrderForUser(userId: string, orderId: string) {
+  // 原子取消：只翻转仍为 PENDING 的订单，避免与支付回调竞态时把刚 PAID 的订单误改为 CANCELED。
+  const result = await prisma.rechargeOrder.updateMany({
+    where: {
+      id: orderId,
+      userId,
+      status: "PENDING",
+    },
+    data: {
+      status: "CANCELED",
+    },
+  });
+
   const order = await prisma.rechargeOrder.findFirst({
     where: {
       id: orderId,
@@ -655,28 +681,18 @@ export async function cancelRechargeOrderForUser(userId: string, orderId: string
   });
 
   if (!order) {
-    throw new Error("订单不存在。");
+    throw new AppError("NOT_FOUND", "订单不存在。", 404);
   }
 
-  if (order.status !== "PENDING") {
-    throw new Error("只有待支付订单可以取消。");
+  if (result.count === 0) {
+    if (order.status === "CANCELED") {
+      return serializeOrder(order); // 幂等：已取消
+    }
+    if (order.status === "PAID") {
+      throw new AppError("CONFLICT", "订单已支付成功，积分已到账，无法取消。", 409);
+    }
+    throw new AppError("CONFLICT", "只有待支付订单可以取消。", 409);
   }
 
-  const updated = await prisma.rechargeOrder.update({
-    where: {
-      id: orderId,
-    },
-    data: {
-      status: "CANCELED",
-    },
-    include: {
-      user: {
-        select: {
-          email: true,
-        },
-      },
-    },
-  });
-
-  return serializeOrder(updated);
+  return serializeOrder(order);
 }

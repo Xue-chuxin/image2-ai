@@ -1,3 +1,4 @@
+import { getAppErrorMessage } from "@/lib/app-error";
 import { NextResponse } from "next/server";
 
 import { getAdminSession } from "@/lib/auth";
@@ -28,7 +29,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json(
       {
         ok: false,
-        error: error instanceof Error ? error.message : "下架运营精选失败",
+        error: getAppErrorMessage(error, "下架运营精选失败"),
       },
       {
         status: 400,
@@ -55,7 +56,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
     return NextResponse.json(
       {
         ok: false,
-        error: error instanceof Error ? error.message : "删除运营精选失败",
+        error: getAppErrorMessage(error, "删除运营精选失败"),
       },
       {
         status: 400,

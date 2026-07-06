@@ -42,7 +42,7 @@ function createId(prefix: string) {
 function getAuthSecret() {
   const secret = process.env.AUTH_SECRET || "";
   if (process.env.NODE_ENV === "production" && !isUsableSecret(secret)) {
-    throw new Error("AUTH_SECRET 缺失或仍为示例值，生产环境必须配置至少 32 位随机密钥。");
+    throw new AppError("PROVIDER_CONFIG", "AUTH_SECRET 缺失或仍为示例值，生产环境必须配置至少 32 位随机密钥。", 500);
   }
 
   return secret || "change-me";
@@ -50,7 +50,7 @@ function getAuthSecret() {
 
 function assertDatabaseConfigured() {
   if (!process.env.DATABASE_URL) {
-    throw new Error("缺少 DATABASE_URL，无法使用登录和用户系统。请先配置数据库连接并同步 Prisma schema。");
+    throw new AppError("PROVIDER_CONFIG", "缺少 DATABASE_URL，无法使用登录和用户系统。请先配置数据库连接并同步 Prisma schema。", 500);
   }
 }
 
@@ -251,7 +251,7 @@ export async function ensureInitialAdmin() {
     }
 
     if (process.env.NODE_ENV === "production") {
-      throw new Error("ADMIN_EMAIL 或 ADMIN_PASSWORD 缺失或仍为示例值，生产环境不能初始化默认管理员。");
+      throw new AppError("PROVIDER_CONFIG", "ADMIN_EMAIL 或 ADMIN_PASSWORD 缺失或仍为示例值，生产环境不能初始化默认管理员。", 500);
     }
     return;
   }
@@ -264,17 +264,36 @@ export async function ensureInitialAdmin() {
   });
 
   if (existingUser) {
-    if (existingUser.role !== "ADMIN" || !existingUser.passwordHash) {
-      await prisma.user.update({
-        where: {
-          id: existingUser.id,
-        },
-        data: {
-          role: "ADMIN",
-          passwordHash,
-        },
-      });
+    if (existingUser.role === "ADMIN") {
+      // 已是管理员：只补齐缺失的密码，不覆盖已有密码。
+      if (!existingUser.passwordHash) {
+        await prisma.user.update({
+          where: { id: existingUser.id },
+          data: { passwordHash },
+        });
+      }
+      return;
     }
+
+    if (existingUser.passwordHash) {
+      // 安全：ADMIN_EMAIL 指向一个已注册的普通用户，绝不静默提权 + 覆盖其密码。
+      const adminCount = await prisma.user.count({ where: { role: "ADMIN" } });
+      if (adminCount > 0) {
+        console.error(`[ensureInitialAdmin] ADMIN_EMAIL 指向已注册普通用户 ${email}，已跳过自动提权。`);
+        return;
+      }
+      throw new AppError(
+        "PROVIDER_CONFIG",
+        "ADMIN_EMAIL 指向一个已注册的普通用户，且系统中没有任何管理员。请更换 ADMIN_EMAIL，或手动在数据库中将该账号提升为管理员。",
+        500,
+      );
+    }
+
+    // 无密码占位账号：允许认领并提权（密码来自运维掌控的 ADMIN_PASSWORD，安全）。
+    await prisma.user.update({
+      where: { id: existingUser.id },
+      data: { role: "ADMIN", passwordHash },
+    });
     return;
   }
 
@@ -400,25 +419,12 @@ export async function loginOrCreateUser(
     }
 
     if (!existingUser.passwordHash) {
-      const passwordHash = hashPassword(password);
-      const user = await prisma.user.update({
-        where: {
-          id: existingUser.id,
-        },
-        data: {
-          passwordHash,
-          lastLoginAt: new Date(),
-          creditAccount: existingUser.creditAccount
-            ? undefined
-            : {
-                create: {
-                  available: 0,
-                  frozen: 0,
-                },
-              },
-        },
-      });
-      return user;
+      // 安全：不允许用任意密码"认领"没有设过密码的既有账号（否则知道邮箱即可接管）。
+      throw new AppError(
+        "FORBIDDEN",
+        "该账号尚未设置密码，暂不支持密码登录。请通过忘记密码流程设置密码，或联系管理员在后台为你设置密码。",
+        403,
+      );
     }
 
     if (!verifyPassword(password, existingUser.passwordHash)) {

@@ -3,6 +3,7 @@ import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import sharp from "sharp";
 
+import { AppError } from "@/lib/app-error";
 import { getStorageRuntimeConfig, type StorageProviderName, type StorageRuntimeConfig } from "@/lib/settings";
 
 export type StoredImage = {
@@ -94,7 +95,7 @@ function createGeneratedFilename(ownerId: string, requestedFilename: string | un
 
 function assertLocalStorage(config: StorageRuntimeConfig) {
   if (config.provider !== "local") {
-    throw new Error(`当前版本仅实现 local 存储，${config.provider} 已预留配置但尚未接入对象存储 SDK。`);
+    throw new AppError("PROVIDER_CONFIG", `当前版本仅实现 local 存储，${config.provider} 已预留配置但尚未接入对象存储 SDK。`, 500);
   }
 }
 
@@ -171,7 +172,7 @@ export function createStorageService(config: StorageRuntimeConfig): StorageServi
   return {
     provider: config.provider,
     async save() {
-      throw new Error(`当前版本仅实现 local 存储，${config.provider} 已预留配置但尚未接入对象存储 SDK。`);
+      throw new AppError("PROVIDER_CONFIG", `当前版本仅实现 local 存储，${config.provider} 已预留配置但尚未接入对象存储 SDK。`, 500);
     },
   };
 }
@@ -184,12 +185,13 @@ export async function saveGeneratedImage(jobId: string, index: number, buffer: B
   const service = await getStorageService();
   const extension = extensionFromMime(mimeType);
 
+  // 文件名加随机段：任务重试不再同名覆盖旧文件，URL 变为内容不可变，可安全长缓存（见 storage 回源路由）。
   return service.save({
     namespace: "generated",
     ownerId: jobId,
     buffer,
     mimeType,
-    filename: `${sanitizeSegment(jobId)}-${index + 1}.${extension}`,
+    filename: `${sanitizeSegment(jobId)}-${index + 1}-${randomBytes(4).toString("hex")}.${extension}`,
   });
 }
 

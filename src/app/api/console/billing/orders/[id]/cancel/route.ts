@@ -1,3 +1,4 @@
+import { getAppErrorMessage } from "@/lib/app-error";
 import { consoleError, consoleOk, getConsoleSession } from "@/app/api/console/_lib/envelope";
 import { cancelRechargeOrderForUser } from "@/lib/billing";
 
@@ -21,6 +22,6 @@ export async function POST(_request: Request, context: RouteContext) {
     const order = await cancelRechargeOrderForUser(session.userId, id);
     return consoleOk(order);
   } catch (error) {
-    return consoleError(error instanceof Error ? error.message : "取消订单失败。", 400);
+    return consoleError(getAppErrorMessage(error, "取消订单失败。"), 400);
   }
 }
