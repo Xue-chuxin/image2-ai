@@ -25,14 +25,14 @@ const features: FeatureCard[] = [
     name: "一键生成变体",
     description: "对满意的结果快速衍生多个风格变体，挑选最佳。",
     icon: Layers,
-    iconClass: "bg-emerald-50 text-emerald-600",
+    iconClass: "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-300",
   },
 ];
 
 export default function AssistantPage() {
   return (
     <main className="mx-auto w-full max-w-[1200px] space-y-5">
-      <div className="rounded-2xl border border-line bg-white px-5 py-14 text-center shadow-card md:py-20">
+      <div className="rounded-2xl border border-line bg-panel px-5 py-14 text-center shadow-card md:py-20">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-400 to-brand-600 text-white shadow-chip">
           <Bot size={28} />
         </div>
@@ -55,12 +55,12 @@ export default function AssistantPage() {
         {features.map((feature) => {
           const Icon = feature.icon;
           return (
-            <div key={feature.name} className="rounded-2xl border border-line bg-white p-5 shadow-card">
+            <div key={feature.name} className="rounded-2xl border border-line bg-panel p-5 shadow-card">
               <div className="flex items-center gap-3">
                 <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${feature.iconClass}`}>
                   <Icon size={19} />
                 </span>
-                <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-600">规划中</span>
+                <span className="rounded-full bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-300">规划中</span>
               </div>
               <h3 className="mt-3.5 text-[15px] font-bold text-ink">{feature.name}</h3>
               <p className="mt-1.5 text-[13px] leading-5 text-ink-secondary">{feature.description}</p>

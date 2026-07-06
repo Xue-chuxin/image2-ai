@@ -64,10 +64,10 @@ function buttonClass(tone: "primary" | "secondary" | "danger" = "secondary") {
   }
 
   if (tone === "danger") {
-    return "inline-flex items-center justify-center gap-1.5 rounded-xl border border-rose-100 bg-rose-50 px-3.5 py-2 text-[13px] font-semibold text-rose-500 transition hover:bg-rose-100 disabled:opacity-60";
+    return "inline-flex items-center justify-center gap-1.5 rounded-xl border border-rose-100 dark:border-rose-500/20 bg-rose-50 dark:bg-rose-500/10 px-3.5 py-2 text-[13px] font-semibold text-rose-500 dark:text-rose-300 transition hover:bg-rose-100 disabled:opacity-60";
   }
 
-  return "inline-flex items-center justify-center gap-1.5 rounded-xl border border-line bg-white px-3.5 py-2 text-[13px] font-semibold text-ink-secondary transition hover:bg-page disabled:opacity-60";
+  return "inline-flex items-center justify-center gap-1.5 rounded-xl border border-line bg-panel px-3.5 py-2 text-[13px] font-semibold text-ink-secondary transition hover:bg-page disabled:opacity-60";
 }
 
 function formatSize(bytes?: number | null) {
@@ -203,7 +203,7 @@ export function HistoryJobActions(props: HistoryJobActionsProps) {
                 href={image.url}
                 target="_blank"
                 rel="noreferrer"
-                className="overflow-hidden rounded-lg border border-line bg-white transition hover:border-brand-300"
+                className="overflow-hidden rounded-lg border border-line bg-panel transition hover:border-brand-300"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={image.thumbnailUrl || image.url} alt="参考图" className="h-20 w-full object-cover" />
@@ -244,7 +244,7 @@ export function HistoryJobActions(props: HistoryJobActionsProps) {
                     <p className="text-xs font-medium text-ink-faint">图片 ID</p>
                     <p className="mt-0.5 truncate text-[13px] font-semibold text-ink-secondary">{image.id}</p>
                     {disabledByTakeDown ? (
-                      <p className="mt-1 text-xs font-semibold text-rose-500">已被后台下架：{image.takenDownReason || "管理员下架"}</p>
+                      <p className="mt-1 text-xs font-semibold text-rose-500 dark:text-rose-300">已被后台下架：{image.takenDownReason || "管理员下架"}</p>
                     ) : null}
                   </div>
                   <div className="flex flex-wrap gap-1.5">

@@ -41,7 +41,7 @@ const tools: ToolCard[] = [
     description: "自动识别商品主体并抠出透明底，支持批量处理。",
     category: "图片处理",
     gradient: "from-emerald-50 via-white to-teal-50",
-    accent: "text-emerald-600",
+    accent: "text-emerald-600 dark:text-emerald-300",
   },
   {
     name: "生图修图",
@@ -57,7 +57,7 @@ const tools: ToolCard[] = [
     description: "按平台规范生成电商主图，自动搭配背景与光影。",
     category: "电商设计",
     gradient: "from-amber-50 via-white to-orange-50",
-    accent: "text-amber-600",
+    accent: "text-amber-600 dark:text-amber-300",
   },
   {
     name: "图文编辑",
@@ -65,7 +65,7 @@ const tools: ToolCard[] = [
     description: "在生成图上叠加标题与卖点文字，直接输出成品海报。",
     category: "电商设计",
     gradient: "from-rose-50 via-white to-pink-50",
-    accent: "text-rose-500",
+    accent: "text-rose-500 dark:text-rose-300",
   },
   {
     name: "SKU 换色",
@@ -91,9 +91,9 @@ export default function ToolsPage() {
 
   return (
     <main className="mx-auto w-full max-w-[1200px] space-y-5">
-      <div className="flex flex-col gap-3 rounded-2xl border border-line bg-white p-5 shadow-card sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 rounded-2xl border border-line bg-panel p-5 shadow-card sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-500">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-500">
             <Lightbulb size={19} />
           </span>
           <div>
@@ -124,7 +124,7 @@ export default function ToolsPage() {
                 "rounded-lg border px-3.5 py-2 text-[13px] font-semibold transition",
                 active
                   ? "border-brand-500 bg-brand-500 text-white shadow-chip"
-                  : "border-line bg-white text-ink-secondary hover:bg-page",
+                  : "border-line bg-panel text-ink-secondary hover:bg-page",
               )}
             >
               {category}
@@ -137,13 +137,13 @@ export default function ToolsPage() {
         {visibleTools.map((tool) => (
           <div
             key={tool.name}
-            className="group relative cursor-default overflow-hidden rounded-2xl border border-line bg-white shadow-card transition duration-200 hover:-translate-y-1 hover:shadow-pop"
+            className="group relative cursor-default overflow-hidden rounded-2xl border border-line bg-panel shadow-card transition duration-200 hover:-translate-y-1 hover:shadow-pop"
           >
-            <span className="absolute right-3 top-3 z-10 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-600">
+            <span className="absolute right-3 top-3 z-10 rounded-full bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-300">
               敬请期待
             </span>
-            <div className={clsx("flex h-32 flex-col items-center justify-center gap-1.5 bg-gradient-to-br px-4", tool.gradient)}>
-              <p className={clsx("text-2xl font-extrabold tracking-wide", tool.accent)}>{tool.name}</p>
+            <div className={clsx("flex h-32 flex-col items-center justify-center gap-1.5 bg-gradient-to-br px-4 dark:bg-none dark:bg-white/[0.04]", tool.gradient)}>
+              <p className={clsx("text-2xl font-extrabold tracking-wide dark:text-ink", tool.accent)}>{tool.name}</p>
               <p className="text-xs font-medium text-ink-faint">{tool.tagline}</p>
             </div>
             <div className="space-y-1.5 p-4">

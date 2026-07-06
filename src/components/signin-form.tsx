@@ -125,7 +125,7 @@ export function SignInForm({
     <form onSubmit={handleSubmit} className="space-y-4">
       <label className="block">
         <span className="text-sm font-semibold text-ink-secondary">用户邮箱</span>
-        <div className="mt-1.5 flex items-center gap-2.5 rounded-xl border border-line bg-page/60 px-3.5 py-2.5 transition focus-within:border-brand-400 focus-within:bg-white focus-within:ring-2 focus-within:ring-brand-100">
+        <div className="mt-1.5 flex items-center gap-2.5 rounded-xl border border-line bg-page/60 px-3.5 py-2.5 transition focus-within:border-brand-400 focus-within:bg-panel focus-within:ring-2 focus-within:ring-brand-100">
           <Mail size={15} className="shrink-0 text-ink-faint" />
           <input
             value={email}
@@ -141,7 +141,7 @@ export function SignInForm({
 
       <label className="block">
         <span className="text-sm font-semibold text-ink-secondary">{isRegister ? "设置密码" : "登录密码"}</span>
-        <div className="mt-1.5 flex items-center gap-2.5 rounded-xl border border-line bg-page/60 px-3.5 py-2.5 transition focus-within:border-brand-400 focus-within:bg-white focus-within:ring-2 focus-within:ring-brand-100">
+        <div className="mt-1.5 flex items-center gap-2.5 rounded-xl border border-line bg-page/60 px-3.5 py-2.5 transition focus-within:border-brand-400 focus-within:bg-panel focus-within:ring-2 focus-within:ring-brand-100">
           <LockKeyhole size={15} className="shrink-0 text-ink-faint" />
           <input
             value={password}
@@ -158,7 +158,7 @@ export function SignInForm({
         <div className="block">
           <span className="text-sm font-semibold text-ink-secondary">注册验证码</span>
           <div className="mt-1.5 flex items-stretch gap-2">
-            <div className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-line bg-page/60 px-3.5 py-2.5 transition focus-within:border-brand-400 focus-within:bg-white focus-within:ring-2 focus-within:ring-brand-100">
+            <div className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-line bg-page/60 px-3.5 py-2.5 transition focus-within:border-brand-400 focus-within:bg-panel focus-within:ring-2 focus-within:ring-brand-100">
               <ShieldCheck size={15} className="shrink-0 text-ink-faint" />
               <input
                 value={verificationCode}
@@ -173,7 +173,7 @@ export function SignInForm({
               type="button"
               onClick={() => void sendVerificationCode()}
               disabled={isSendingCode || isSubmitting || codeCooldown > 0 || !email.trim()}
-              className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-line bg-white px-4 py-2.5 text-sm font-semibold text-ink-secondary transition hover:bg-page disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-line bg-panel px-4 py-2.5 text-sm font-semibold text-ink-secondary transition hover:bg-page disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSendingCode ? <Loader2 size={15} className="animate-spin" /> : null}
               {isSendingCode ? "发送中" : codeCooldown > 0 ? `${codeCooldown} 秒后重发` : "发送验证码"}
@@ -183,8 +183,8 @@ export function SignInForm({
         </div>
       ) : null}
 
-      {message ? <p className="rounded-xl bg-emerald-50 px-3.5 py-2.5 text-sm font-medium text-emerald-600">{message}</p> : null}
-      {error ? <p className="rounded-xl bg-rose-50 px-3.5 py-2.5 text-sm font-medium text-rose-500">{error}</p> : null}
+      {message ? <p className="rounded-xl bg-emerald-50 dark:bg-emerald-500/10 px-3.5 py-2.5 text-sm font-medium text-emerald-600 dark:text-emerald-300">{message}</p> : null}
+      {error ? <p className="rounded-xl bg-rose-50 dark:bg-rose-500/10 px-3.5 py-2.5 text-sm font-medium text-rose-500 dark:text-rose-300">{error}</p> : null}
 
       <button
         type="submit"

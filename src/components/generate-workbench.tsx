@@ -125,7 +125,7 @@ function StatusStepper({ steps }: { steps: StatusStep[] }) {
                     ? "bg-rose-500 text-white"
                     : step.active
                       ? "bg-brand-500 text-white shadow-chip"
-                      : "border border-line bg-white text-ink-faint",
+                      : "border border-line bg-panel text-ink-faint",
               )}
             >
               {step.complete ? <Check size={14} /> : index + 1}
@@ -133,7 +133,7 @@ function StatusStepper({ steps }: { steps: StatusStep[] }) {
             <span
               className={clsx(
                 "mt-2 text-xs font-semibold",
-                step.complete ? "text-emerald-600" : isFailure ? "text-rose-500" : step.active ? "text-brand-600" : "text-ink-faint",
+                step.complete ? "text-emerald-600 dark:text-emerald-300" : isFailure ? "text-rose-500 dark:text-rose-300" : step.active ? "text-brand-600" : "text-ink-faint",
               )}
             >
               {step.label}
@@ -203,7 +203,7 @@ export function GenerateWorkbench({
 
         {/* 右列：结果与任务信息 */}
         <aside className="space-y-5">
-          <section className="rounded-2xl border border-line bg-white p-5 shadow-card">
+          <section className="rounded-2xl border border-line bg-panel p-5 shadow-card">
             <h2 className="text-[17px] font-bold text-ink">结果预览</h2>
             <div className="mt-4">
               {firstImage ? (
@@ -223,16 +223,16 @@ export function GenerateWorkbench({
             </div>
           </section>
 
-          <section className="rounded-2xl border border-line bg-white p-5 shadow-card">
+          <section className="rounded-2xl border border-line bg-panel p-5 shadow-card">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-[17px] font-bold text-ink">任务进度</h2>
               <span
                 className={clsx(
                   "rounded-full px-2.5 py-1 text-xs font-bold",
                   status === "FAILED"
-                    ? "bg-rose-50 text-rose-500"
+                    ? "bg-rose-50 dark:bg-rose-500/10 text-rose-500 dark:text-rose-300"
                     : status === "COMPLETED"
-                      ? "bg-emerald-50 text-emerald-600"
+                      ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-300"
                       : "bg-brand-50 text-brand-600",
                 )}
               >
@@ -245,7 +245,7 @@ export function GenerateWorkbench({
           </section>
 
           {references.length > 0 ? (
-            <section className="rounded-2xl border border-line bg-white p-5 shadow-card">
+            <section className="rounded-2xl border border-line bg-panel p-5 shadow-card">
               <h2 className="text-[17px] font-bold text-ink">参考图</h2>
               <div className="mt-4 grid grid-cols-2 gap-2.5">
                 {references.map((image) => (
@@ -256,7 +256,7 @@ export function GenerateWorkbench({
             </section>
           ) : null}
 
-          <section className="rounded-2xl border border-line bg-white p-5 shadow-card">
+          <section className="rounded-2xl border border-line bg-panel p-5 shadow-card">
             <h2 className="text-[17px] font-bold text-ink">任务信息</h2>
             {job ? (
               <>
@@ -268,14 +268,14 @@ export function GenerateWorkbench({
                     </div>
                   ))}
                 </dl>
-                {job.errorMessage ? <p className="mt-3 rounded-xl bg-rose-50 px-3.5 py-2.5 text-sm font-medium text-rose-500">{job.errorMessage}</p> : null}
+                {job.errorMessage ? <p className="mt-3 rounded-xl bg-rose-50 dark:bg-rose-500/10 px-3.5 py-2.5 text-sm font-medium text-rose-500 dark:text-rose-300">{job.errorMessage}</p> : null}
               </>
             ) : (
               <p className="mt-3 text-sm leading-6 text-ink-faint">输入描述并点击“开始生成”后，这里会显示当前任务信息。</p>
             )}
           </section>
 
-          <section className="space-y-2.5 rounded-2xl border border-line bg-white p-5 shadow-card">
+          <section className="space-y-2.5 rounded-2xl border border-line bg-panel p-5 shadow-card">
             <div className="flex items-start gap-2.5 text-sm leading-6 text-ink-secondary">
               <Coins size={16} className="mt-1 shrink-0 text-amber-500" />
               <span>标准 10 积分 / 张，高清 35 积分 / 张，省积分 3 积分 / 张。</span>

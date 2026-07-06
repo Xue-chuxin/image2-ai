@@ -63,20 +63,20 @@ const appEntries: AppEntry[] = [
     title: "灵感画廊",
     description: "浏览公开作品，一键复用同款描述继续创作",
     icon: Images,
-    iconClass: "bg-emerald-50 text-emerald-600",
+    iconClass: "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-300",
     href: "#showcase",
   },
   {
     title: "智能助手",
     description: "AI 创作对话助手，答疑解惑与灵感脑暴",
     icon: Bot,
-    iconClass: "bg-amber-50 text-amber-600",
+    iconClass: "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-300",
   },
   {
     title: "小红书爆款文案",
     description: "按主题生成种草笔记文案与标签组合",
     icon: Flame,
-    iconClass: "bg-rose-50 text-rose-500",
+    iconClass: "bg-rose-50 dark:bg-rose-500/10 text-rose-500 dark:text-rose-300",
   },
   {
     title: "公众号标题生成",
@@ -204,12 +204,12 @@ function AppEntryCard({ entry }: { entry: AppEntry }) {
       </span>
     </>
   );
-  const baseClass = "relative flex flex-col gap-3 rounded-2xl border border-line bg-white p-4 shadow-card";
+  const baseClass = "relative flex flex-col gap-3 rounded-2xl border border-line bg-panel p-4 shadow-card";
 
   if (!entry.href) {
     return (
       <div className={`${baseClass} cursor-default`} title={`「${entry.title}」正在规划中，敬请期待`}>
-        <span className="absolute right-3 top-3 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-600">
+        <span className="absolute right-3 top-3 rounded-full bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-300">
           敬请期待
         </span>
         {body}

@@ -1,6 +1,6 @@
 "use client";
 
-import { type ChangeEvent, type DragEvent, useMemo, useRef, useState } from "react";
+import { type ChangeEvent, type DragEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { Loader2, RotateCcw, Send, UploadCloud, Wand2, X } from "lucide-react";
@@ -125,9 +125,21 @@ async function readApiJson<T>(response: Response): Promise<ApiResult<T>> {
   } as ApiResult<T>;
 }
 
-function wait(ms: number) {
-  return new Promise((resolve) => {
-    window.setTimeout(resolve, ms);
+function wait(ms: number, signal?: AbortSignal) {
+  return new Promise<void>((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DOMException("aborted", "AbortError"));
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    function onAbort() {
+      window.clearTimeout(timer);
+      reject(new DOMException("aborted", "AbortError"));
+    }
+    signal?.addEventListener("abort", onAbort, { once: true });
   });
 }
 
@@ -148,7 +160,7 @@ function chipClass(active: boolean) {
     "rounded-lg border px-3.5 py-2 text-[13px] font-semibold transition",
     active
       ? "border-brand-500 bg-brand-500 text-white shadow-chip"
-      : "border-line bg-white text-ink-secondary hover:border-brand-200 hover:bg-brand-50/50 hover:text-brand-600",
+      : "border-line bg-panel text-ink-secondary hover:border-brand-200 hover:bg-brand-50/50 hover:text-brand-600",
   );
 }
 
@@ -185,18 +197,25 @@ export function GenerateComposer({
 
   const canGenerate = useMemo(() => prompt.trim().length > 0 && !isGenerating && !isUploadingReference, [prompt, isGenerating, isUploadingReference]);
 
+  const abortRef = useRef<AbortController | null>(null);
+  useEffect(() => {
+    // 组件卸载（如切换页面）时中止进行中的轮询，避免后台持续 fetch。
+    return () => abortRef.current?.abort();
+  }, []);
+
   function updateJob(job: GenerationJobResult | null) {
     onJobChange?.(job);
   }
 
-  async function pollGenerationJob(initialJob: GenerationJobResult) {
+  async function pollGenerationJob(initialJob: GenerationJobResult, signal: AbortSignal) {
     let latestJob = initialJob;
 
     for (let attempt = 0; attempt < 180; attempt += 1) {
-      await wait(2000);
+      await wait(2000, signal);
       const pollResponse = await fetch(`/api/generation/jobs/${latestJob.id}`, {
         method: "GET",
         cache: "no-store",
+        signal,
       });
       const pollResult = await readApiJson<GenerationResult>(pollResponse);
 
@@ -345,6 +364,11 @@ export function GenerateComposer({
       return;
     }
 
+    // 新任务开始前中止上一次可能仍在进行的轮询，避免叠加。
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setIsGenerating(true);
     setError("");
     setNotice("");
@@ -356,6 +380,7 @@ export function GenerateComposer({
         headers: {
           "Content-Type": "application/json",
         },
+        signal: controller.signal,
         body: JSON.stringify({
           promptZh: rawPrompt,
           promptEn: polishedPromptEn || undefined,
@@ -379,7 +404,7 @@ export function GenerateComposer({
       let finalJob = result.job;
       if (!isTerminalStatus(finalJob.status)) {
         setNotice(referenceImages.length ? "任务已提交，参考图已关联到任务。" : "任务已提交，正在等待结果。");
-        finalJob = await pollGenerationJob(finalJob);
+        finalJob = await pollGenerationJob(finalJob, controller.signal);
       }
 
       if (finalJob.status === "FAILED") {
@@ -399,9 +424,15 @@ export function GenerateComposer({
 
       setNotice("生成完成，结果已保存到历史记录。");
     } catch (caughtError) {
+      // 被中止（卸载或新任务）时静默返回，不提示错误、不复位 loading。
+      if (controller.signal.aborted) {
+        return;
+      }
       setError(caughtError instanceof Error ? caughtError.message : "生成失败");
     } finally {
-      setIsGenerating(false);
+      if (!controller.signal.aborted) {
+        setIsGenerating(false);
+      }
     }
   }
 
@@ -420,7 +451,7 @@ export function GenerateComposer({
   }
 
   return (
-    <section className="space-y-4 rounded-2xl border border-line bg-white p-5 shadow-card">
+    <section className="space-y-4 rounded-2xl border border-line bg-panel p-5 shadow-card">
       {/* 画面描述 */}
       <div>
         <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -439,7 +470,7 @@ export function GenerateComposer({
           }}
           placeholder="例如：雨夜街头的人像写真，浅景深，侧光，35mm 镜头，背景干净，真实皮肤质感。"
           rows={5}
-          className="mt-2.5 w-full resize-y rounded-xl border border-line bg-page/60 px-3.5 py-2.5 text-sm leading-6 text-ink outline-none transition placeholder:text-ink-faint focus:border-brand-400 focus:bg-white focus:ring-2 focus:ring-brand-100"
+          className="mt-2.5 w-full resize-y rounded-xl border border-line bg-page/60 px-3.5 py-2.5 text-sm leading-6 text-ink outline-none transition placeholder:text-ink-faint focus:border-brand-400 focus:bg-panel focus:ring-2 focus:ring-brand-100"
         />
       </div>
 
@@ -465,13 +496,13 @@ export function GenerateComposer({
           </button>
         </div>
       ) : !compact ? (
-        <div className="rounded-xl bg-amber-50 px-3.5 py-2.5 text-sm font-medium text-amber-600">当前正式版先开放文字生图，参考图生图暂未开放。</div>
+        <div className="rounded-xl bg-amber-50 dark:bg-amber-500/10 px-3.5 py-2.5 text-sm font-medium text-amber-600 dark:text-amber-300">当前正式版先开放文字生图，参考图生图暂未开放。</div>
       ) : null}
 
       {referenceImages.length > 0 ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {referenceImages.map((image) => (
-            <div key={image.id} className="relative overflow-hidden rounded-xl border border-line bg-white shadow-card">
+            <div key={image.id} className="relative overflow-hidden rounded-xl border border-line bg-panel shadow-card">
               <img src={image.thumbnailUrl || image.url} alt="参考图" className="h-24 w-full object-cover" />
               <button
                 type="button"
@@ -550,8 +581,8 @@ export function GenerateComposer({
         </div>
       ) : null}
 
-      {notice ? <div className="rounded-xl bg-emerald-50 px-3.5 py-2.5 text-sm font-medium text-emerald-600">{notice}</div> : null}
-      {error ? <div className="rounded-xl bg-rose-50 px-3.5 py-2.5 text-sm font-medium text-rose-500">{error}</div> : null}
+      {notice ? <div className="rounded-xl bg-emerald-50 dark:bg-emerald-500/10 px-3.5 py-2.5 text-sm font-medium text-emerald-600 dark:text-emerald-300">{notice}</div> : null}
+      {error ? <div className="rounded-xl bg-rose-50 dark:bg-rose-500/10 px-3.5 py-2.5 text-sm font-medium text-rose-500 dark:text-rose-300">{error}</div> : null}
 
       {/* 操作行 */}
       <div className="flex items-center gap-2.5">
@@ -559,7 +590,7 @@ export function GenerateComposer({
           type="button"
           onClick={polishPrompt}
           disabled={isPolishing || isGenerating}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-line bg-white px-4 py-2.5 text-sm font-semibold text-ink-secondary transition hover:bg-page disabled:opacity-60"
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-line bg-panel px-4 py-2.5 text-sm font-semibold text-ink-secondary transition hover:bg-page disabled:opacity-60"
         >
           {isPolishing ? <Loader2 className="animate-spin" size={16} /> : <Wand2 size={16} />}
           整理描述
@@ -578,7 +609,7 @@ export function GenerateComposer({
           onClick={resetComposer}
           aria-label="重置"
           title="重置"
-          className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-xl border border-line bg-white text-ink-faint transition hover:bg-page hover:text-ink-secondary"
+          className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-xl border border-line bg-panel text-ink-faint transition hover:bg-page hover:text-ink-secondary"
         >
           <RotateCcw size={16} />
         </button>

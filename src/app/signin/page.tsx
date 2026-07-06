@@ -24,7 +24,7 @@ export default async function SignInPage({
   const nextPath = getSafeNextPath(resolvedSearchParams.next, "/generate");
 
   return (
-    <section className="w-full max-w-[420px] animate-float-in rounded-2xl border border-line bg-white p-7 shadow-card">
+    <section className="w-full max-w-[420px] animate-float-in rounded-2xl border border-line bg-panel p-7 shadow-card">
       <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 text-white shadow-chip">
         <ShieldCheck size={20} />
       </div>

@@ -86,22 +86,22 @@ function formatTime(value: string) {
 
 function getStatusBadgeClass(status: string) {
   if (status === "COMPLETED") {
-    return "bg-emerald-50 text-emerald-600";
+    return "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-300";
   }
 
   if (status === "FAILED") {
-    return "bg-rose-50 text-rose-500";
+    return "bg-rose-50 dark:bg-rose-500/10 text-rose-500 dark:text-rose-300";
   }
 
   if (status === "CANCELED") {
-    return "bg-slate-100 text-slate-500";
+    return "bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-ink-faint";
   }
 
   if (RUNNING_STATUSES.includes(status)) {
     return "bg-brand-50 text-brand-600";
   }
 
-  return "bg-slate-100 text-slate-500";
+  return "bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-ink-faint";
 }
 
 function HistoryItem({ job }: { job: GenerationJobView }) {
@@ -116,7 +116,7 @@ function HistoryItem({ job }: { job: GenerationJobView }) {
   ];
 
   return (
-    <article className="rounded-2xl border border-line bg-white p-4 shadow-card md:p-5">
+    <article className="rounded-2xl border border-line bg-panel p-4 shadow-card md:p-5">
       <div className="grid gap-4 md:grid-cols-[240px_1fr] md:gap-5">
         <div className="overflow-hidden rounded-xl border border-line bg-page">
           {firstImage ? (
@@ -157,7 +157,7 @@ function HistoryItem({ job }: { job: GenerationJobView }) {
             </p>
           ) : null}
           {job.errorMessage ? (
-            <p className="rounded-xl bg-rose-50 px-3.5 py-2.5 text-sm font-medium text-rose-500">{job.errorMessage}</p>
+            <p className="rounded-xl bg-rose-50 dark:bg-rose-500/10 px-3.5 py-2.5 text-sm font-medium text-rose-500 dark:text-rose-300">{job.errorMessage}</p>
           ) : null}
 
           <dl className="flex flex-wrap gap-1.5">
@@ -194,7 +194,7 @@ export default async function HistoryPage() {
     return (
       <main className="mx-auto w-full max-w-[1200px] space-y-5">
         <div className="flex justify-center py-10 md:py-16">
-          <div className="w-full max-w-md rounded-2xl border border-line bg-white p-8 text-center shadow-card">
+          <div className="w-full max-w-md rounded-2xl border border-line bg-panel p-8 text-center shadow-card">
             <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-50 text-brand-500">
               <LockKeyhole className="h-6 w-6" />
             </span>
@@ -229,9 +229,9 @@ export default async function HistoryPage() {
 
   const stats = [
     { label: "全部任务", value: jobs.length, valueClass: "text-ink" },
-    { label: "已完成", value: completedCount, valueClass: "text-emerald-600" },
+    { label: "已完成", value: completedCount, valueClass: "text-emerald-600 dark:text-emerald-300" },
     { label: "进行中", value: runningCount, valueClass: "text-brand-600" },
-    { label: "失败", value: failedCount, valueClass: "text-rose-500" },
+    { label: "失败", value: failedCount, valueClass: "text-rose-500 dark:text-rose-300" },
     { label: "积分记录", value: creditTotal, valueClass: "text-ink" },
   ];
 
@@ -241,7 +241,7 @@ export default async function HistoryPage() {
         <>
           <section aria-label="历史概览" className="grid grid-cols-2 gap-3 md:grid-cols-5">
             {stats.map((item) => (
-              <div key={item.label} className="rounded-2xl border border-line bg-white px-4 py-3.5 shadow-card">
+              <div key={item.label} className="rounded-2xl border border-line bg-panel px-4 py-3.5 shadow-card">
                 <p className={`text-2xl font-extrabold leading-tight ${item.valueClass}`}>{item.value}</p>
                 <p className="mt-1 text-xs font-medium text-ink-faint">{item.label}</p>
               </div>
@@ -256,7 +256,7 @@ export default async function HistoryPage() {
         </>
       ) : (
         <div className="flex justify-center py-10 md:py-16">
-          <div className="w-full max-w-md rounded-2xl border border-line bg-white p-8 text-center shadow-card">
+          <div className="w-full max-w-md rounded-2xl border border-line bg-panel p-8 text-center shadow-card">
             <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-50 text-brand-500">
               <Palette className="h-6 w-6" />
             </span>

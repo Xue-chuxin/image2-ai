@@ -234,7 +234,7 @@ export function HomeWorksShowcase({
 
   return (
     <>
-      <section className="rounded-2xl border border-line bg-white p-5 shadow-card" aria-label={eyebrow}>
+      <section className="rounded-2xl border border-line bg-panel p-5 shadow-card" aria-label={eyebrow}>
         <div className="min-w-0">
           <h2 className="text-[17px] font-bold text-ink">{title}</h2>
           <p className="mt-1 text-sm text-ink-faint">{galleryError || (usingFallback ? fallbackDescription : realDescription)}</p>
@@ -250,7 +250,7 @@ export function HomeWorksShowcase({
                 className={`shrink-0 rounded-lg border px-3.5 py-2 text-[13px] font-semibold transition ${
                   category === item
                     ? "border-brand-500 bg-brand-500 text-white shadow-chip"
-                    : "border-line bg-white text-ink-secondary hover:border-brand-200 hover:bg-brand-50 hover:text-brand-600"
+                    : "border-line bg-panel text-ink-secondary hover:border-brand-200 hover:bg-brand-50 hover:text-brand-600"
                 }`}
               >
                 {item}
@@ -258,7 +258,7 @@ export function HomeWorksShowcase({
             ))}
           </div>
 
-          <label className="flex w-full items-center gap-2.5 rounded-xl border border-line bg-page/60 px-3.5 py-2.5 transition focus-within:border-brand-400 focus-within:bg-white focus-within:ring-2 focus-within:ring-brand-100 md:w-64 md:shrink-0">
+          <label className="flex w-full items-center gap-2.5 rounded-xl border border-line bg-page/60 px-3.5 py-2.5 transition focus-within:border-brand-400 focus-within:bg-panel focus-within:ring-2 focus-within:ring-brand-100 md:w-64 md:shrink-0">
             <Search size={15} className="shrink-0 text-ink-faint" />
             <input
               value={query}
@@ -278,7 +278,7 @@ export function HomeWorksShowcase({
               key={item.id}
               type="button"
               onClick={() => setSelectedItem(item)}
-              className="group relative mb-4 block w-full animate-float-in break-inside-avoid overflow-hidden rounded-2xl border border-line bg-white text-left shadow-card transition duration-300 hover:-translate-y-1 hover:shadow-pop"
+              className="group relative mb-4 block w-full animate-float-in break-inside-avoid overflow-hidden rounded-2xl border border-line bg-panel text-left shadow-card transition duration-300 hover:-translate-y-1 hover:shadow-pop"
               style={{ animationDelay: `${Math.min(index * 40, 320)}ms` }}
             >
               <span className={`relative block w-full overflow-hidden ${item.aspectClass}`}>
@@ -291,7 +291,7 @@ export function HomeWorksShowcase({
                     className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
                   />
                 ) : (
-                  <span className={`flex h-full w-full items-center justify-center bg-gradient-to-br ${item.gradient} p-4`}>
+                  <span className={`flex h-full w-full items-center justify-center bg-gradient-to-br ${item.gradient} p-4 dark:bg-none dark:bg-white/[0.04]`}>
                     <span className="text-4xl font-extrabold text-ink/10">{item.title.slice(0, 1)}</span>
                   </span>
                 )}
@@ -307,7 +307,7 @@ export function HomeWorksShowcase({
           ))}
         </div>
       ) : (
-        <div className="rounded-2xl border border-line bg-white p-10 text-center shadow-card">
+        <div className="rounded-2xl border border-line bg-panel p-10 text-center shadow-card">
           <p className="text-[17px] font-bold text-ink">
             {galleryError ? "作品库暂时不可用" : isLibraryEmpty ? "暂无公开作品" : emptyTitle}
           </p>
@@ -331,7 +331,7 @@ export function HomeWorksShowcase({
               onClick={() => setSelectedItem(null)}
             >
               <div
-                className="relative flex max-h-[calc(100dvh-24px)] w-[min(960px,calc(100vw-24px))] animate-float-in flex-col overflow-hidden rounded-2xl bg-white shadow-pop md:grid md:grid-cols-[1.15fr_0.85fr]"
+                className="relative flex max-h-[calc(100dvh-24px)] w-[min(960px,calc(100vw-24px))] animate-float-in flex-col overflow-hidden rounded-2xl bg-panel shadow-pop md:grid md:grid-cols-[1.15fr_0.85fr]"
                 onClick={(event) => event.stopPropagation()}
               >
                 <button
@@ -395,13 +395,13 @@ export function HomeWorksShowcase({
                       <a
                         href={selectedItem.imageUrl}
                         download
-                        className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-line bg-white px-4 py-2.5 text-sm font-semibold text-ink-secondary transition hover:bg-page"
+                        className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-line bg-panel px-4 py-2.5 text-sm font-semibold text-ink-secondary transition hover:bg-page"
                       >
                         <Download size={15} />
                         下载
                       </a>
                     ) : (
-                      <span className="inline-flex cursor-default items-center justify-center rounded-xl border border-line bg-white px-4 py-2.5 text-sm font-semibold text-ink-faint">
+                      <span className="inline-flex cursor-default items-center justify-center rounded-xl border border-line bg-panel px-4 py-2.5 text-sm font-semibold text-ink-faint">
                         作为参考
                       </span>
                     )}
@@ -413,7 +413,7 @@ export function HomeWorksShowcase({
                       <CopyPromptButton
                         text={selectedItem.promptZh}
                         label="复制"
-                        className="inline-flex items-center gap-1 rounded-lg border border-line bg-white px-2.5 py-1.5 text-xs font-semibold text-ink-secondary transition hover:bg-page"
+                        className="inline-flex items-center gap-1 rounded-lg border border-line bg-panel px-2.5 py-1.5 text-xs font-semibold text-ink-secondary transition hover:bg-page"
                       />
                     </div>
                     <p className="text-sm leading-6 text-ink-secondary">{selectedItem.promptZh}</p>
@@ -439,7 +439,7 @@ export function HomeWorksShowcase({
                       setCategory(selectedItem.category);
                       setSelectedItem(null);
                     }}
-                    className="inline-flex w-full items-center justify-center rounded-xl border border-line bg-white px-4 py-2.5 text-sm font-semibold text-ink-secondary transition hover:bg-page"
+                    className="inline-flex w-full items-center justify-center rounded-xl border border-line bg-panel px-4 py-2.5 text-sm font-semibold text-ink-secondary transition hover:bg-page"
                   >
                     查看同类作品
                   </button>

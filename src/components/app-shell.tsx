@@ -10,7 +10,6 @@ import {
   Images,
   Info,
   LayoutGrid,
-  Moon,
   Palette,
   Search,
   Settings2,
@@ -23,6 +22,7 @@ import {
 import { clsx } from "clsx";
 import type { PublicAppSettings } from "@/lib/settings";
 import { AccountMenu } from "@/components/account-menu";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export type ShellUser = {
   email: string;
@@ -147,7 +147,7 @@ function WorkspaceShell({
   return (
     <div className="flex min-h-dvh">
       {/* 侧边栏 */}
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-[232px] flex-col border-r border-line bg-white px-3.5 py-4 md:flex">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-[232px] flex-col border-r border-line bg-panel px-3.5 py-4 md:flex">
         <Brand settings={settings} />
 
         <nav className="mt-6 flex flex-1 flex-col gap-1" aria-label="主导航">
@@ -192,7 +192,7 @@ function WorkspaceShell({
       {/* 主区域 */}
       <div className="flex min-w-0 flex-1 flex-col md:pl-[232px]">
         {/* 顶栏 */}
-        <header className="sticky top-0 z-30 border-b border-line bg-white/90 backdrop-blur-md">
+        <header className="sticky top-0 z-30 border-b border-line bg-panel/90 backdrop-blur-md">
           <div className="flex h-16 items-center gap-3 px-4 md:gap-5 md:px-6">
             <div className="flex min-w-0 items-center gap-2.5 md:hidden">
               <Brand settings={settings} />
@@ -204,7 +204,7 @@ function WorkspaceShell({
             </div>
 
             <form onSubmit={onSearchSubmit} className="hidden min-w-0 flex-1 justify-center md:flex">
-              <label className="flex w-full max-w-xl items-center gap-2.5 rounded-full border border-line bg-page px-4 py-2.5 transition focus-within:border-brand-300 focus-within:bg-white focus-within:ring-2 focus-within:ring-brand-100">
+              <label className="flex w-full max-w-xl items-center gap-2.5 rounded-full border border-line bg-page px-4 py-2.5 transition focus-within:border-brand-300 focus-within:bg-panel focus-within:ring-2 focus-within:ring-brand-100">
                 <Search size={15} className="shrink-0 text-ink-faint" />
                 <input
                   value={searchValue}
@@ -219,7 +219,7 @@ function WorkspaceShell({
               <button
                 type="button"
                 onClick={() => showComingSoon("邀请有礼")}
-                className="hidden items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1.5 text-[13px] font-bold text-amber-600 transition hover:bg-amber-100 lg:flex"
+                className="hidden items-center gap-1.5 rounded-full bg-amber-50 dark:bg-amber-500/10 px-3 py-1.5 text-[13px] font-bold text-amber-600 dark:text-amber-300 transition hover:bg-amber-100 dark:hover:bg-amber-500/20 lg:flex"
               >
                 <Gift size={14} />
                 邀请有礼
@@ -245,14 +245,7 @@ function WorkspaceShell({
                 VIP 升级会员
               </button>
 
-              <button
-                type="button"
-                onClick={() => showComingSoon("暗色模式")}
-                aria-label="切换暗色模式"
-                className="hidden h-9 w-9 items-center justify-center rounded-full text-ink-secondary transition hover:bg-page md:flex"
-              >
-                <Moon size={17} />
-              </button>
+              <ThemeToggle className="flex h-9 w-9 items-center justify-center rounded-full text-ink-secondary transition hover:bg-brand-50 hover:text-brand-600" />
 
               {user?.email ? (
                 <AccountMenu email={user.email} role="user" />
@@ -273,7 +266,7 @@ function WorkspaceShell({
 
       {/* 移动端底部导航 */}
       <nav
-        className="fixed inset-x-3 bottom-3 z-50 mx-auto grid max-w-md grid-cols-5 gap-1 rounded-3xl border border-line bg-white/95 p-1.5 shadow-pop backdrop-blur-xl md:hidden"
+        className="fixed inset-x-3 bottom-3 z-50 mx-auto grid max-w-md grid-cols-5 gap-1 rounded-3xl border border-line bg-panel/95 p-1.5 shadow-pop backdrop-blur-xl md:hidden"
         aria-label="移动端主导航"
         style={{ paddingBottom: "max(6px, env(safe-area-inset-bottom))" }}
       >
@@ -317,7 +310,7 @@ function AuthShell({ children, settings }: { children: ReactNode; settings: Publ
     <div className="flex min-h-dvh flex-col">
       <header className="flex h-16 items-center justify-between px-5 md:px-8">
         <Brand settings={settings} />
-        <Link href="/" className="rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold text-ink-secondary transition hover:bg-page">
+        <Link href="/" className="rounded-full border border-line bg-panel px-4 py-2 text-sm font-semibold text-ink-secondary transition hover:bg-page">
           返回首页
         </Link>
       </header>

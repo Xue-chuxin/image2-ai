@@ -31,7 +31,7 @@ const availableApps: AppCard[] = [
     name: "提示词整理",
     description: "把零散想法整理成结构化提示词，直接带入创作台使用。",
     icon: ListChecks,
-    iconClass: "bg-emerald-50 text-emerald-600",
+    iconClass: "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-300",
     href: "/generate",
   },
 ];
@@ -47,13 +47,13 @@ const upcomingApps: AppCard[] = [
     name: "小红书爆款文案",
     description: "按笔记风格生成标题与正文，自带表情与话题标签。",
     icon: Flame,
-    iconClass: "bg-rose-50 text-rose-500",
+    iconClass: "bg-rose-50 dark:bg-rose-500/10 text-rose-500 dark:text-rose-300",
   },
   {
     name: "高情商回复",
     description: "工作群、客户沟通场景的得体回复建议。",
     icon: MessagesSquare,
-    iconClass: "bg-amber-50 text-amber-600",
+    iconClass: "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-300",
   },
   {
     name: "公众号标题生成器",
@@ -87,9 +87,9 @@ function AppCardBody({ app }: { app: AppCard }) {
 export default function AppsPage() {
   return (
     <main className="mx-auto w-full max-w-[1200px] space-y-5">
-      <div className="flex flex-col gap-3 rounded-2xl border border-line bg-white p-5 shadow-card sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 rounded-2xl border border-line bg-panel p-5 shadow-card sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-500">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-500">
             <Lightbulb size={19} />
           </span>
           <div>
@@ -113,7 +113,7 @@ export default function AppsPage() {
             <Link
               key={app.name}
               href={app.href || "/generate"}
-              className="group rounded-2xl border border-line bg-white p-5 shadow-card transition duration-200 hover:-translate-y-1 hover:border-brand-200 hover:shadow-pop"
+              className="group rounded-2xl border border-line bg-panel p-5 shadow-card transition duration-200 hover:-translate-y-1 hover:border-brand-200 hover:shadow-pop"
             >
               <AppCardBody app={app} />
               <span className="mt-3.5 inline-flex items-center gap-1 text-[13px] font-semibold text-brand-600">
@@ -131,9 +131,9 @@ export default function AppsPage() {
           {upcomingApps.map((app) => (
             <div
               key={app.name}
-              className="relative cursor-default rounded-2xl border border-line bg-white p-5 shadow-card transition duration-200 hover:-translate-y-1 hover:shadow-pop"
+              className="relative cursor-default rounded-2xl border border-line bg-panel p-5 shadow-card transition duration-200 hover:-translate-y-1 hover:shadow-pop"
             >
-              <span className="absolute right-4 top-4 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-600">
+              <span className="absolute right-4 top-4 rounded-full bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-300">
                 敬请期待
               </span>
               <div className="pr-14">

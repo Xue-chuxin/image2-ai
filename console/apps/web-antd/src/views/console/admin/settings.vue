@@ -13,6 +13,7 @@ import {
   message,
   Modal,
   Select,
+  Skeleton,
   Space,
   Spin,
   Switch,
@@ -742,7 +743,9 @@ onMounted(() => {
           浏览器通道。敏感配置只显示是否已配置，不回显明文。
         </p>
 
-        <Tabs v-model:active-key="activeTab">
+        <Skeleton v-if="!loaded" active :paragraph="{ rows: 10 }" />
+
+        <Tabs v-else v-model:active-key="activeTab">
           <!-- ========== 1. 站点显示 ========== -->
           <TabPane key="site" tab="站点显示">
             <div class="grid gap-4 xl:grid-cols-2">
