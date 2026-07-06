@@ -167,6 +167,9 @@ run_source_update() {
   echo "构建生产版本..."
   npm run build
 
+  echo "构建控制台（用户中心/管理后台）..."
+  npm run build:console
+
   echo "源码升级流程已完成，请按你的部署方式重启服务。"
 }
 

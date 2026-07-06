@@ -2,6 +2,17 @@
 
 这份文档面向已经自行部署 Image2 AI 生图系统的用户。升级前请先备份数据库、`.env.production` / `.env.local` 和图片存储目录或 Docker volume。
 
+## 升级到 v0.2.0（UI 重构与控制台）注意事项
+
+v0.2.0 是一次大版本界面重构，升级前请完整阅读本节：
+
+- **前台模板下线**：旧版 `glass_app` / `tdesign_workspace` 双模板已移除，前台固定为新版浅色侧边栏布局；后台「前台模板」配置不再生效，无需处理。
+- **管理后台迁移**：`/admin` 及全部子页面迁移到控制台 `/console`（旧地址自动跳转）；管理员改为在控制台登录页使用邮箱 + 密码登录，账号数据不变。
+- **用户中心迁移**：`/account` 迁移到控制台 `/console#/account/overview`（旧地址自动跳转），充值、订单、流水功能不变。
+- **源码部署新增构建步骤**：构建前台后需要额外执行 `npm run build:console` 生成控制台静态产物（首次会自动通过 npx 使用 pnpm 安装 `console/` 依赖，需 Node >= 22 构建控制台；仅运行 Next.js 服务仍兼容 Node 20）。`scripts/update.sh source` 已包含该步骤。
+- **Docker 部署无需额外操作**：`docker compose up -d --build` 会在镜像内自动构建控制台。
+- 数据库无新迁移，环境变量无新增必填项。
+
 ## 升级前检查
 
 - 确认当前项目目录是通过 Git 克隆的仓库。

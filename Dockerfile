@@ -7,6 +7,17 @@ ENV NEXT_TELEMETRY_DISABLED=1
 COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts
 
+FROM node:22-bookworm-slim AS console-builder
+
+WORKDIR /console
+
+# 控制台（vben）要求 Node >= 22，使用 corepack 提供的 pnpm 构建
+RUN corepack enable pnpm
+
+COPY console/ ./
+RUN pnpm install --frozen-lockfile
+RUN pnpm run build:antd
+
 FROM node:20-bookworm-slim AS builder
 
 WORKDIR /app
@@ -58,6 +69,7 @@ COPY --from=builder /app/package-lock.json ./package-lock.json
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
+COPY --from=console-builder /console/apps/web-antd/dist ./public/console
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/scripts ./scripts
 COPY scripts/docker-entrypoint.sh /app/scripts/docker-entrypoint.sh
