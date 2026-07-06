@@ -232,16 +232,48 @@ export function normalizePaymentProvider(value: unknown): PaymentProviderName {
   return "epay";
 }
 
-async function readPaymentSettingRows() {
-  const rows = await prisma.appSetting.findMany({
-    where: {
-      key: {
-        in: [...plainSettingKeys, ...secretSettingKeys],
-      },
-    },
-  });
+// 支付配置行内存缓存：与 settings.ts 的机制相同（键空间为 payment.* 前缀，两边互不重叠、无需联动失效）。
+const PAYMENT_SETTINGS_CACHE_TTL_MS = 30_000;
+let paymentRowsCache: { map: Map<string, SettingRow>; expiresAt: number } | null = null;
+let paymentRowsInflight: Promise<Map<string, SettingRow>> | null = null;
 
-  return new Map(rows.map((row) => [row.key, row as SettingRow]));
+function invalidatePaymentSettingsCache() {
+  paymentRowsCache = null;
+  paymentRowsInflight = null;
+}
+
+async function readPaymentSettingRows() {
+  if (paymentRowsCache && paymentRowsCache.expiresAt > Date.now()) {
+    return paymentRowsCache.map;
+  }
+
+  if (paymentRowsInflight) {
+    return paymentRowsInflight;
+  }
+
+  paymentRowsInflight = (async () => {
+    try {
+      const rows = await prisma.appSetting.findMany({
+        where: {
+          key: {
+            in: [...plainSettingKeys, ...secretSettingKeys],
+          },
+        },
+      });
+      const map = new Map(rows.map((row) => [row.key, row as SettingRow]));
+      paymentRowsCache = { map, expiresAt: Date.now() + PAYMENT_SETTINGS_CACHE_TTL_MS };
+      return map;
+    } catch (error) {
+      if (paymentRowsCache) {
+        return paymentRowsCache.map;
+      }
+      throw error;
+    } finally {
+      paymentRowsInflight = null;
+    }
+  })();
+
+  return paymentRowsInflight;
 }
 
 function getPlain(map: Map<string, SettingRow>, key: string, fallback = "") {
@@ -395,6 +427,9 @@ export async function savePaymentProviderSettings(input: Partial<PaymentProvider
     upsertSecretIfPresent("payment.wechatPay.platformPublicKey", input.wechatPay?.platformPublicKey),
     upsertSecretIfPresent("payment.paypal.secret", input.paypal?.secret),
   ]);
+
+  // 保存后失效缓存，让末尾的回读与后续请求拿到最新配置。
+  invalidatePaymentSettingsCache();
 
   return getPaymentProviderSettings();
 }

@@ -783,18 +783,45 @@ function resolveStorageLocalBaseDir(value: string) {
   return path.isAbsolute(value) ? value : path.resolve(process.cwd(), value);
 }
 
+// 配置行内存缓存：单进程部署下把"每个 getter 一次整表查询"收敛为 30 秒一次。
+// 异常时不写缓存，返回过期旧值兜底（stale-on-error），避免数据库抖动让全站配置瞬间回落默认值。
+const SETTINGS_CACHE_TTL_MS = 30_000;
+let settingsRowsCache: { rows: SettingRow[]; expiresAt: number } | null = null;
+let settingsRowsInflight: Promise<SettingRow[]> | null = null;
+
+export function invalidateSettingsCache() {
+  settingsRowsCache = null;
+  settingsRowsInflight = null;
+}
+
 async function readSettingRows() {
   if (!process.env.DATABASE_URL) {
     return [];
   }
 
-  try {
-    const { Prisma } = await import("@prisma/client");
-    const { prisma } = await import("@/lib/db");
-    return await prisma.$queryRaw<SettingRow[]>(Prisma.sql`SELECT "key", "value", "isEncrypted" FROM "AppSetting"`);
-  } catch {
-    return [];
+  if (settingsRowsCache && settingsRowsCache.expiresAt > Date.now()) {
+    return settingsRowsCache.rows;
   }
+
+  if (settingsRowsInflight) {
+    return settingsRowsInflight;
+  }
+
+  settingsRowsInflight = (async () => {
+    try {
+      const { Prisma } = await import("@prisma/client");
+      const { prisma } = await import("@/lib/db");
+      const rows = await prisma.$queryRaw<SettingRow[]>(Prisma.sql`SELECT "key", "value", "isEncrypted" FROM "AppSetting"`);
+      settingsRowsCache = { rows, expiresAt: Date.now() + SETTINGS_CACHE_TTL_MS };
+      return rows;
+    } catch {
+      return settingsRowsCache?.rows ?? [];
+    } finally {
+      settingsRowsInflight = null;
+    }
+  })();
+
+  return settingsRowsInflight;
 }
 
 function toMap(rows: SettingRow[]) {
@@ -819,6 +846,9 @@ async function upsertSettings(settings: SettingWrite[]) {
       );
     }
   });
+
+  // 保存成功后立即失效缓存，让新配置对后续请求即时生效。
+  invalidateSettingsCache();
 }
 
 async function checkDatabase(): Promise<AdminDiagnosticItem> {
@@ -1007,7 +1037,8 @@ export async function getOpenAICompatibleChannelSettings(): Promise<OpenAICompat
   return toPublicOpenAICompatibleChannels(map, { openaiImageModel });
 }
 
-export async function getAdminAppSettings(): Promise<AdminAppSettings> {
+export async function getAdminAppSettings(options?: { includeDiagnostics?: boolean }): Promise<AdminAppSettings> {
+  const includeDiagnostics = options?.includeDiagnostics ?? true;
   const map = toMap(await readSettingRows());
   const publicSettings = await getPublicAppSettings();
   const openaiCompatibleChannels = toPublicOpenAICompatibleChannels(map, { openaiImageModel: publicSettings.openaiImageModel });
@@ -1031,7 +1062,10 @@ export async function getAdminAppSettings(): Promise<AdminAppSettings> {
     legacyOpenaiApiKeyConfigured,
     stabilityAiApiKeyConfigured,
     encryptionReady: hasSettingsEncryptionKey(),
-    diagnostics: await buildDiagnostics(publicSettings, openaiCompatibleChannels, deepseekApiKeyConfigured, openaiApiKeyConfigured, stabilityAiApiKeyConfigured, moderationSettings, emailSettings),
+    // 诊断含数据库探测（SELECT 1），仅后台设置页需要；运行时链路取配置时跳过。
+    diagnostics: includeDiagnostics
+      ? await buildDiagnostics(publicSettings, openaiCompatibleChannels, deepseekApiKeyConfigured, openaiApiKeyConfigured, stabilityAiApiKeyConfigured, moderationSettings, emailSettings)
+      : [],
   };
 }
 
@@ -1198,13 +1232,14 @@ async function getSecretValue(key: "deepseekApiKey" | "openaiApiKey" | "stabilit
 
 export async function getDeepSeekRuntimeConfig() {
   const settings = await getPublicAppSettings();
-  const adminSettings = await getAdminAppSettings();
+  // 直接从配置行取润色提示词，避免为一个字段走 getAdminAppSettings 的完整诊断链路。
+  const map = toMap(await readSettingRows());
 
   return {
     apiKey: await getSecretValue("deepseekApiKey", process.env.DEEPSEEK_API_KEY),
     baseUrl: settings.deepseekBaseUrl,
     model: settings.deepseekModel,
-    polishPrompt: adminSettings.deepseekPolishPrompt,
+    polishPrompt: normalizeText(getStoredSetting(map, "deepseekPolishPrompt"), defaultDeepSeekPolishPrompt, 6000),
   };
 }
 
