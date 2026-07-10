@@ -10,7 +10,7 @@ const INVITEE_REWARD_MEMO = "受邀注册奖励";
 const REFERRAL_CODE_LENGTH = 8;
 
 // 生成去除易混淆字符的短邀请码。
-function createReferralCode() {
+export function createReferralCode() {
   const alphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
   const bytes = randomBytes(REFERRAL_CODE_LENGTH);
   let code = "";

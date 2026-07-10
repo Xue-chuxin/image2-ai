@@ -588,7 +588,7 @@ function normalizeStoragePrefix(value: unknown, fallback: string) {
   return clean || fallback;
 }
 
-function normalizeBoolean(value: unknown, fallback: boolean) {
+export function normalizeBoolean(value: unknown, fallback: boolean) {
   if (typeof value === "boolean") {
     return value;
   }
@@ -606,7 +606,7 @@ function normalizeBoolean(value: unknown, fallback: boolean) {
   return fallback;
 }
 
-function normalizeTimeoutSeconds(value: unknown, fallback: number) {
+export function normalizeTimeoutSeconds(value: unknown, fallback: number) {
   const numeric = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(numeric)) {
     return fallback;
@@ -615,7 +615,7 @@ function normalizeTimeoutSeconds(value: unknown, fallback: number) {
   return Math.min(Math.max(Math.floor(numeric), 30), 900);
 }
 
-function normalizeRetentionDays(value: unknown, fallback: number) {
+export function normalizeRetentionDays(value: unknown, fallback: number) {
   const numeric = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(numeric)) {
     return fallback;
@@ -625,7 +625,7 @@ function normalizeRetentionDays(value: unknown, fallback: number) {
   return Math.min(Math.max(Math.floor(numeric), 1), 3650);
 }
 
-function normalizeMembershipDiscount(value: unknown, fallback: number) {
+export function normalizeMembershipDiscount(value: unknown, fallback: number) {
   const numeric = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(numeric)) {
     return fallback;
@@ -634,7 +634,7 @@ function normalizeMembershipDiscount(value: unknown, fallback: number) {
   return Math.min(Math.max(Math.floor(numeric), 0), 90);
 }
 
-function normalizeNonNegativeInt(value: unknown, fallback: number, max: number) {
+export function normalizeNonNegativeInt(value: unknown, fallback: number, max: number) {
   const numeric = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(numeric)) {
     return fallback;

@@ -88,7 +88,7 @@ export function assertReferenceImageUploadAllowed(mimeType: string, fileSize: nu
  * 读取 buffer 的真实图片格式（magic bytes），映射回白名单 MIME。
  * 与客户端声明的 Content-Type 无关：伪造 Content-Type 的非图片文件在此被拒。
  */
-async function detectReferenceImageMimeType(buffer: Buffer): Promise<string> {
+export async function detectReferenceImageMimeType(buffer: Buffer): Promise<string> {
   let format: string | undefined;
   try {
     format = (await sharp(buffer).metadata()).format;

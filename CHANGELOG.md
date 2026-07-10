@@ -4,6 +4,8 @@
 
 ## 未发布
 
+- 引入 Vitest 与核心纯逻辑单测：新增 Vitest 测试基建（`vitest.config.ts`、`tests/setup.ts`，通过 `npm test` 运行），并为一批高价值纯逻辑函数补充单元测试——出图积分估价（`estimateGenerationCreditCost`）、接口限流（`checkRateLimit`）、内容审核关键词匹配与语义判定解析（`parseForbiddenWords`/`checkForbiddenWords`/`parseSemanticVerdict`）、设置项归一化器（布尔/非负整数/会员折扣/保留天数/超时秒数）、邀请码生成（`createReferralCode`），以及参考图 magic-byte 类型探测（`detectReferenceImageMimeType`，验证伪造 Content-Type 无效）。此为纯开发侧改动，不影响运行时行为与部署。
+
 - 邀请返积分：顶栏「邀请有礼」现可用——登录用户点击后弹出邀请弹窗，展示专属邀请码、邀请链接（一键复制）、已邀请人数与累计返积分。新用户通过邀请链接（`/signup?ref=邀请码`）注册成功后，邀请人与被邀请人各得一份积分奖励（叠加在新用户注册赠送积分之上）。是否开启、双方奖励积分数均可在控制台「安全与存储 → 邀请返积分」配置（默认关闭，邀请人 30 / 被邀请人 20）。邀请码惰性生成、去除易混淆字符；奖励在注册事务内原子发放，仅注册时发放一次。`User` 表新增 `referralCode`/`referredById` 字段（需执行数据库迁移）。
 
 - 作品收藏：画廊广场（及运营精选）作品卡片右上角新增心形收藏按钮，登录后可一键收藏/取消收藏；侧边栏新增「我的收藏」页面，集中查看收藏的公开作品与精选，取消收藏后即时移除。收藏仅在作品仍公开可见时生效，原作品下架/删除后自动从收藏列表剔除。新增数据表 `ImageFavorite`（需执行数据库迁移）。

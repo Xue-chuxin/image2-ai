@@ -29,7 +29,7 @@ function normalizeForMatch(value: string) {
   return value.trim().toLocaleLowerCase();
 }
 
-function parseForbiddenWords(value: string) {
+export function parseForbiddenWords(value: string) {
   const seen = new Set<string>();
   return value
     .split(/\r?\n/)
@@ -45,7 +45,7 @@ function parseForbiddenWords(value: string) {
     });
 }
 
-function checkForbiddenWords(inputs: ModerationTextInput[], config: ModerationRuntimeConfig): ModerationResult {
+export function checkForbiddenWords(inputs: ModerationTextInput[], config: ModerationRuntimeConfig): ModerationResult {
   const forbiddenWords = parseForbiddenWords(config.forbiddenWords);
   if (!forbiddenWords.length) {
     return { ok: true };
@@ -90,7 +90,7 @@ type DeepSeekChatResponse = {
   }>;
 };
 
-function parseSemanticVerdict(content: string): { allowed: boolean; category?: string } {
+export function parseSemanticVerdict(content: string): { allowed: boolean; category?: string } {
   const withoutFence = content
     .replace(/^```json\s*/i, "")
     .replace(/^```\s*/i, "")
