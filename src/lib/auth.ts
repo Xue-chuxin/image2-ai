@@ -390,6 +390,7 @@ export async function loginOrCreateUser(
   password: string,
   verificationCode?: string,
   intent: UserAuthIntent = "auto",
+  referralCode?: string,
 ) {
   assertDatabaseConfigured();
 
@@ -459,7 +460,13 @@ export async function loginOrCreateUser(
   const displayName = normalizedEmail.split("@")[0] || "新用户";
   const passwordHash = hashPassword(password);
 
-  return prisma.$transaction(async (tx) => {
+  // 邀请返积分：仅在活动开启且邀请码有效时记录邀请关系并发放奖励。
+  const { getInviteRuntimeConfig } = await import("@/lib/settings");
+  const { resolveReferrerByCode, getOrCreateReferralCode, grantReferralRewardsInTx } = await import("@/lib/invite");
+  const inviteConfig = await getInviteRuntimeConfig();
+  const referrerUserId = inviteConfig.enabled ? await resolveReferrerByCode(referralCode) : null;
+
+  const newUser = await prisma.$transaction(async (tx) => {
     const user = await tx.user.create({
       data: {
         id: createId("usr"),
@@ -468,6 +475,7 @@ export async function loginOrCreateUser(
         role: "USER",
         passwordHash,
         lastLoginAt: new Date(),
+        referredById: referrerUserId,
       },
     });
 
@@ -489,6 +497,24 @@ export async function loginOrCreateUser(
       },
     });
 
+    if (referrerUserId) {
+      await grantReferralRewardsInTx(tx, {
+        inviteeUserId: user.id,
+        referrerUserId,
+        inviterCredits: inviteConfig.inviterCredits,
+        inviteeCredits: inviteConfig.inviteeCredits,
+      });
+    }
+
     return user;
   });
+
+  // 提前为新用户生成邀请码，便于其立即分享（失败不影响注册主流程）。
+  try {
+    await getOrCreateReferralCode(newUser.id);
+  } catch {
+    // 邀请码可后续惰性生成，忽略此处异常。
+  }
+
+  return newUser;
 }

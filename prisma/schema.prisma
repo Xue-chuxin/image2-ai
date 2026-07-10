@@ -48,6 +48,8 @@ model User {
   passwordHash       String?
   role               UserRole            @default(USER)
   twoFactorEnabled   Boolean             @default(false)
+  referralCode       String?             @unique
+  referredById       String?
   lastLoginAt        DateTime?
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
@@ -60,6 +62,8 @@ model User {
   oauthAccounts      OAuthAccount[]
   subscription       Subscription?
   imageFavorites     ImageFavorite[]
+
+  @@index([referredById])
 }
 
 model OAuthAccount {

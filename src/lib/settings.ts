@@ -90,6 +90,9 @@ export type AdminAppSettings = PublicAppSettings & {
   membershipDailyCredits: number;
   membershipGenerationRateLimit: number;
   membershipExpiryReminderDays: number;
+  inviteEnabled: boolean;
+  inviteInviterCredits: number;
+  inviteInviteeCredits: number;
   oauthGithubEnabled: boolean;
   oauthGithubClientId: string;
   oauthGithubClientSecretConfigured: boolean;
@@ -127,6 +130,9 @@ export type SaveAdminSettingsInput = Partial<PublicAppSettings> & {
   membershipDailyCredits?: number | string;
   membershipGenerationRateLimit?: number | string;
   membershipExpiryReminderDays?: number | string;
+  inviteEnabled?: boolean | string;
+  inviteInviterCredits?: number | string;
+  inviteInviteeCredits?: number | string;
   oauthGithubEnabled?: boolean | string;
   oauthGithubClientId?: string;
   oauthGithubClientSecret?: string;
@@ -185,6 +191,12 @@ export type MembershipRuntimeConfig = {
   dailyCredits: number;
   generationRateLimit: number;
   expiryReminderDays: number;
+};
+
+export type InviteRuntimeConfig = {
+  enabled: boolean;
+  inviterCredits: number;
+  inviteeCredits: number;
 };
 
 export type OAuthProviderName = "github" | "google";
@@ -287,6 +299,12 @@ const defaultMembershipSettings: MembershipRuntimeConfig = {
   dailyCredits: 0,
   generationRateLimit: 30,
   expiryReminderDays: 7,
+};
+
+const defaultInviteSettings: InviteRuntimeConfig = {
+  enabled: false,
+  inviterCredits: 30,
+  inviteeCredits: 20,
 };
 
 const defaultEmailSettings: Omit<EmailRuntimeConfig, "password"> = {
@@ -847,6 +865,14 @@ function getMembershipSettings(map: Map<string, SettingRow>): MembershipRuntimeC
   };
 }
 
+function getInviteSettings(map: Map<string, SettingRow>): InviteRuntimeConfig {
+  return {
+    enabled: normalizeBoolean(map.get("inviteEnabled")?.value, defaultInviteSettings.enabled),
+    inviterCredits: normalizeNonNegativeInt(map.get("inviteInviterCredits")?.value, defaultInviteSettings.inviterCredits, 100000),
+    inviteeCredits: normalizeNonNegativeInt(map.get("inviteInviteeCredits")?.value, defaultInviteSettings.inviteeCredits, 100000),
+  };
+}
+
 function getEmailAdminSettings(map: Map<string, SettingRow>) {
   return {
     emailSmtpEnabled: normalizeBoolean(map.get("emailSmtpEnabled")?.value, normalizeBoolean(process.env.EMAIL_SMTP_ENABLED, defaultEmailSettings.enabled)),
@@ -1156,6 +1182,7 @@ export async function getAdminAppSettings(options?: { includeDiagnostics?: boole
   const openaiCompatibleChannels = toPublicOpenAICompatibleChannels(map, { openaiImageModel: publicSettings.openaiImageModel });
   const moderationSettings = getModerationSettings(map);
   const membershipSettings = getMembershipSettings(map);
+  const inviteSettings = getInviteSettings(map);
   const emailSettings = getEmailAdminSettings(map);
   const deepseekApiKeyConfigured = Boolean(map.get("deepseekApiKey")?.value || process.env.DEEPSEEK_API_KEY);
   const legacyOpenaiApiKeyConfigured = Boolean(map.get("openaiApiKey")?.value || process.env.OPENAI_API_KEY);
@@ -1177,6 +1204,9 @@ export async function getAdminAppSettings(options?: { includeDiagnostics?: boole
     membershipDailyCredits: membershipSettings.dailyCredits,
     membershipGenerationRateLimit: membershipSettings.generationRateLimit,
     membershipExpiryReminderDays: membershipSettings.expiryReminderDays,
+    inviteEnabled: inviteSettings.enabled,
+    inviteInviterCredits: inviteSettings.inviterCredits,
+    inviteInviteeCredits: inviteSettings.inviteeCredits,
     oauthGithubEnabled: normalizeBoolean(map.get("oauthGithubEnabled")?.value, false),
     oauthGithubClientId: normalizeOptionalText(map.get("oauthGithubClientId")?.value ?? process.env.OAUTH_GITHUB_CLIENT_ID, "", 200),
     oauthGithubClientSecretConfigured: Boolean(map.get("oauthGithubClientSecret")?.value || process.env.OAUTH_GITHUB_CLIENT_SECRET),
@@ -1205,6 +1235,7 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
   const currentPublicSettings = await getPublicAppSettings();
   const currentModerationSettings = getModerationSettings(settingsMap);
   const currentMembershipSettings = getMembershipSettings(settingsMap);
+  const currentInviteSettings = getInviteSettings(settingsMap);
   const currentEmailSettings = getEmailAdminSettings(settingsMap);
   const browserTitle = normalizeText(input.browserTitle, currentPublicSettings.browserTitle);
   const siteTitle = normalizeText(input.siteTitle, currentPublicSettings.siteTitle);
@@ -1239,6 +1270,9 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
   const membershipDailyCredits = normalizeNonNegativeInt(input.membershipDailyCredits, currentMembershipSettings.dailyCredits, 100000);
   const membershipGenerationRateLimit = normalizeNonNegativeInt(input.membershipGenerationRateLimit, currentMembershipSettings.generationRateLimit, 100000);
   const membershipExpiryReminderDays = normalizeNonNegativeInt(input.membershipExpiryReminderDays, currentMembershipSettings.expiryReminderDays, 60);
+  const inviteEnabled = normalizeBoolean(input.inviteEnabled, currentInviteSettings.enabled);
+  const inviteInviterCredits = normalizeNonNegativeInt(input.inviteInviterCredits, currentInviteSettings.inviterCredits, 100000);
+  const inviteInviteeCredits = normalizeNonNegativeInt(input.inviteInviteeCredits, currentInviteSettings.inviteeCredits, 100000);
   const oauthGithubEnabled = normalizeBoolean(input.oauthGithubEnabled, normalizeBoolean(settingsMap.get("oauthGithubEnabled")?.value, false));
   const oauthGithubClientId = normalizeOptionalText(input.oauthGithubClientId, settingsMap.get("oauthGithubClientId")?.value ?? "", 200);
   const oauthGoogleEnabled = normalizeBoolean(input.oauthGoogleEnabled, normalizeBoolean(settingsMap.get("oauthGoogleEnabled")?.value, false));
@@ -1333,6 +1367,9 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
     { key: "membershipDailyCredits", value: String(membershipDailyCredits) },
     { key: "membershipGenerationRateLimit", value: String(membershipGenerationRateLimit) },
     { key: "membershipExpiryReminderDays", value: String(membershipExpiryReminderDays) },
+    { key: "inviteEnabled", value: String(inviteEnabled) },
+    { key: "inviteInviterCredits", value: String(inviteInviterCredits) },
+    { key: "inviteInviteeCredits", value: String(inviteInviteeCredits) },
     { key: "oauthGithubEnabled", value: String(oauthGithubEnabled) },
     { key: "oauthGithubClientId", value: oauthGithubClientId },
     { key: "oauthGoogleEnabled", value: String(oauthGoogleEnabled) },
@@ -1560,4 +1597,8 @@ export async function getModerationRuntimeConfig(): Promise<ModerationRuntimeCon
 
 export async function getMembershipRuntimeConfig(): Promise<MembershipRuntimeConfig> {
   return getMembershipSettings(toMap(await readSettingRows()));
+}
+
+export async function getInviteRuntimeConfig(): Promise<InviteRuntimeConfig> {
+  return getInviteSettings(toMap(await readSettingRows()));
 }

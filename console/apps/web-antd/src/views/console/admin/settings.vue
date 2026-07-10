@@ -98,6 +98,9 @@ interface AdminAppSettings {
   homePopup: HomePopupSettings;
   icpNumber: string;
   legacyOpenaiApiKeyConfigured: boolean;
+  inviteEnabled: boolean;
+  inviteInviterCredits: number;
+  inviteInviteeCredits: number;
   membershipDailyCredits: number;
   membershipDiscountPercent: number;
   membershipGenerationRateLimit: number;
@@ -175,6 +178,9 @@ interface SaveSettingsPayload {
   frontTemplate: FrontTemplateName;
   homePopup: HomePopupSettings;
   icpNumber: string;
+  inviteEnabled: boolean;
+  inviteInviterCredits: number;
+  inviteInviteeCredits: number;
   membershipDailyCredits: number;
   membershipDiscountPercent: number;
   membershipGenerationRateLimit: number;
@@ -307,6 +313,9 @@ function createDefaultSettings(): AdminAppSettings {
     homePopup: { content: '', contentFormat: 'markdown', enabled: false, title: '' },
     icpNumber: '',
     legacyOpenaiApiKeyConfigured: false,
+    inviteEnabled: false,
+    inviteInviterCredits: 30,
+    inviteInviteeCredits: 20,
     membershipDailyCredits: 0,
     membershipDiscountPercent: 0,
     membershipGenerationRateLimit: 30,
@@ -627,6 +636,9 @@ function buildPayload(friendLinks: FooterFriendLink[]): SaveSettingsPayload {
     frontTemplate: form.frontTemplate,
     homePopup: { ...form.homePopup },
     icpNumber: form.icpNumber,
+    inviteEnabled: form.inviteEnabled,
+    inviteInviterCredits: Number(form.inviteInviterCredits || 0),
+    inviteInviteeCredits: Number(form.inviteInviteeCredits || 0),
     membershipDailyCredits: Number(form.membershipDailyCredits || 0),
     membershipDiscountPercent: Number(form.membershipDiscountPercent || 0),
     membershipGenerationRateLimit: Number(form.membershipGenerationRateLimit || 0),
@@ -1330,6 +1342,41 @@ onMounted(() => {
                     />
                     <p class="mt-1 text-xs text-gray-400">
                       会员到期前该天数内自动发送提醒邮件，到期后也会发送一次。0 表示关闭到期提醒（需已配置 SMTP 发信）。
+                    </p>
+                  </FormItem>
+                </Form>
+              </Card>
+
+              <Card size="small" title="邀请返积分">
+                <Form layout="vertical">
+                  <FormItem label="开启邀请返积分">
+                    <Switch v-model:checked="form.inviteEnabled" />
+                    <p class="mt-1 text-xs text-gray-400">
+                      开启后，新用户通过邀请码/邀请链接注册时，邀请人与被邀请人各得一份积分奖励。
+                    </p>
+                  </FormItem>
+                  <FormItem label="邀请人奖励积分">
+                    <InputNumber
+                      v-model:value="form.inviteInviterCredits"
+                      :max="100000"
+                      :min="0"
+                      :precision="0"
+                      class="w-full"
+                    />
+                    <p class="mt-1 text-xs text-gray-400">
+                      每成功邀请一位新用户注册，邀请人获得的积分，0 表示不奖励。
+                    </p>
+                  </FormItem>
+                  <FormItem label="被邀请人奖励积分">
+                    <InputNumber
+                      v-model:value="form.inviteInviteeCredits"
+                      :max="100000"
+                      :min="0"
+                      :precision="0"
+                      class="w-full"
+                    />
+                    <p class="mt-1 text-xs text-gray-400">
+                      新用户凭邀请码注册后，额外获得的积分（叠加在新用户注册赠送积分之上），0 表示不奖励。
                     </p>
                   </FormItem>
                 </Form>

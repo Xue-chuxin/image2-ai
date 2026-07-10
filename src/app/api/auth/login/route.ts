@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const payload = (await request.json().catch(() => null)) as { email?: string; password?: string; verificationCode?: string; twoFactorCode?: string; intent?: string } | null;
+  const payload = (await request.json().catch(() => null)) as { email?: string; password?: string; verificationCode?: string; twoFactorCode?: string; intent?: string; referralCode?: string } | null;
   const email = payload?.email?.trim().toLowerCase();
   const password = payload?.password || "";
   const intent = payload?.intent === "login" || payload?.intent === "register" ? payload.intent : "auto";
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const user = await loginOrCreateUser(email, password, payload?.verificationCode, intent);
+    const user = await loginOrCreateUser(email, password, payload?.verificationCode, intent, payload?.referralCode);
 
     // 密码校验通过后进入二步验证闸门：已开启则需邮箱验证码，未开启直接放行。
     const gate = await enforceLoginTwoFactor({

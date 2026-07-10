@@ -45,6 +45,7 @@ export function SignInForm({
   const [isSendingCode, setIsSendingCode] = useState(false);
   const [codeCooldown, setCodeCooldown] = useState(0);
   const [oauthProviders, setOauthProviders] = useState<Array<{ provider: string; label: string }>>([]);
+  const [referralCode, setReferralCode] = useState("");
   const isRegister = mode === "register";
   const switchHref = `${isRegister ? "/signin" : "/signup"}${nextPath ? `?next=${encodeURIComponent(nextPath)}` : ""}`;
 
@@ -59,11 +60,16 @@ export function SignInForm({
       })
       .catch(() => undefined);
 
-    // 回显 OAuth 回调错误。
+    // 回显 OAuth 回调错误，并解析邀请码（?ref=）。
     try {
-      const oauthError = new URLSearchParams(window.location.search).get("oauth_error");
+      const params = new URLSearchParams(window.location.search);
+      const oauthError = params.get("oauth_error");
       if (oauthError) {
         setError(oauthError);
+      }
+      const ref = params.get("ref");
+      if (ref) {
+        setReferralCode(ref.trim().toUpperCase().slice(0, 16));
       }
     } catch {
       // 忽略。
@@ -131,6 +137,7 @@ export function SignInForm({
           intent: mode,
           verificationCode: isRegister ? verificationCode : undefined,
           twoFactorCode: !isRegister && twoFactorRequired ? twoFactorCode : undefined,
+          referralCode: isRegister && referralCode ? referralCode : undefined,
         }),
       });
       const data = await readApiResponse(response);
@@ -214,6 +221,11 @@ export function SignInForm({
             </button>
           </div>
           <p className="mt-2 text-xs leading-5 text-ink-faint">新用户注册需要邮箱验证码，验证码 10 分钟内有效。</p>
+          {referralCode ? (
+            <p className="mt-2 rounded-xl bg-brand-50 dark:bg-brand-500/10 px-3.5 py-2.5 text-xs font-medium leading-5 text-brand-600 dark:text-brand-300">
+              已应用邀请码 <span className="font-bold">{referralCode}</span>，注册成功后你与邀请人都将获得积分奖励。
+            </p>
+          ) : null}
         </div>
       ) : null}
 
