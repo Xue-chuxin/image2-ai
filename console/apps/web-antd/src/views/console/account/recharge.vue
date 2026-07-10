@@ -50,6 +50,31 @@ let pollBusy = false;
 
 const availableBalance = computed(() => overview.value?.balance.available ?? 0);
 
+const subscription = computed(() => overview.value?.subscription ?? null);
+
+const membershipMessage = computed(() => {
+  const sub = subscription.value;
+  if (!sub) {
+    return '';
+  }
+  const expires = new Date(sub.expiresAt).toLocaleDateString();
+  if (sub.active) {
+    return `会员「${sub.packageName}」有效期至 ${expires}，剩余 ${sub.daysRemaining} 天`;
+  }
+  return `会员「${sub.packageName}」已于 ${expires} 到期，可购买会员卡续期`;
+});
+
+const membershipType = computed(() => {
+  const sub = subscription.value;
+  if (!sub) {
+    return 'info';
+  }
+  if (!sub.active) {
+    return 'warning';
+  }
+  return sub.daysRemaining <= 7 ? 'warning' : 'success';
+});
+
 const availableChannels = computed<PaymentChannelView[]>(
   () =>
     overview.value?.channels.filter(
@@ -86,6 +111,14 @@ function formatAmount(cents: number) {
 
 function packageTotal(pkg: CreditPackageView) {
   return pkg.credits + pkg.bonusCredits;
+}
+
+function durationLabel(days: number) {
+  if (days === 30) return '月卡';
+  if (days === 365) return '年卡';
+  if (days % 365 === 0) return `${days / 365} 年卡`;
+  if (days % 30 === 0) return `${days / 30} 个月卡`;
+  return `${days} 天卡`;
 }
 
 async function loadOverview() {
@@ -247,6 +280,14 @@ onUnmounted(stopPolling);
       />
 
       <Alert
+        v-if="subscription"
+        class="mt-4"
+        :message="membershipMessage"
+        :type="membershipType"
+        show-icon
+      />
+
+      <Alert
         v-if="!loading && !hasChannel"
         class="mt-4"
         message="管理员尚未配置支付渠道，暂时无法在线充值"
@@ -276,7 +317,15 @@ onUnmounted(stopPolling);
             :hoverable="true"
             class="flex flex-col"
           >
-            <div class="text-base font-semibold">{{ pkg.name }}</div>
+            <div class="flex items-center gap-2">
+              <span class="text-base font-semibold">{{ pkg.name }}</span>
+              <span
+                v-if="pkg.packageType === 'SUBSCRIPTION'"
+                class="rounded bg-blue-50 px-1.5 py-0.5 text-xs text-blue-600"
+              >
+                {{ durationLabel(pkg.durationDays) }}
+              </span>
+            </div>
             <p class="mt-1 min-h-5 text-sm text-gray-500">
               {{ pkg.description || '—' }}
             </p>
@@ -286,6 +335,12 @@ onUnmounted(stopPolling);
             </div>
             <p v-if="pkg.bonusCredits > 0" class="mt-1 text-xs text-orange-500">
               含赠送 {{ pkg.bonusCredits }}
+            </p>
+            <p
+              v-if="pkg.packageType === 'SUBSCRIPTION'"
+              class="mt-1 text-xs text-blue-500"
+            >
+              开通后会员有效期 {{ pkg.durationDays }} 天，可叠加续期
             </p>
             <div class="mt-3 text-lg font-medium">
               {{ formatAmount(pkg.priceCents) }}
@@ -297,7 +352,7 @@ onUnmounted(stopPolling);
               type="primary"
               @click="buy(pkg)"
             >
-              立即购买
+              {{ pkg.packageType === 'SUBSCRIPTION' ? '开通 / 续费' : '立即购买' }}
             </Button>
           </Card>
         </div>

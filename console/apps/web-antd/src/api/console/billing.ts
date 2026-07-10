@@ -14,6 +14,8 @@ export interface CreditPackageView {
   totalCredits: number;
   priceCents: number;
   currency: string;
+  packageType: 'RECHARGE' | 'SUBSCRIPTION';
+  durationDays: number;
   sortOrder: number;
   isActive: boolean;
   createdAt: string;
@@ -28,6 +30,8 @@ export interface RechargeOrderView {
   credits: number;
   bonusCredits: number;
   totalCredits: number;
+  packageType: 'RECHARGE' | 'SUBSCRIPTION';
+  durationDays: number;
   amountCents: number;
   currency: string;
   status: 'CANCELED' | 'EXPIRED' | 'PAID' | 'PENDING';
@@ -49,11 +53,20 @@ export interface PaymentChannelView {
   mode?: 'production' | 'sandbox';
 }
 
+export interface SubscriptionView {
+  packageName: string;
+  startedAt: string;
+  expiresAt: string;
+  active: boolean;
+  daysRemaining: number;
+}
+
 export interface BillingOverview {
   balance: CreditBalance;
   packages: CreditPackageView[];
   orders: RechargeOrderView[];
   channels: PaymentChannelView[];
+  subscription: SubscriptionView | null;
 }
 
 export interface CreditTransactionView {

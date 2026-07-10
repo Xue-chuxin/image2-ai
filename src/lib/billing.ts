@@ -42,6 +42,8 @@ const defaultPackages = [
 
 export type BillingPaymentSettings = PaymentProviderSettings;
 
+export type CreditPackageType = "RECHARGE" | "SUBSCRIPTION";
+
 export type CreditPackageView = {
   id: string;
   name: string;
@@ -51,10 +53,20 @@ export type CreditPackageView = {
   totalCredits: number;
   priceCents: number;
   currency: string;
+  packageType: CreditPackageType;
+  durationDays: number;
   sortOrder: number;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+};
+
+export type SubscriptionView = {
+  packageName: string;
+  startedAt: string;
+  expiresAt: string;
+  active: boolean;
+  daysRemaining: number;
 };
 
 export type RechargeOrderView = {
@@ -67,6 +79,8 @@ export type RechargeOrderView = {
   credits: number;
   bonusCredits: number;
   totalCredits: number;
+  packageType: CreditPackageType;
+  durationDays: number;
   amountCents: number;
   currency: string;
   status: RechargeOrderStatus;
@@ -100,7 +114,32 @@ export type BillingOverview = {
   packages: CreditPackageView[];
   orders: RechargeOrderView[];
   channels: PaymentChannelView[];
+  subscription: SubscriptionView | null;
 };
+
+function normalizePackageType(value: unknown): CreditPackageType {
+  return value === "SUBSCRIPTION" ? "SUBSCRIPTION" : "RECHARGE";
+}
+
+function serializeSubscription(sub: any): SubscriptionView | null {
+  if (!sub) {
+    return null;
+  }
+  const expiresAt: Date = sub.expiresAt;
+  const remainingMs = expiresAt.getTime() - Date.now();
+  return {
+    packageName: sub.packageName,
+    startedAt: sub.startedAt.toISOString(),
+    expiresAt: expiresAt.toISOString(),
+    active: remainingMs > 0,
+    daysRemaining: remainingMs > 0 ? Math.ceil(remainingMs / (1000 * 60 * 60 * 24)) : 0,
+  };
+}
+
+export async function getUserSubscription(userId: string): Promise<SubscriptionView | null> {
+  const sub = await prisma.subscription.findUnique({ where: { userId } });
+  return serializeSubscription(sub);
+}
 
 function serializePackage(pkg: any): CreditPackageView {
   return {
@@ -112,6 +151,8 @@ function serializePackage(pkg: any): CreditPackageView {
     totalCredits: pkg.credits + pkg.bonusCredits,
     priceCents: pkg.priceCents,
     currency: pkg.currency,
+    packageType: normalizePackageType(pkg.packageType),
+    durationDays: pkg.durationDays ?? 0,
     sortOrder: pkg.sortOrder,
     isActive: Boolean(pkg.isActive),
     createdAt: pkg.createdAt.toISOString(),
@@ -130,6 +171,8 @@ function serializeOrder(order: any): RechargeOrderView {
     credits: order.credits,
     bonusCredits: order.bonusCredits,
     totalCredits: order.credits + order.bonusCredits,
+    packageType: normalizePackageType(order.packageType),
+    durationDays: order.durationDays ?? 0,
     amountCents: order.amountCents,
     currency: order.currency,
     status: order.status,
@@ -235,6 +278,8 @@ export async function upsertCreditPackage(input: {
   bonusCredits?: number;
   priceCents: number;
   currency?: string;
+  packageType?: string;
+  durationDays?: number;
   sortOrder?: number;
   isActive?: boolean;
 }) {
@@ -242,6 +287,8 @@ export async function upsertCreditPackage(input: {
   const credits = Math.floor(Number(input.credits));
   const bonusCredits = Math.max(0, Math.floor(Number(input.bonusCredits || 0)));
   const priceCents = Math.floor(Number(input.priceCents));
+  const packageType = normalizePackageType(input.packageType);
+  const durationDays = Math.max(0, Math.floor(Number(input.durationDays || 0)));
 
   if (!name) {
     throw new AppError("BAD_REQUEST", "请输入套餐名称。", 400);
@@ -255,6 +302,10 @@ export async function upsertCreditPackage(input: {
     throw new AppError("BAD_REQUEST", "套餐价格必须大于 0。", 400);
   }
 
+  if (packageType === "SUBSCRIPTION" && durationDays <= 0) {
+    throw new AppError("BAD_REQUEST", "会员套餐的有效天数必须大于 0。", 400);
+  }
+
   const data = {
     name,
     description: normalizeText(input.description, 300) || null,
@@ -262,6 +313,8 @@ export async function upsertCreditPackage(input: {
     bonusCredits,
     priceCents,
     currency: normalizeText(input.currency, 12) || "CNY",
+    packageType,
+    durationDays: packageType === "SUBSCRIPTION" ? durationDays : 0,
     sortOrder: Math.floor(Number(input.sortOrder || 0)),
     isActive: input.isActive ?? true,
   };
@@ -307,6 +360,8 @@ export async function createRechargeOrder(userId: string, packageId: string, pro
       packageNameSnapshot: pkg.name,
       credits: pkg.credits,
       bonusCredits: pkg.bonusCredits,
+      packageType: pkg.packageType,
+      durationDays: pkg.durationDays,
       amountCents: pkg.priceCents,
       currency: pkg.currency,
       status: "PENDING",
@@ -416,11 +471,12 @@ export async function listUserRechargeOrders(userId: string, limit = 20, options
 }
 
 export async function getUserBillingOverview(userId: string, options: ListUserRechargeOrdersOptions = {}): Promise<BillingOverview> {
-  const [balance, packages, orders, channels] = await Promise.all([
+  const [balance, packages, orders, channels, subscription] = await Promise.all([
     getUserCreditBalance(userId),
     listActiveCreditPackages(),
     listUserRechargeOrders(userId, 20, options),
     listPublicPaymentChannels(),
+    getUserSubscription(userId),
   ]);
 
   return {
@@ -428,6 +484,7 @@ export async function getUserBillingOverview(userId: string, options: ListUserRe
     packages,
     orders,
     channels,
+    subscription,
   };
 }
 
@@ -635,6 +692,29 @@ export async function markRechargeOrderPaidByPayment(input: {
         memo: `在线支付订单 ${order.orderNo} 到账`,
       },
     });
+
+    // 会员套餐：在充值到账的同时续期会员有效期（从当前有效期与现在的较晚者往后顺延）。
+    if (order.packageType === "SUBSCRIPTION" && order.durationDays > 0) {
+      const existing = await tx.subscription.findUnique({ where: { userId: order.userId } });
+      const base = existing && existing.expiresAt.getTime() > Date.now() ? existing.expiresAt.getTime() : Date.now();
+      const expiresAt = new Date(base + order.durationDays * 24 * 60 * 60 * 1000);
+      await tx.subscription.upsert({
+        where: { userId: order.userId },
+        update: {
+          packageId: order.packageId,
+          packageName: order.packageNameSnapshot,
+          expiresAt,
+          lastOrderId: order.id,
+        },
+        create: {
+          userId: order.userId,
+          packageId: order.packageId,
+          packageName: order.packageNameSnapshot,
+          expiresAt,
+          lastOrderId: order.id,
+        },
+      });
+    }
 
     return tx.rechargeOrder.findUniqueOrThrow({
       where: {

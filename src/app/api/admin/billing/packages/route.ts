@@ -54,6 +54,8 @@ export async function POST(request: Request) {
       bonusCredits: normalizeNumber(body.bonusCredits),
       priceCents: Math.round(normalizeNumber(body.priceYuan) * 100 || normalizeNumber(body.priceCents)),
       currency: normalizeString(body.currency) || "CNY",
+      packageType: normalizeString(body.packageType) || "RECHARGE",
+      durationDays: normalizeNumber(body.durationDays),
       sortOrder: normalizeNumber(body.sortOrder),
       isActive: body.isActive === false ? false : true,
     });

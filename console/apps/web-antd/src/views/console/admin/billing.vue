@@ -86,6 +86,8 @@ interface CreditPackageView {
   totalCredits: number;
   priceCents: number;
   currency: string;
+  packageType: 'RECHARGE' | 'SUBSCRIPTION';
+  durationDays: number;
   sortOrder: number;
   isActive: boolean;
   createdAt: string;
@@ -120,6 +122,8 @@ interface PackageFormState {
   credits: number;
   bonusCredits: number;
   priceYuan: number;
+  packageType: 'RECHARGE' | 'SUBSCRIPTION';
+  durationDays: number;
   sortOrder: number;
   isActive: boolean;
 }
@@ -209,9 +213,11 @@ function createEmptyPackageForm(): PackageFormState {
     bonusCredits: 0,
     credits: 100,
     description: '',
+    durationDays: 0,
     id: '',
     isActive: true,
     name: '',
+    packageType: 'RECHARGE',
     priceYuan: 12.9,
     sortOrder: 0,
   };
@@ -332,9 +338,11 @@ async function savePackage(input: PackageFormState) {
     bonusCredits: input.bonusCredits,
     credits: input.credits,
     description: input.description,
+    durationDays: input.durationDays,
     id: input.id || undefined,
     isActive: input.isActive,
     name: input.name,
+    packageType: input.packageType,
     priceYuan: input.priceYuan,
     sortOrder: input.sortOrder,
   });
@@ -375,9 +383,11 @@ function editPackage(pkg: CreditPackageView) {
     bonusCredits: pkg.bonusCredits,
     credits: pkg.credits,
     description: pkg.description ?? '',
+    durationDays: pkg.durationDays ?? 0,
     id: pkg.id,
     isActive: pkg.isActive,
     name: pkg.name,
+    packageType: pkg.packageType ?? 'RECHARGE',
     priceYuan: pkg.priceCents / 100,
     sortOrder: pkg.sortOrder,
   });
@@ -391,9 +401,11 @@ async function togglePackage(pkg: CreditPackageView) {
       bonusCredits: pkg.bonusCredits,
       credits: pkg.credits,
       description: pkg.description ?? '',
+      durationDays: pkg.durationDays ?? 0,
       id: pkg.id,
       isActive: !pkg.isActive,
       name: pkg.name,
+      packageType: pkg.packageType ?? 'RECHARGE',
       priceYuan: pkg.priceCents / 100,
       sortOrder: pkg.sortOrder,
     });
@@ -744,6 +756,30 @@ onMounted(() => {
                     :precision="2"
                     class="w-full"
                   />
+                </div>
+                <div>
+                  <div class="mb-1 text-sm text-gray-600">套餐类型</div>
+                  <Select
+                    v-model:value="packageForm.packageType"
+                    :options="[
+                      { label: '充值包（一次性）', value: 'RECHARGE' },
+                      { label: '会员卡（周期）', value: 'SUBSCRIPTION' },
+                    ]"
+                    class="w-full"
+                  />
+                </div>
+                <div v-if="packageForm.packageType === 'SUBSCRIPTION'">
+                  <div class="mb-1 text-sm text-gray-600">会员有效天数</div>
+                  <InputNumber
+                    v-model:value="packageForm.durationDays"
+                    :min="1"
+                    :precision="0"
+                    class="w-full"
+                    placeholder="月卡填 30、年卡填 365"
+                  />
+                  <div class="mt-1 text-xs text-gray-400">
+                    购买后按此天数续期会员；会员卡同样即时发放上面配置的积分。
+                  </div>
                 </div>
                 <div>
                   <div class="mb-1 text-sm text-gray-600">排序</div>

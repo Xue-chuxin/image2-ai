@@ -57,6 +57,7 @@ model User {
   creditTransactions CreditTransaction[]
   rechargeOrders     RechargeOrder[]
   oauthAccounts      OAuthAccount[]
+  subscription       Subscription?
 }
 
 model OAuthAccount {
@@ -296,6 +297,8 @@ model CreditPackage {
   bonusCredits  Int             @default(0)
   priceCents    Int
   currency      String          @default("CNY")
+  packageType   String          @default("RECHARGE")
+  durationDays  Int             @default(0)
   sortOrder     Int             @default(0)
   isActive      Boolean         @default(true)
   orders        RechargeOrder[]
@@ -313,6 +316,8 @@ model RechargeOrder {
   packageNameSnapshot String
   credits             Int
   bonusCredits        Int                 @default(0)
+  packageType         String              @default("RECHARGE")
+  durationDays        Int                 @default(0)
   amountCents         Int
   currency            String              @default("CNY")
   status              RechargeOrderStatus @default(PENDING)
@@ -345,6 +350,21 @@ model RechargeOrder {
   @@index([submittedAt])
   @@index([provider])
   @@index([providerTradeNo])
+}
+
+model Subscription {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  packageId   String?
+  packageName String
+  startedAt   DateTime @default(now())
+  expiresAt   DateTime
+  lastOrderId String?
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([expiresAt])
 }
 
 model PaymentEvent {
