@@ -588,7 +588,7 @@ export function GenerateComposer({
         />
       </div>
 
-      {/* 参考图上传（当前未开放，代码保留） */}
+      {/* 参考图上传（默认开放，管理员可在后台关闭） */}
       {referenceImagesEnabled ? (
         <div
           className={clsx(
@@ -739,7 +739,7 @@ export function GenerateComposer({
           className="inline-flex items-center justify-center gap-2 rounded-xl border border-line bg-panel px-4 py-2.5 text-sm font-semibold text-ink-secondary transition hover:bg-page disabled:opacity-60"
         >
           {isPolishing ? <Loader2 className="animate-spin" size={16} /> : <Wand2 size={16} />}
-          整理描述
+          一键润色
         </button>
         <button
           type="button"

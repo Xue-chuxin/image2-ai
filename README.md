@@ -14,6 +14,7 @@
 
 - 在线演示：[https://www.zaotutai.com/](https://www.zaotutai.com/)
 - English：[README_EN.md](README_EN.md)
+- 一键安装：[一键安装（推荐）](#一键安装推荐)
 - 快速部署：[Docker Compose 部署](#docker-compose-部署)
 - 本地开发：[本地开发](#本地开发)
 - 常见问题：[docs/faq.md](docs/faq.md)
@@ -35,7 +36,29 @@
 
 演示站地址：[https://www.zaotutai.com/](https://www.zaotutai.com/)
 
-## 30 秒体验 Docker 部署
+## 一键安装（推荐）
+
+已装好 Docker（含 Compose v2）的 Linux / macOS 服务器，在仓库根目录执行：
+
+```bash
+./install.sh
+```
+
+交互式向导会问你站点地址、管理员邮箱/密码和数据库模式（内置 Postgres 或已有数据库），
+自动生成登录密钥与数据库密码、正确拼好 `DATABASE_URL`、写好 `.env.production`、选对 compose 文件并一键起服务。
+结尾会明示自动生成的管理员密码，请及时保存。
+
+常用变体：
+
+```bash
+./install.sh --config-only   # 只生成 .env.production 并打印将执行的 compose 命令，不真正构建/启动（先看后起）
+./install.sh --yes           # 非交互，全部用默认值/环境变量（便于自动化）
+./install.sh --help          # 查看全部选项
+```
+
+想手动控制每一步，或了解各环境变量含义，见下方 [Docker Compose 部署](#docker-compose-部署)。
+
+## 30 秒体验 Docker 部署（手动）
 
 ```bash
 cp .env.example .env.production

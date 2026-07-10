@@ -283,7 +283,7 @@ const defaultSettings: PublicAppSettings = {
   deepseekModel: "deepseek-chat",
   openaiImageModel: "gpt-image-2",
   openaiVisionModel: "gpt-4o",
-  referenceImagesEnabled: false,
+  referenceImagesEnabled: true,
   referenceImageRetentionDays: 30,
   stabilityAiModel: "stable-diffusion-xl-1024-v1-0",
   chatgptWebEnabled: false,

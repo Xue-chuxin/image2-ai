@@ -348,7 +348,7 @@ function createDefaultSettings(): AdminAppSettings {
     openaiImageModel: '',
     openaiVisionModel: '',
     referenceImageRetentionDays: 30,
-    referenceImagesEnabled: false,
+    referenceImagesEnabled: true,
     siteFaviconUrl: '',
     siteLogoUrl: '',
     siteSubtitle: '',
