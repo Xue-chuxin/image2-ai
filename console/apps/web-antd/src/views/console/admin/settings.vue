@@ -101,6 +101,7 @@ interface AdminAppSettings {
   membershipDailyCredits: number;
   membershipDiscountPercent: number;
   membershipGenerationRateLimit: number;
+  membershipExpiryReminderDays: number;
   moderationBlockMessage: string;
   moderationEnabled: boolean;
   moderationForbiddenWords: string;
@@ -177,6 +178,7 @@ interface SaveSettingsPayload {
   membershipDailyCredits: number;
   membershipDiscountPercent: number;
   membershipGenerationRateLimit: number;
+  membershipExpiryReminderDays: number;
   moderationBlockMessage: string;
   moderationEnabled: boolean;
   moderationForbiddenWords: string;
@@ -308,6 +310,7 @@ function createDefaultSettings(): AdminAppSettings {
     membershipDailyCredits: 0,
     membershipDiscountPercent: 0,
     membershipGenerationRateLimit: 30,
+    membershipExpiryReminderDays: 7,
     moderationBlockMessage: '',
     moderationEnabled: false,
     moderationForbiddenWords: '',
@@ -627,6 +630,7 @@ function buildPayload(friendLinks: FooterFriendLink[]): SaveSettingsPayload {
     membershipDailyCredits: Number(form.membershipDailyCredits || 0),
     membershipDiscountPercent: Number(form.membershipDiscountPercent || 0),
     membershipGenerationRateLimit: Number(form.membershipGenerationRateLimit || 0),
+    membershipExpiryReminderDays: Number(form.membershipExpiryReminderDays || 0),
     moderationBlockMessage: form.moderationBlockMessage,
     moderationEnabled: form.moderationEnabled,
     moderationForbiddenWords: form.moderationForbiddenWords,
@@ -1314,6 +1318,18 @@ onMounted(() => {
                     />
                     <p class="mt-1 text-xs text-gray-400">
                       有效会员的出图频率上限（普通用户固定为 10）。设置为低于 10 时按 10 生效。
+                    </p>
+                  </FormItem>
+                  <FormItem label="到期提醒提前天数">
+                    <InputNumber
+                      v-model:value="form.membershipExpiryReminderDays"
+                      :max="60"
+                      :min="0"
+                      :precision="0"
+                      class="w-full"
+                    />
+                    <p class="mt-1 text-xs text-gray-400">
+                      会员到期前该天数内自动发送提醒邮件，到期后也会发送一次。0 表示关闭到期提醒（需已配置 SMTP 发信）。
                     </p>
                   </FormItem>
                 </Form>

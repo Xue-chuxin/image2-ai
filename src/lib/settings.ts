@@ -89,6 +89,7 @@ export type AdminAppSettings = PublicAppSettings & {
   membershipDiscountPercent: number;
   membershipDailyCredits: number;
   membershipGenerationRateLimit: number;
+  membershipExpiryReminderDays: number;
   oauthGithubEnabled: boolean;
   oauthGithubClientId: string;
   oauthGithubClientSecretConfigured: boolean;
@@ -125,6 +126,7 @@ export type SaveAdminSettingsInput = Partial<PublicAppSettings> & {
   membershipDiscountPercent?: number | string;
   membershipDailyCredits?: number | string;
   membershipGenerationRateLimit?: number | string;
+  membershipExpiryReminderDays?: number | string;
   oauthGithubEnabled?: boolean | string;
   oauthGithubClientId?: string;
   oauthGithubClientSecret?: string;
@@ -182,6 +184,7 @@ export type MembershipRuntimeConfig = {
   discountPercent: number;
   dailyCredits: number;
   generationRateLimit: number;
+  expiryReminderDays: number;
 };
 
 export type OAuthProviderName = "github" | "google";
@@ -283,6 +286,7 @@ const defaultMembershipSettings: MembershipRuntimeConfig = {
   discountPercent: 0,
   dailyCredits: 0,
   generationRateLimit: 30,
+  expiryReminderDays: 7,
 };
 
 const defaultEmailSettings: Omit<EmailRuntimeConfig, "password"> = {
@@ -839,6 +843,7 @@ function getMembershipSettings(map: Map<string, SettingRow>): MembershipRuntimeC
     discountPercent: normalizeMembershipDiscount(map.get("membershipDiscountPercent")?.value, defaultMembershipSettings.discountPercent),
     dailyCredits: normalizeNonNegativeInt(map.get("membershipDailyCredits")?.value, defaultMembershipSettings.dailyCredits, 100000),
     generationRateLimit: normalizeNonNegativeInt(map.get("membershipGenerationRateLimit")?.value, defaultMembershipSettings.generationRateLimit, 100000),
+    expiryReminderDays: normalizeNonNegativeInt(map.get("membershipExpiryReminderDays")?.value, defaultMembershipSettings.expiryReminderDays, 60),
   };
 }
 
@@ -1171,6 +1176,7 @@ export async function getAdminAppSettings(options?: { includeDiagnostics?: boole
     membershipDiscountPercent: membershipSettings.discountPercent,
     membershipDailyCredits: membershipSettings.dailyCredits,
     membershipGenerationRateLimit: membershipSettings.generationRateLimit,
+    membershipExpiryReminderDays: membershipSettings.expiryReminderDays,
     oauthGithubEnabled: normalizeBoolean(map.get("oauthGithubEnabled")?.value, false),
     oauthGithubClientId: normalizeOptionalText(map.get("oauthGithubClientId")?.value ?? process.env.OAUTH_GITHUB_CLIENT_ID, "", 200),
     oauthGithubClientSecretConfigured: Boolean(map.get("oauthGithubClientSecret")?.value || process.env.OAUTH_GITHUB_CLIENT_SECRET),
@@ -1232,6 +1238,7 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
   const membershipDiscountPercent = normalizeMembershipDiscount(input.membershipDiscountPercent, currentMembershipSettings.discountPercent);
   const membershipDailyCredits = normalizeNonNegativeInt(input.membershipDailyCredits, currentMembershipSettings.dailyCredits, 100000);
   const membershipGenerationRateLimit = normalizeNonNegativeInt(input.membershipGenerationRateLimit, currentMembershipSettings.generationRateLimit, 100000);
+  const membershipExpiryReminderDays = normalizeNonNegativeInt(input.membershipExpiryReminderDays, currentMembershipSettings.expiryReminderDays, 60);
   const oauthGithubEnabled = normalizeBoolean(input.oauthGithubEnabled, normalizeBoolean(settingsMap.get("oauthGithubEnabled")?.value, false));
   const oauthGithubClientId = normalizeOptionalText(input.oauthGithubClientId, settingsMap.get("oauthGithubClientId")?.value ?? "", 200);
   const oauthGoogleEnabled = normalizeBoolean(input.oauthGoogleEnabled, normalizeBoolean(settingsMap.get("oauthGoogleEnabled")?.value, false));
@@ -1325,6 +1332,7 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
     { key: "membershipDiscountPercent", value: String(membershipDiscountPercent) },
     { key: "membershipDailyCredits", value: String(membershipDailyCredits) },
     { key: "membershipGenerationRateLimit", value: String(membershipGenerationRateLimit) },
+    { key: "membershipExpiryReminderDays", value: String(membershipExpiryReminderDays) },
     { key: "oauthGithubEnabled", value: String(oauthGithubEnabled) },
     { key: "oauthGithubClientId", value: oauthGithubClientId },
     { key: "oauthGoogleEnabled", value: String(oauthGoogleEnabled) },

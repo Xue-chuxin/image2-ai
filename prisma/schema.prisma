@@ -361,6 +361,10 @@ model Subscription {
   expiresAt   DateTime
   lastOrderId String?
   lastDailyGrantAt DateTime?
+  // 到期提醒去重：记录已针对哪个 expiresAt 值发送过「即将到期」「已到期」邮件，
+  // 续期后 expiresAt 变化，存值不再匹配即可为新周期重新提醒。
+  expiringRemindedFor DateTime?
+  expiredRemindedFor  DateTime?
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

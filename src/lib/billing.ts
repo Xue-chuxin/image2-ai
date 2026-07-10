@@ -4,6 +4,7 @@ import type { RechargeOrderStatus } from "@prisma/client";
 import { AppError } from "@/lib/app-error";
 import { prisma } from "@/lib/db";
 import { getUserCreditBalance } from "@/lib/credits";
+import { maybeSendMembershipReminders } from "@/lib/membership-reminders";
 import { getMembershipRuntimeConfig } from "@/lib/settings";
 import {
   createPaymentForOrder,
@@ -479,6 +480,9 @@ export async function listUserRechargeOrders(userId: string, limit = 20, options
 }
 
 export async function getUserBillingOverview(userId: string, options: ListUserRechargeOrdersOptions = {}): Promise<BillingOverview> {
+  // 惰性触发到期提醒扫描（进程内节流，每小时至多一次），无需常驻进程。
+  maybeSendMembershipReminders();
+
   const [balance, packages, orders, channels, subscription, membershipConfig] = await Promise.all([
     getUserCreditBalance(userId),
     listActiveCreditPackages(),
