@@ -4,6 +4,7 @@ import { AppError } from "@/lib/app-error";
 import { safeEqual } from "@/lib/app-crypto";
 import { prisma } from "@/lib/db";
 import { sendSystemEmail } from "@/lib/email";
+import { buildVerificationCodeEmail, getEmailBrand } from "@/lib/email-templates";
 
 export type EmailVerificationPurpose = "register" | "password_reset";
 
@@ -40,27 +41,6 @@ function hashVerificationCode(email: string, purpose: EmailVerificationPurpose, 
 
 function generateCode() {
   return randomInt(0, 1000000).toString().padStart(6, "0");
-}
-
-function buildVerificationEmail(code: string) {
-  const text = [
-    "你正在注册造图台账号。",
-    "",
-    `验证码：${code}`,
-    "",
-    "验证码 10 分钟内有效。如果不是你本人操作，请忽略这封邮件。",
-  ].join("\n");
-  const html = [
-    "<p>你正在注册造图台账号。</p>",
-    `<p style="font-size:24px;font-weight:800;letter-spacing:4px;">${code}</p>`,
-    "<p>验证码 10 分钟内有效。如果不是你本人操作，请忽略这封邮件。</p>",
-  ].join("");
-
-  return {
-    subject: "造图台注册验证码",
-    text,
-    html,
-  };
 }
 
 export async function sendEmailVerificationCode(emailInput: unknown, purpose: EmailVerificationPurpose = "register") {
@@ -132,9 +112,10 @@ export async function sendEmailVerificationCode(emailInput: unknown, purpose: Em
     });
   });
 
+  const brand = await getEmailBrand();
   await sendSystemEmail({
     to: email,
-    ...buildVerificationEmail(code),
+    ...buildVerificationCodeEmail(brand, { code }),
   });
 
   return {

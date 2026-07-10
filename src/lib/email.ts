@@ -3,6 +3,7 @@ import tls from "tls";
 import { randomBytes } from "crypto";
 
 import { AppError } from "@/lib/app-error";
+import { buildTestEmail, getEmailBrand } from "@/lib/email-templates";
 import { getEmailRuntimeConfig, type EmailRuntimeConfig } from "@/lib/settings";
 
 type EmailPayload = {
@@ -288,12 +289,11 @@ export async function sendSystemEmail(payload: EmailPayload) {
 export async function sendTestEmail(to?: string) {
   const config = await getEmailRuntimeConfig();
   const recipient = to?.trim() || config.testRecipient || config.fromEmail;
+  const brand = await getEmailBrand();
 
   await sendSystemEmail({
     to: recipient,
-    subject: "造图台邮件测试",
-    text: "如果你收到这封邮件，说明造图台 SMTP 发信配置已经生效。",
-    html: "<p>如果你收到这封邮件，说明<strong>造图台 SMTP 发信配置已经生效</strong>。</p>",
+    ...buildTestEmail(brand),
   });
 
   return recipient;
