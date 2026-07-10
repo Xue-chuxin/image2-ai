@@ -4,6 +4,8 @@
 
 ## 未发布
 
+- 核心钱/安全逻辑的数据库集成测试：在纯逻辑单测之外，新增连真实 Postgres 的集成测试（`npm run test:db`），覆盖用 mock 测不到的「涉及钱」条件更新 SQL 与幂等保证——积分冻结/结算/退款/充值（`reserveCreditsForJob`/`spendReservedCreditsForJob`/`refundReservedCreditsForJob`/`grantPurchasedCredits`，含余额不足 402、重复结算/退款不双扣、reserve→spend/refund 全链路账实一致）、邀请码解析与返积分发放（`resolveReferrerByCode`/`getOrCreateReferralCode`/`grantReferralRewardsInTx`）、内容审核关键词拦截与审计落库（`checkModerationText`）。集成测试独立成组：仅当设置环境变量 `DATABASE_URL_TEST` 时运行，未设置则自动跳过（`npm test` 纯逻辑测试保持零数据库依赖）。首次使用需 `createdb image2_app_test` 建独立测试库并执行 `DATABASE_URL=$DATABASE_URL_TEST npm run test:db:setup`。此为纯开发侧改动，不影响运行时行为与部署。
+
 - 引入 Vitest 与核心纯逻辑单测：新增 Vitest 测试基建（`vitest.config.ts`、`tests/setup.ts`，通过 `npm test` 运行），并为一批高价值纯逻辑函数补充单元测试——出图积分估价（`estimateGenerationCreditCost`）、接口限流（`checkRateLimit`）、内容审核关键词匹配与语义判定解析（`parseForbiddenWords`/`checkForbiddenWords`/`parseSemanticVerdict`）、设置项归一化器（布尔/非负整数/会员折扣/保留天数/超时秒数）、邀请码生成（`createReferralCode`），以及参考图 magic-byte 类型探测（`detectReferenceImageMimeType`，验证伪造 Content-Type 无效）。此为纯开发侧改动，不影响运行时行为与部署。
 
 - 邀请返积分：顶栏「邀请有礼」现可用——登录用户点击后弹出邀请弹窗，展示专属邀请码、邀请链接（一键复制）、已邀请人数与累计返积分。新用户通过邀请链接（`/signup?ref=邀请码`）注册成功后，邀请人与被邀请人各得一份积分奖励（叠加在新用户注册赠送积分之上）。是否开启、双方奖励积分数均可在控制台「安全与存储 → 邀请返积分」配置（默认关闭，邀请人 30 / 被邀请人 20）。邀请码惰性生成、去除易混淆字符；奖励在注册事务内原子发放，仅注册时发放一次。`User` 表新增 `referralCode`/`referredById` 字段（需执行数据库迁移）。
