@@ -102,17 +102,6 @@ export async function POST(request: Request) {
     const promptEn = normalizeString(body.promptEn);
     const negativePrompt = normalizeString(body.negativePrompt);
     const referenceImageIds = normalizeStringArray(body.referenceImageIds);
-    if (referenceImageIds.length) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: "当前正式版暂未开放参考图参与生图，请先移除参考图后再生成。",
-        },
-        {
-          status: 400,
-        },
-      );
-    }
 
     const moderation = await checkModerationText([
       { value: promptZh, label: "中文提示词" },

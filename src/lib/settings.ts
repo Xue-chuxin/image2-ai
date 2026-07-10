@@ -35,6 +35,9 @@ export type PublicAppSettings = {
   deepseekBaseUrl: string;
   deepseekModel: string;
   openaiImageModel: string;
+  openaiVisionModel: string;
+  referenceImagesEnabled: boolean;
+  referenceImageRetentionDays: number;
   stabilityAiModel: string;
   chatgptWebEnabled: boolean;
   chatgptWebUserDataDir: string;
@@ -201,6 +204,9 @@ const defaultSettings: PublicAppSettings = {
   deepseekBaseUrl: "https://api.deepseek.com",
   deepseekModel: "deepseek-chat",
   openaiImageModel: "gpt-image-2",
+  openaiVisionModel: "gpt-4o",
+  referenceImagesEnabled: false,
+  referenceImageRetentionDays: 30,
   stabilityAiModel: "stable-diffusion-xl-1024-v1-0",
   chatgptWebEnabled: false,
   chatgptWebUserDataDir: "chatgpt-web-profile",
@@ -528,6 +534,16 @@ function normalizeTimeoutSeconds(value: unknown, fallback: number) {
   }
 
   return Math.min(Math.max(Math.floor(numeric), 30), 900);
+}
+
+function normalizeRetentionDays(value: unknown, fallback: number) {
+  const numeric = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(numeric)) {
+    return fallback;
+  }
+
+  // 1 天到 10 年，避免误填 0 导致立即清理或极端值。
+  return Math.min(Math.max(Math.floor(numeric), 1), 3650);
 }
 
 function normalizePort(value: unknown, fallback: number) {
@@ -1010,6 +1026,12 @@ export async function getPublicAppSettings(): Promise<PublicAppSettings> {
     deepseekBaseUrl: normalizeText(getStoredSetting(map, "deepseekBaseUrl") || process.env.DEEPSEEK_BASE_URL, defaultSettings.deepseekBaseUrl, 200),
     deepseekModel: normalizeText(getStoredSetting(map, "deepseekModel") || process.env.DEEPSEEK_MODEL, defaultSettings.deepseekModel),
     openaiImageModel,
+    openaiVisionModel: normalizeOptionalText(getStoredSetting(map, "openaiVisionModel") ?? process.env.OPENAI_VISION_MODEL, defaultSettings.openaiVisionModel),
+    referenceImagesEnabled: getStoredBoolean(map, "referenceImagesEnabled", process.env.REFERENCE_IMAGES_ENABLED, defaultSettings.referenceImagesEnabled),
+    referenceImageRetentionDays: normalizeRetentionDays(
+      getStoredSetting(map, "referenceImageRetentionDays") ?? process.env.REFERENCE_IMAGE_RETENTION_DAYS,
+      defaultSettings.referenceImageRetentionDays,
+    ),
     stabilityAiModel: normalizeText(getStoredSetting(map, "stabilityAiModel") || process.env.STABILITY_AI_MODEL, defaultSettings.stabilityAiModel),
     chatgptWebEnabled: getStoredBoolean(map, "chatgptWebEnabled", process.env.CHATGPT_WEB_ENABLED, defaultSettings.chatgptWebEnabled),
     chatgptWebUserDataDir,
@@ -1088,6 +1110,9 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
   const deepseekBaseUrl = normalizeText(input.deepseekBaseUrl, currentPublicSettings.deepseekBaseUrl, 200);
   const deepseekModel = normalizeText(input.deepseekModel, currentPublicSettings.deepseekModel);
   const openaiImageModel = normalizeText(input.openaiImageModel, currentPublicSettings.openaiImageModel);
+  const openaiVisionModel = normalizeOptionalText(input.openaiVisionModel, currentPublicSettings.openaiVisionModel);
+  const referenceImagesEnabled = normalizeBoolean(input.referenceImagesEnabled, currentPublicSettings.referenceImagesEnabled);
+  const referenceImageRetentionDays = normalizeRetentionDays(input.referenceImageRetentionDays, currentPublicSettings.referenceImageRetentionDays);
   const stabilityAiModel = normalizeText(input.stabilityAiModel, currentPublicSettings.stabilityAiModel);
   const deepseekPolishPrompt = normalizeText(input.deepseekPolishPrompt, getStoredSetting(settingsMap, "deepseekPolishPrompt") || defaultDeepSeekPolishPrompt, 6000);
   const moderationEnabled = normalizeBoolean(input.moderationEnabled, currentModerationSettings.enabled);
@@ -1167,6 +1192,9 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
     { key: "deepseekBaseUrl", value: deepseekBaseUrl },
     { key: "deepseekModel", value: deepseekModel },
     { key: "openaiImageModel", value: openaiImageModel },
+    { key: "openaiVisionModel", value: openaiVisionModel },
+    { key: "referenceImagesEnabled", value: String(referenceImagesEnabled) },
+    { key: "referenceImageRetentionDays", value: String(referenceImageRetentionDays) },
     { key: "stabilityAiModel", value: stabilityAiModel },
     { key: "deepseekPolishPrompt", value: deepseekPolishPrompt },
     { key: "moderationEnabled", value: String(moderationEnabled) },

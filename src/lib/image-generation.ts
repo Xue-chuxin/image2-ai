@@ -151,7 +151,8 @@ const REFERENCE_ANALYSIS_PROMPT = [
 
 async function analyzeReferenceImages(
   images: Array<{ url: string; mimeType?: string | null }>,
-  apiKey: string,
+  channel: OpenAICompatibleRuntimeChannel,
+  visionModel: string,
 ): Promise<string | null> {
   if (!images.length) {
     return null;
@@ -170,14 +171,14 @@ async function analyzeReferenceImages(
       });
     }
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch(`${channel.baseUrl.replace(/\/+$/, "")}/chat/completions`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${channel.apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o",
+        model: visionModel,
         messages: [
           {
             role: "user",
@@ -450,13 +451,18 @@ class OpenAIImageProvider implements ImageGenerationProvider {
     }
 
     let referenceAnalysis: string | undefined;
-    const referenceAnalysisChannel = channels.find((channel) => channel.apiKey);
 
-    if (request.referenceImages?.length && referenceAnalysisChannel) {
-      referenceAnalysis = (await analyzeReferenceImages(
-        request.referenceImages.map((img) => ({ url: img.url, mimeType: img.mimeType })),
-        referenceAnalysisChannel.apiKey,
-      )) || undefined;
+    if (request.referenceImages?.length) {
+      const { openaiVisionModel } = await getPublicAppSettings();
+      const referenceAnalysisChannel = channels.find((channel) => channel.apiKey);
+
+      if (openaiVisionModel && referenceAnalysisChannel) {
+        referenceAnalysis = (await analyzeReferenceImages(
+          request.referenceImages.map((img) => ({ url: img.url, mimeType: img.mimeType })),
+          referenceAnalysisChannel,
+          openaiVisionModel,
+        )) || undefined;
+      }
     }
 
     const errors: string[] = [];
@@ -546,7 +552,7 @@ class StabilityAIProvider implements ImageGenerationProvider {
       formData.append("cfg_scale", "7");
       formData.append("samples", String(count));
 
-      const response = await fetch("https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/image-to-image", {
+      const response = await fetch(`https://api.stability.ai/v1/generation/${config.model}/image-to-image`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${config.apiKey}`,

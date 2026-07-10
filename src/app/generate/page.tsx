@@ -1,4 +1,5 @@
 import { GenerateWorkbench } from "@/components/generate-workbench";
+import { getPublicAppSettings } from "@/lib/settings";
 
 const validRatios = new Set(["1:1", "3:4", "16:9", "9:16"]);
 const validQualities = new Set(["standard", "high", "low"]);
@@ -35,6 +36,7 @@ export default async function GeneratePage({
   }>;
 }) {
   const resolvedSearchParams = searchParams ? await searchParams : {};
+  const publicSettings = await getPublicAppSettings();
   const initialPrompt = firstValue(resolvedSearchParams.prompt);
   const initialPromptEn = firstValue(resolvedSearchParams.promptEn);
   const initialNegativePrompt = firstValue(resolvedSearchParams.negativePrompt);
@@ -68,7 +70,7 @@ export default async function GeneratePage({
         initialQuality={initialQuality}
         initialImageCount={initialImageCount}
         initialReferenceImages={initialReferenceImages.filter((image) => image.id)}
-        referenceImagesEnabled={false}
+        referenceImagesEnabled={publicSettings.referenceImagesEnabled}
       />
     </main>
   );

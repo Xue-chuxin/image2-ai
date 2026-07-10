@@ -1,5 +1,5 @@
 import { randomBytes } from "crypto";
-import { mkdir, writeFile } from "fs/promises";
+import { mkdir, unlink, writeFile } from "fs/promises";
 import path from "path";
 import sharp from "sharp";
 
@@ -204,6 +204,47 @@ export async function saveReferenceImage(userId: string, buffer: Buffer, mimeTyp
     buffer,
     mimeType,
   });
+}
+
+/** 从存储 URL 取出安全的文件名段（仅允许存储层生成的字符集），拒绝任何路径穿越。 */
+function safeStoredFilename(url: string | null | undefined) {
+  if (!url) {
+    return "";
+  }
+
+  const withoutQuery = url.split(/[?#]/)[0];
+  const filename = withoutQuery.split("/").pop() || "";
+  return /^[a-zA-Z0-9_.-]+$/.test(filename) ? filename : "";
+}
+
+async function unlinkQuietly(filePath: string) {
+  try {
+    await unlink(filePath);
+  } catch {
+    // 文件已不存在或无权限：清理场景下忽略，不阻断其余删除。
+  }
+}
+
+/**
+ * 删除参考图的原图与缩略图磁盘文件。
+ * 仅本地存储实现落盘删除；对象存储尚未接入，暂不处理远端删除（软删除记录仍生效）。
+ */
+export async function deleteReferenceImageFiles(url: string, thumbnailUrl?: string | null): Promise<void> {
+  const config = await getStorageRuntimeConfig();
+  if (config.provider !== "local") {
+    return;
+  }
+
+  const referenceDir = path.join(config.localBaseDir, `${config.uploadsPrefix}/reference`);
+  const filename = safeStoredFilename(url);
+  if (filename) {
+    await unlinkQuietly(path.join(referenceDir, filename));
+  }
+
+  const thumbFilename = safeStoredFilename(thumbnailUrl);
+  if (thumbFilename) {
+    await unlinkQuietly(path.join(referenceDir, "thumbs", thumbFilename));
+  }
 }
 
 export async function savePaymentProof(userId: string, orderId: string, buffer: Buffer, mimeType: string): Promise<StoredImage> {

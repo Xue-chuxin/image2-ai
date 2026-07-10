@@ -104,6 +104,9 @@ interface AdminAppSettings {
   openaiApiKeyConfigured: boolean;
   openaiCompatibleChannels: OpenAICompatibleChannelSetting[];
   openaiImageModel: string;
+  openaiVisionModel: string;
+  referenceImageRetentionDays: number;
+  referenceImagesEnabled: boolean;
   siteFaviconUrl: string;
   siteLogoUrl: string;
   siteSubtitle: string;
@@ -163,6 +166,9 @@ interface SaveSettingsPayload {
   openaiApiKey?: string;
   openaiCompatibleChannels: ChannelPayload[];
   openaiImageModel: string;
+  openaiVisionModel: string;
+  referenceImageRetentionDays: number;
+  referenceImagesEnabled: boolean;
   siteFaviconUrl: string;
   siteLogoUrl: string;
   siteSubtitle: string;
@@ -277,6 +283,9 @@ function createDefaultSettings(): AdminAppSettings {
     openaiApiKeyConfigured: false,
     openaiCompatibleChannels: [],
     openaiImageModel: '',
+    openaiVisionModel: '',
+    referenceImageRetentionDays: 30,
+    referenceImagesEnabled: false,
     siteFaviconUrl: '',
     siteLogoUrl: '',
     siteSubtitle: '',
@@ -584,6 +593,10 @@ function buildPayload(friendLinks: FooterFriendLink[]): SaveSettingsPayload {
       return item;
     }),
     openaiImageModel: form.openaiImageModel,
+    openaiVisionModel: form.openaiVisionModel,
+    // InputNumber 清空时可能得到 null，这里兜底为默认保留天数
+    referenceImageRetentionDays: Number(form.referenceImageRetentionDays || 30),
+    referenceImagesEnabled: form.referenceImagesEnabled,
     siteFaviconUrl: form.siteFaviconUrl,
     siteLogoUrl: form.siteLogoUrl,
     siteSubtitle: form.siteSubtitle,
@@ -892,6 +905,32 @@ onMounted(() => {
                     </FormItem>
                     <p class="text-xs text-gray-400">
                       未配置兼容通道列表时，会自动使用这里的旧版单通道配置。
+                    </p>
+                    <FormItem label="开放参考图生图">
+                      <Switch v-model:checked="form.referenceImagesEnabled" />
+                    </FormItem>
+                    <FormItem label="参考图保留天数">
+                      <InputNumber
+                        v-model:value="form.referenceImageRetentionDays"
+                        :min="1"
+                        :max="3650"
+                        :precision="0"
+                        class="w-full"
+                      />
+                      <p class="mt-1 text-xs text-gray-400">
+                        超过该天数且未被任何生成任务引用的参考图会被自动清理（软删除并删除磁盘文件），默认 30 天。
+                      </p>
+                    </FormItem>
+                    <FormItem label="参考图视觉分析模型">
+                      <Input
+                        v-model:value="form.openaiVisionModel"
+                        placeholder="如 gpt-4o，留空表示关闭视觉分析"
+                      />
+                    </FormItem>
+                    <p class="text-xs text-gray-400">
+                      开放后创作页支持上传参考图。OpenAI
+                      兼容通道会先用视觉分析模型提取参考图特征再生图；Stability
+                      AI 走原生图生图；网页版 ChatGPT 通道不支持参考图。
                     </p>
                   </Form>
                 </Card>

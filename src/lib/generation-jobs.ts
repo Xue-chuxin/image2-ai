@@ -139,7 +139,8 @@ const text = {
   promptRequired: "\u8bf7\u8f93\u5165\u4e2d\u6587\u63d0\u793a\u8bcd",
   generationFailed: "\u751f\u6210\u4efb\u52a1\u6267\u884c\u5931\u8d25",
   staleFailed: "\u4efb\u52a1\u957f\u65f6\u95f4\u672a\u5b8c\u6210\uff0c\u5df2\u81ea\u52a8\u6807\u8bb0\u5931\u8d25\u5e76\u9000\u56de\u51bb\u7ed3\u79ef\u5206\u3002",
-  referenceImagesDisabled: "\u5f53\u524d\u6b63\u5f0f\u7248\u6682\u672a\u5f00\u653e\u53c2\u8003\u56fe\u53c2\u4e0e\u751f\u56fe\uff0c\u8bf7\u5148\u79fb\u9664\u53c2\u8003\u56fe\u540e\u518d\u751f\u6210\u3002",
+  referenceImagesDisabled: "\u7ba1\u7406\u5458\u6682\u672a\u5f00\u653e\u53c2\u8003\u56fe\u53c2\u4e0e\u751f\u56fe\uff0c\u8bf7\u5148\u79fb\u9664\u53c2\u8003\u56fe\u540e\u518d\u751f\u6210\u3002",
+  referenceImagesUnsupportedByProvider: "ChatGPT \u7f51\u9875\u7248\u901a\u9053\u6682\u4e0d\u652f\u6301\u53c2\u8003\u56fe\uff0c\u8bf7\u5207\u6362\u751f\u56fe\u901a\u9053\u6216\u79fb\u9664\u53c2\u8003\u56fe\u540e\u518d\u751f\u6210\u3002",
 };
 
 function serializeDate(value: Date | string) {
@@ -603,6 +604,15 @@ export async function createAndQueueGenerationJob(userId: string, input: CreateG
 
   const publicSettings = await getPublicAppSettings();
   const providerName = input.provider || publicSettings.defaultGenerationProvider;
+
+  if (!publicSettings.referenceImagesEnabled) {
+    assertReferenceImagesNotUsed(input.referenceImageIds?.length);
+  }
+
+  if (isChatGPTWebProvider(providerName) && input.referenceImageIds?.length) {
+    throw new AppError("BAD_REQUEST", text.referenceImagesUnsupportedByProvider, 400);
+  }
+
   const imageCount = normalizeImageCount(input.imageCount);
   const quality = normalizeQuality(input.quality);
   const ratio = input.ratio || "1:1";
