@@ -2,13 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronDown, KeyRound, LogOut, Settings, UserRound, WalletCards } from "lucide-react";
+import { ChevronDown, KeyRound, LogOut, Settings, UserCog, UserRound, WalletCards } from "lucide-react";
 import clsx from "clsx";
 
 type AccountMenuProps = {
   email: string;
   role: "user" | "admin";
   variant?: "front" | "admin";
+  displayName?: string | null;
+  avatarUrl?: string | null;
 };
 
 type PasswordResponse = {
@@ -31,7 +33,7 @@ async function readPasswordResponse(response: Response): Promise<PasswordRespons
   };
 }
 
-export function AccountMenu({ email, role, variant = "front" }: AccountMenuProps) {
+export function AccountMenu({ email, role, variant = "front", displayName: displayNameProp, avatarUrl }: AccountMenuProps) {
   const [open, setOpen] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -41,7 +43,7 @@ export function AccountMenu({ email, role, variant = "front" }: AccountMenuProps
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const displayName = getDisplayName(email);
+  const displayName = displayNameProp?.trim() || getDisplayName(email);
   const isAdmin = role === "admin";
 
   useEffect(() => {
@@ -129,9 +131,14 @@ export function AccountMenu({ email, role, variant = "front" }: AccountMenuProps
           variant === "admin" ? "hover:bg-black/5 dark:bg-white/10" : "hover:bg-brand-50",
         )}
       >
-        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-brand-400 to-brand-600 text-sm font-bold text-white">
-          {displayName.slice(0, 1).toUpperCase()}
-        </span>
+        {avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={avatarUrl} alt={displayName} className="h-8 w-8 rounded-full object-cover" />
+        ) : (
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-brand-400 to-brand-600 text-sm font-bold text-white">
+            {displayName.slice(0, 1).toUpperCase()}
+          </span>
+        )}
         <span className="hidden max-w-28 truncate text-sm font-semibold text-ink md:block">{displayName}</span>
         <ChevronDown size={14} className={clsx("text-ink-faint transition", open && "rotate-180")} />
       </button>
@@ -145,6 +152,14 @@ export function AccountMenu({ email, role, variant = "front" }: AccountMenuProps
           <div className="p-1.5">
             {!isAdmin ? (
               <>
+                <Link
+                  className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-ink-secondary transition hover:bg-brand-50 hover:text-brand-600"
+                  href="/profile"
+                  onClick={() => setOpen(false)}
+                >
+                  <UserCog size={15} />
+                  个人资料
+                </Link>
                 <a
                   className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-ink-secondary transition hover:bg-brand-50 hover:text-brand-600"
                   href="/console#/account/overview"

@@ -31,6 +31,8 @@ import { ThemeToggle } from "@/components/theme-toggle";
 export type ShellUser = {
   email: string;
   credits?: number;
+  displayName?: string | null;
+  avatarUrl?: string | null;
 };
 
 type NavItem = {
@@ -265,7 +267,7 @@ function WorkspaceShell({
               <ThemeToggle className="flex h-9 w-9 items-center justify-center rounded-full text-ink-secondary transition hover:bg-brand-50 hover:text-brand-600" />
 
               {user?.email ? (
-                <AccountMenu email={user.email} role="user" />
+                <AccountMenu email={user.email} role="user" displayName={user.displayName} avatarUrl={user.avatarUrl} />
               ) : (
                 <Link
                   href={`/signin?next=${encodeURIComponent(pathname === "/" ? "/generate" : pathname)}`}

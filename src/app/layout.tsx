@@ -4,6 +4,7 @@ import "./globals.css";
 import { AppShell, type ShellUser } from "@/components/app-shell";
 import { getUserSession } from "@/lib/auth";
 import { getUserCreditBalance } from "@/lib/credits";
+import { prisma } from "@/lib/db";
 import { getPublicAppSettings } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
@@ -29,8 +30,16 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   if (userSession) {
     user = { email: userSession.email };
     try {
-      const balance = await getUserCreditBalance(userSession.userId);
+      const [balance, profile] = await Promise.all([
+        getUserCreditBalance(userSession.userId),
+        prisma.user.findUnique({
+          where: { id: userSession.userId },
+          select: { displayName: true, avatarUrl: true },
+        }),
+      ]);
       user.credits = balance.available;
+      user.displayName = profile?.displayName ?? null;
+      user.avatarUrl = profile?.avatarUrl ?? null;
     } catch {
       // 数据库暂不可用时仍允许页面渲染，仅不显示积分数字。
     }
