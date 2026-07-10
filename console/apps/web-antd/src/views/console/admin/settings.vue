@@ -101,6 +101,8 @@ interface AdminAppSettings {
   moderationBlockMessage: string;
   moderationEnabled: boolean;
   moderationForbiddenWords: string;
+  moderationSemanticEnabled: boolean;
+  moderationSemanticModel: string;
   openaiApiKeyConfigured: boolean;
   openaiCompatibleChannels: OpenAICompatibleChannelSetting[];
   openaiImageModel: string;
@@ -166,6 +168,8 @@ interface SaveSettingsPayload {
   moderationBlockMessage: string;
   moderationEnabled: boolean;
   moderationForbiddenWords: string;
+  moderationSemanticEnabled: boolean;
+  moderationSemanticModel: string;
   openaiApiKey?: string;
   openaiCompatibleChannels: ChannelPayload[];
   openaiImageModel: string;
@@ -286,6 +290,8 @@ function createDefaultSettings(): AdminAppSettings {
     moderationBlockMessage: '',
     moderationEnabled: false,
     moderationForbiddenWords: '',
+    moderationSemanticEnabled: false,
+    moderationSemanticModel: '',
     openaiApiKeyConfigured: false,
     openaiCompatibleChannels: [],
     openaiImageModel: '',
@@ -590,6 +596,8 @@ function buildPayload(friendLinks: FooterFriendLink[]): SaveSettingsPayload {
     moderationBlockMessage: form.moderationBlockMessage,
     moderationEnabled: form.moderationEnabled,
     moderationForbiddenWords: form.moderationForbiddenWords,
+    moderationSemanticEnabled: form.moderationSemanticEnabled,
+    moderationSemanticModel: form.moderationSemanticModel,
     openaiCompatibleChannels: channels.value.map((channel, index) => {
       const item: ChannelPayload = {
         baseUrl: channel.baseUrl,
@@ -1097,6 +1105,18 @@ onMounted(() => {
                   </FormItem>
                   <FormItem label="拦截提示文案">
                     <Input v-model:value="form.moderationBlockMessage" />
+                  </FormItem>
+                  <FormItem label="启用语义审核（DeepSeek）">
+                    <Switch v-model:checked="form.moderationSemanticEnabled" />
+                    <p class="mt-1 text-xs text-gray-400">
+                      开启后，关键词放行的内容会再调用 DeepSeek 通道做语义判断；需先在「生图通道」配置 DeepSeek API Key。模型不可用时自动放行。
+                    </p>
+                  </FormItem>
+                  <FormItem label="语义审核模型">
+                    <Input
+                      v-model:value="form.moderationSemanticModel"
+                      placeholder="留空则使用 DeepSeek 润色所配置的模型"
+                    />
                   </FormItem>
                 </Form>
               </Card>

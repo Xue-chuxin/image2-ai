@@ -84,6 +84,8 @@ export type AdminAppSettings = PublicAppSettings & {
   moderationEnabled: boolean;
   moderationForbiddenWords: string;
   moderationBlockMessage: string;
+  moderationSemanticEnabled: boolean;
+  moderationSemanticModel: string;
   emailSmtpEnabled: boolean;
   emailSmtpHost: string;
   emailSmtpPort: number;
@@ -109,6 +111,8 @@ export type SaveAdminSettingsInput = Partial<PublicAppSettings> & {
   moderationEnabled?: boolean | string;
   moderationForbiddenWords?: string;
   moderationBlockMessage?: string;
+  moderationSemanticEnabled?: boolean | string;
+  moderationSemanticModel?: string;
   deepseekApiKey?: string;
   openaiApiKey?: string;
   openaiCompatibleChannels?: Array<Partial<OpenAICompatibleChannelSetting> & { apiKey?: string }>;
@@ -152,6 +156,8 @@ export type ModerationRuntimeConfig = {
   enabled: boolean;
   forbiddenWords: string;
   blockMessage: string;
+  semanticEnabled: boolean;
+  semanticModel: string;
 };
 
 export type EmailRuntimeConfig = {
@@ -235,6 +241,8 @@ const defaultModerationSettings: ModerationRuntimeConfig = {
   enabled: true,
   forbiddenWords: "",
   blockMessage: "内容包含不适合生成的词语，请调整后再试。",
+  semanticEnabled: false,
+  semanticModel: "",
 };
 
 const defaultEmailSettings: Omit<EmailRuntimeConfig, "password"> = {
@@ -764,6 +772,8 @@ function getModerationSettings(map: Map<string, SettingRow>): ModerationRuntimeC
       defaultModerationSettings.blockMessage,
       200,
     ),
+    semanticEnabled: normalizeBoolean(map.get("moderationSemanticEnabled")?.value, defaultModerationSettings.semanticEnabled),
+    semanticModel: normalizeOptionalText(map.get("moderationSemanticModel")?.value, defaultModerationSettings.semanticModel, 120),
   };
 }
 
@@ -1090,6 +1100,8 @@ export async function getAdminAppSettings(options?: { includeDiagnostics?: boole
     moderationEnabled: moderationSettings.enabled,
     moderationForbiddenWords: moderationSettings.forbiddenWords,
     moderationBlockMessage: moderationSettings.blockMessage,
+    moderationSemanticEnabled: moderationSettings.semanticEnabled,
+    moderationSemanticModel: moderationSettings.semanticModel,
     ...emailSettings,
     deepseekApiKeyConfigured,
     openaiApiKeyConfigured,
@@ -1139,6 +1151,8 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
     currentModerationSettings.blockMessage,
     200,
   );
+  const moderationSemanticEnabled = normalizeBoolean(input.moderationSemanticEnabled, currentModerationSettings.semanticEnabled);
+  const moderationSemanticModel = normalizeOptionalText(input.moderationSemanticModel, currentModerationSettings.semanticModel, 120);
   const defaultGenerationProvider = normalizeProvider(input.defaultGenerationProvider || currentPublicSettings.defaultGenerationProvider);
   const chatgptWebEnabled = normalizeBoolean(input.chatgptWebEnabled, currentPublicSettings.chatgptWebEnabled);
   const chatgptWebUserDataDir = normalizeText(input.chatgptWebUserDataDir, currentPublicSettings.chatgptWebUserDataDir, 300);
@@ -1219,6 +1233,8 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
     { key: "moderationEnabled", value: String(moderationEnabled) },
     { key: "moderationForbiddenWords", value: moderationForbiddenWords },
     { key: "moderationBlockMessage", value: moderationBlockMessage },
+    { key: "moderationSemanticEnabled", value: String(moderationSemanticEnabled) },
+    { key: "moderationSemanticModel", value: moderationSemanticModel },
     { key: "defaultGenerationProvider", value: defaultGenerationProvider },
     { key: "chatgptWebEnabled", value: String(chatgptWebEnabled) },
     { key: "chatgptWebUserDataDir", value: chatgptWebUserDataDir },

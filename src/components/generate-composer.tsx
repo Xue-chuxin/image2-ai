@@ -207,6 +207,74 @@ export function GenerateComposer({
     onJobChange?.(job);
   }
 
+  // SSE 优先：服务端推送任务状态，失败/不支持时回退到 HTTP 轮询。
+  function subscribeGenerationJobViaSSE(initialJob: GenerationJobResult, signal: AbortSignal) {
+    return new Promise<GenerationJobResult>((resolve, reject) => {
+      let settled = false;
+      const source = new EventSource(`/api/generation/jobs/${initialJob.id}/events`);
+
+      const cleanup = () => {
+        signal.removeEventListener("abort", onAbort);
+        source.close();
+      };
+      const finish = (job: GenerationJobResult) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        resolve(job);
+      };
+      const fail = (error: Error) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        reject(error);
+      };
+      function onAbort() {
+        fail(new DOMException("aborted", "AbortError"));
+      }
+
+      if (signal.aborted) {
+        onAbort();
+        return;
+      }
+      signal.addEventListener("abort", onAbort, { once: true });
+
+      source.onmessage = (event) => {
+        try {
+          const job = JSON.parse(event.data) as GenerationJobResult;
+          updateJob(job);
+          if (isTerminalStatus(job.status)) {
+            finish(job);
+          }
+        } catch {
+          // 忽略无法解析的消息，等待下一条。
+        }
+      };
+      // 连接错误或服务端超时：交由外层回退到轮询。
+      source.addEventListener("error", () => fail(new DOMException("sse-error", "SseError")));
+      source.addEventListener("timeout", () => fail(new DOMException("sse-timeout", "SseTimeout")));
+    });
+  }
+
+  async function watchGenerationJob(initialJob: GenerationJobResult, signal: AbortSignal) {
+    if (isTerminalStatus(initialJob.status)) {
+      return initialJob;
+    }
+
+    if (typeof window !== "undefined" && "EventSource" in window) {
+      try {
+        return await subscribeGenerationJobViaSSE(initialJob, signal);
+      } catch (error) {
+        // 用户主动取消不回退；其余错误回退到轮询兜底。
+        if (error instanceof DOMException && error.name === "AbortError") {
+          throw error;
+        }
+      }
+    }
+
+    return pollGenerationJob(initialJob, signal);
+  }
+
   async function pollGenerationJob(initialJob: GenerationJobResult, signal: AbortSignal) {
     let latestJob = initialJob;
 
@@ -404,7 +472,7 @@ export function GenerateComposer({
       let finalJob = result.job;
       if (!isTerminalStatus(finalJob.status)) {
         setNotice(referenceImages.length ? "任务已提交，参考图已关联到任务。" : "任务已提交，正在等待结果。");
-        finalJob = await pollGenerationJob(finalJob, controller.signal);
+        finalJob = await watchGenerationJob(finalJob, controller.signal);
       }
 
       if (finalJob.status === "FAILED") {
