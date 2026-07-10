@@ -588,7 +588,7 @@ export function GenerateComposer({
         />
       </div>
 
-      {/* 参考图上传（当前未开放，代码保留） */}
+      {/* 参考图上传（默认开放，管理员可在后台关闭） */}
       {referenceImagesEnabled ? (
         <div
           className={clsx(
