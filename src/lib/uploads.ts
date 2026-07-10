@@ -1,5 +1,6 @@
 import sharp from "sharp";
 
+import { AppError } from "@/lib/app-error";
 import { prisma } from "@/lib/db";
 import { deleteReferenceImageFiles, saveReferenceImage } from "@/lib/storage";
 
@@ -138,6 +139,84 @@ export async function createUploadedReferenceImage({
   });
 
   return serializeUploadedImage(image);
+}
+
+/** 把存储 URL 解析为可 server 端抓取的绝对地址；相对路径按站点 origin 拼接。 */
+function toAbsoluteStoredUrl(sourceUrl: string, origin: string): string {
+  if (/^https?:\/\//i.test(sourceUrl)) {
+    return sourceUrl;
+  }
+  return `${origin.replace(/\/+$/, "")}/${sourceUrl.replace(/^\/+/, "")}`;
+}
+
+/**
+ * 把一张已存在的存储图片（generated 输出图）复刻为当前用户的参考图，用于「生成变体/二创」。
+ * sourceUrl 由服务端根据图片记录取出（用户仅提供 imageId），因此不存在任意 URL 抓取（SSRF）风险。
+ * 复用 createUploadedReferenceImage 的体积/真实类型校验与落库。
+ */
+export async function createReferenceImageFromSourceUrl({
+  userId,
+  sourceUrl,
+  origin,
+}: {
+  userId: string;
+  sourceUrl: string;
+  origin: string;
+}): Promise<UploadedReferenceImageView> {
+  const absoluteUrl = toAbsoluteStoredUrl(sourceUrl, origin);
+  let response: Response;
+  try {
+    response = await fetch(absoluteUrl);
+  } catch {
+    throw new AppError("BAD_REQUEST", "无法读取原图，请稍后再试。", 400);
+  }
+  if (!response.ok) {
+    throw new AppError("BAD_REQUEST", "无法读取原图，请稍后再试。", 400);
+  }
+  const buffer = Buffer.from(await response.arrayBuffer());
+  return createUploadedReferenceImage({ userId, buffer });
+}
+
+/**
+ * 校验用户可复刻该生成图（本人历史图，或仍公开可见的广场图），并复刻为其参考图。
+ * 图片不存在/已删除 → NOT_FOUND；非本人且未公开可见 → FORBIDDEN。
+ */
+export async function createReferenceFromGeneratedImage({
+  userId,
+  imageId,
+  origin,
+}: {
+  userId: string;
+  imageId: string;
+  origin: string;
+}): Promise<UploadedReferenceImageView> {
+  const cleanId = typeof imageId === "string" ? imageId.trim() : "";
+  if (!cleanId) {
+    throw new AppError("BAD_REQUEST", "图片标识无效。", 400);
+  }
+
+  const image = await prisma.generatedImage.findUnique({
+    where: { id: cleanId },
+    select: {
+      url: true,
+      isPublic: true,
+      isDeleted: true,
+      takenDownAt: true,
+      job: { select: { userId: true } },
+    },
+  });
+
+  if (!image || image.isDeleted) {
+    throw new AppError("NOT_FOUND", "图片不存在或已删除。", 404);
+  }
+
+  const isOwner = image.job.userId === userId;
+  const isPublicVisible = image.isPublic && !image.takenDownAt;
+  if (!isOwner && !isPublicVisible) {
+    throw new AppError("FORBIDDEN", "无权使用该图片作为参考图。", 403);
+  }
+
+  return createReferenceImageFromSourceUrl({ userId, sourceUrl: image.url, origin });
 }
 
 const REFERENCE_IMAGE_PURGE_BATCH = 200;

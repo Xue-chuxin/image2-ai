@@ -98,6 +98,35 @@ export async function createPrompt(options?: {
   });
 }
 
+/** 建一个生成任务 + 一张输出图，返回 { job, image }，供二创/发布等测试使用。 */
+export async function createGeneratedImage(options?: {
+  userId?: string;
+  isPublic?: boolean;
+  isDeleted?: boolean;
+  takenDownAt?: Date | null;
+  url?: string;
+}) {
+  seq += 1;
+  const userId = options?.userId ?? (await createUser()).id;
+  const job = await prisma.generationJob.create({
+    data: {
+      userId,
+      status: "COMPLETED",
+      originalInput: "测试任务",
+    },
+  });
+  const image = await prisma.generatedImage.create({
+    data: {
+      jobId: job.id,
+      url: options?.url ?? `https://example.local/gen-${seq}.png`,
+      isPublic: options?.isPublic ?? false,
+      isDeleted: options?.isDeleted ?? false,
+      takenDownAt: options?.takenDownAt ?? null,
+    },
+  });
+  return { job, image };
+}
+
 /** 读取账户当前 available/frozen（不存在返回 null）。 */
 export async function getAccount(userId: string) {
   return prisma.creditAccount.findUnique({ where: { userId } });

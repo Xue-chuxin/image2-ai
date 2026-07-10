@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Download, EyeOff, Globe2, RefreshCcw, Send, Trash2 } from "lucide-react";
+import { Download, EyeOff, Globe2, RefreshCcw, Send, Sparkles, Trash2 } from "lucide-react";
 import { CopyPromptButton } from "@/components/copy-prompt-button";
 
 type HistoryImageActionView = {
@@ -185,6 +185,31 @@ export function HistoryJobActions(props: HistoryJobActionsProps) {
     }
   }
 
+  async function remixImage(imageId: string) {
+    setPending(`remix:${imageId}`);
+    setMessage("");
+    try {
+      const payload = await requestJson(`/api/images/${imageId}/remix`, { method: "POST" });
+      const reference = payload.image;
+      if (!reference?.id) {
+        throw new Error("生成变体失败");
+      }
+      const params = new URLSearchParams();
+      if (promptZh) params.set("prompt", promptZh);
+      if (promptEn) params.set("promptEn", promptEn);
+      if (negativePrompt) params.set("negativePrompt", negativePrompt);
+      params.set("ratio", ratio);
+      params.set("quality", quality);
+      params.set("imageCount", String(imageCount));
+      params.append("referenceImageIds", reference.id);
+      params.append("referenceImageUrls", reference.thumbnailUrl || reference.url);
+      window.location.href = `/generate?${params.toString()}`;
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "生成变体失败");
+      setPending("");
+    }
+  }
+
   const retryable = status === "FAILED" || status === "CANCELED";
   const visibleImages = images.filter((image) => !image.isDeleted);
 
@@ -252,6 +277,15 @@ export function HistoryJobActions(props: HistoryJobActionsProps) {
                       <Download className="h-3.5 w-3.5" />
                       下载
                     </a>
+                    <button
+                      type="button"
+                      disabled={imagePending}
+                      onClick={() => remixImage(image.id)}
+                      className={buttonClass("secondary")}
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      {pending === `remix:${image.id}` ? "处理中" : "生成变体"}
+                    </button>
                     {image.isPublic ? (
                       <button type="button" disabled={imagePending} onClick={() => updateImage(image.id, "unpublish")} className={buttonClass("secondary")}>
                         <EyeOff className="h-3.5 w-3.5" />
