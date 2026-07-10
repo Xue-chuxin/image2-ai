@@ -7,6 +7,7 @@ import {
   Bot,
   Clock3,
   Gift,
+  Heart,
   Images,
   Info,
   LayoutGrid,
@@ -43,6 +44,7 @@ const navItems: NavItem[] = [
   { href: "/assistant", label: "智能助手", icon: Bot, placeholder: true },
   { href: "/generate", label: "专业绘画", icon: Palette },
   { href: "/tools", label: "更多工具", icon: Wrench, placeholder: true },
+  { href: "/favorites", label: "我的收藏", icon: Heart },
   { href: "/history", label: "生成历史", icon: Clock3 },
   { href: "/console", label: "后台管理", icon: Settings2, external: true },
 ];
@@ -61,6 +63,7 @@ const pageMeta: Record<string, { title: string; description: string }> = {
   "/assistant": { title: "智能助手", description: "AI 创作对话助手" },
   "/generate": { title: "专业绘画", description: "AI 商业设计工作台" },
   "/tools": { title: "更多工具", description: "实用创作工具集合" },
+  "/favorites": { title: "我的收藏", description: "收藏的公开作品与精选" },
   "/history": { title: "生成历史", description: "我的生成任务与结果" },
   "/account": { title: "用户中心", description: "积分、充值与订单" },
 };

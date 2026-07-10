@@ -1,9 +1,10 @@
 "use client";
 
+import type { MouseEvent } from "react";
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { Download, Search, X } from "lucide-react";
+import { Download, Heart, Search, X } from "lucide-react";
 import { CopyPromptButton } from "@/components/copy-prompt-button";
 import type { GalleryImageView } from "@/lib/gallery";
 import type { PromptCardData } from "@/lib/mock-data";
@@ -145,6 +146,8 @@ export function HomeWorksShowcase({
   fallbackSourceLabel = "样例库",
   fallbackTypeLabel = "精选样例",
   allowFallbackSamples = false,
+  enableRemoteSearch = true,
+  favoritesView = false,
   emptyTitle = "没有找到匹配作品",
   emptyDescription = "换一个关键词，或切回“全部”分类。",
 }: {
@@ -161,6 +164,8 @@ export function HomeWorksShowcase({
   fallbackSourceLabel?: string;
   fallbackTypeLabel?: string;
   allowFallbackSamples?: boolean;
+  enableRemoteSearch?: boolean;
+  favoritesView?: boolean;
   emptyTitle?: string;
   emptyDescription?: string;
 }) {
@@ -175,6 +180,9 @@ export function HomeWorksShowcase({
   const [works, setWorks] = useState(initialWorks);
   const [loading, setLoading] = useState(false);
   const [selectedItem, setSelectedItem] = useState<ShowcaseItem | null>(null);
+  const [favoriteEnabled, setFavoriteEnabled] = useState(false);
+  const [favoriteKeys, setFavoriteKeys] = useState<Set<string>>(new Set());
+  const [pendingFavorite, setPendingFavorite] = useState<string | null>(null);
 
   const fallbackItems = useMemo(() => fallbackPrompts.map(promptToItem), [fallbackPrompts]);
   const realItems = useMemo(() => works.map(workToItem), [works]);
@@ -194,7 +202,23 @@ export function HomeWorksShowcase({
   }, [query]);
 
   useEffect(() => {
-    if (usingFallback || hasGalleryError) {
+    const controller = new AbortController();
+    fetch("/api/gallery/favorites?keys=1", { signal: controller.signal })
+      .then((response) => (response.ok ? (response.json() as Promise<{ ok: boolean; keys?: string[] }>) : null))
+      .then((payload) => {
+        if (payload?.ok && payload.keys) {
+          setFavoriteEnabled(true);
+          setFavoriteKeys(new Set(payload.keys));
+        }
+      })
+      .catch(() => {
+        // 未登录或接口异常时静默降级为不显示收藏按钮。
+      });
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    if (usingFallback || hasGalleryError || !enableRemoteSearch) {
       return;
     }
 
@@ -230,7 +254,48 @@ export function HomeWorksShowcase({
       });
 
     return () => controller.abort();
-  }, [hasGalleryError, initialWorks, requestQuery, usingFallback]);
+  }, [enableRemoteSearch, hasGalleryError, initialWorks, requestQuery, usingFallback]);
+
+  async function handleToggleFavorite(item: ShowcaseItem, event: MouseEvent) {
+    event.stopPropagation();
+    if (item.sourceType === "sample") {
+      return;
+    }
+    const key = `${item.sourceType}:${item.id}`;
+    if (pendingFavorite) {
+      return;
+    }
+    setPendingFavorite(key);
+    try {
+      const response = await fetch("/api/gallery/favorites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sourceType: item.sourceType, imageId: item.id }),
+      });
+      const payload = (await response.json()) as { ok: boolean; favorited?: boolean };
+      if (payload.ok) {
+        setFavoriteKeys((prev) => {
+          const next = new Set(prev);
+          if (payload.favorited) {
+            next.add(key);
+          } else {
+            next.delete(key);
+          }
+          return next;
+        });
+        if (!payload.favorited && favoritesView) {
+          setWorks((prev) => prev.filter((work) => `${work.sourceType}:${work.id}` !== key));
+          setSelectedItem((current) => (current && `${current.sourceType}:${current.id}` === key ? null : current));
+        }
+      }
+    } catch {
+      // 忽略网络异常，保持当前收藏状态。
+    } finally {
+      setPendingFavorite(null);
+    }
+  }
+
+  const selectedFavorited = selectedItem ? favoriteKeys.has(`${selectedItem.sourceType}:${selectedItem.id}`) : false;
 
   return (
     <>
@@ -274,13 +339,31 @@ export function HomeWorksShowcase({
       {visibleItems.length > 0 ? (
         <div className="columns-2 gap-4 md:columns-3 xl:columns-4">
           {visibleItems.map((item, index) => (
-            <button
+            <div
               key={item.id}
-              type="button"
-              onClick={() => setSelectedItem(item)}
-              className="group relative mb-4 block w-full animate-float-in break-inside-avoid overflow-hidden rounded-2xl border border-line bg-panel text-left shadow-card transition duration-300 hover:-translate-y-1 hover:shadow-pop"
+              className="group relative mb-4 block w-full animate-float-in break-inside-avoid transition duration-300 hover:-translate-y-1"
               style={{ animationDelay: `${Math.min(index * 40, 320)}ms` }}
             >
+              {favoriteEnabled && item.sourceType !== "sample" ? (
+                <button
+                  type="button"
+                  onClick={(event) => handleToggleFavorite(item, event)}
+                  aria-label={favoriteKeys.has(`${item.sourceType}:${item.id}`) ? "取消收藏" : "收藏作品"}
+                  aria-pressed={favoriteKeys.has(`${item.sourceType}:${item.id}`)}
+                  className="absolute right-2.5 top-2.5 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-slate-950/45 text-white backdrop-blur transition hover:bg-slate-950/65 disabled:opacity-60"
+                  disabled={pendingFavorite === `${item.sourceType}:${item.id}`}
+                >
+                  <Heart
+                    size={15}
+                    className={favoriteKeys.has(`${item.sourceType}:${item.id}`) ? "fill-rose-500 text-rose-500" : "text-white"}
+                  />
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => setSelectedItem(item)}
+                className="block w-full overflow-hidden rounded-2xl border border-line bg-panel text-left shadow-card transition duration-300 hover:shadow-pop"
+              >
               <span className={`relative block w-full overflow-hidden ${item.aspectClass}`}>
                 {item.thumbnailUrl || item.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -303,7 +386,8 @@ export function HomeWorksShowcase({
                   </span>
                 </span>
               </span>
-            </button>
+              </button>
+            </div>
           ))}
         </div>
       ) : (
@@ -406,6 +490,22 @@ export function HomeWorksShowcase({
                       </span>
                     )}
                   </div>
+
+                  {favoriteEnabled && selectedItem.sourceType !== "sample" ? (
+                    <button
+                      type="button"
+                      onClick={(event) => handleToggleFavorite(selectedItem, event)}
+                      disabled={pendingFavorite === `${selectedItem.sourceType}:${selectedItem.id}`}
+                      className={`inline-flex w-full items-center justify-center gap-1.5 rounded-xl border px-4 py-2.5 text-sm font-semibold transition disabled:opacity-60 ${
+                        selectedFavorited
+                          ? "border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 dark:border-rose-500/40 dark:bg-rose-500/10"
+                          : "border-line bg-panel text-ink-secondary hover:bg-page"
+                      }`}
+                    >
+                      <Heart size={15} className={selectedFavorited ? "fill-rose-500 text-rose-500" : ""} />
+                      {selectedFavorited ? "已收藏" : "收藏作品"}
+                    </button>
+                  ) : null}
 
                   <div className="rounded-xl border border-line bg-page/60 p-4">
                     <div className="mb-2.5 flex items-center justify-between">

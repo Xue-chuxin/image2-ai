@@ -59,6 +59,7 @@ model User {
   rechargeOrders     RechargeOrder[]
   oauthAccounts      OAuthAccount[]
   subscription       Subscription?
+  imageFavorites     ImageFavorite[]
 }
 
 model OAuthAccount {
@@ -228,6 +229,20 @@ model GeneratedImage {
   @@index([isPublic, createdAt])
   @@index([isDeleted])
   @@index([publishedAt])
+}
+
+// 用户收藏画廊作品：sourceType 区分自动出图（generated）与官方精选（curated），
+// imageId 仅做快照关联、不设外键，方便同时覆盖两张来源表并在原图删除后保留收藏记录。
+model ImageFavorite {
+  id         String   @id @default(cuid())
+  userId     String
+  sourceType String // generated | curated
+  imageId    String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, sourceType, imageId])
+  @@index([userId, createdAt])
 }
 
 model CuratedGalleryImage {
