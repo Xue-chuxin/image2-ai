@@ -101,28 +101,28 @@ export const APP_DIRECTORY: AppEntry[] = [
     description: "按笔记风格生成标题与正文，自带表情与话题标签。",
     icon: Flame,
     iconClass: "bg-rose-50 dark:bg-rose-500/10 text-rose-500 dark:text-rose-300",
-    href: null,
+    href: "/apps/xhs-copy",
   },
   {
     name: "高情商回复",
     description: "工作群、客户沟通场景的得体回复建议。",
     icon: MessagesSquare,
     iconClass: "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-300",
-    href: null,
+    href: "/apps/reply",
   },
   {
     name: "公众号标题生成器",
     description: "一段摘要生成多条风格各异的公众号标题备选。",
     icon: Newspaper,
     iconClass: "bg-cyan-50 text-cyan-600",
-    href: null,
+    href: "/apps/wechat-title",
   },
   {
     name: "全能写作助手",
     description: "文案、周报、方案大纲，一站式长文写作辅助。",
     icon: PenLine,
     iconClass: "bg-indigo-50 text-indigo-600",
-    href: null,
+    href: "/apps/writing",
   },
 ];
 

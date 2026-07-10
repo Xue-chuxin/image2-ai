@@ -61,7 +61,7 @@ export default function AppsPage() {
         </div>
       </section>
 
-      <section className="space-y-3">
+      <section className={upcoming.length > 0 ? "space-y-3" : "hidden"}>
         <h2 className="text-[17px] font-bold text-ink">即将上线</h2>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {upcoming.map((app) => (
