@@ -11,6 +11,7 @@ import {
   Heart,
   Images,
   Info,
+  Layers,
   LayoutGrid,
   Palette,
   Receipt,
@@ -51,6 +52,7 @@ const navItems: NavItem[] = [
   { href: "/apps", label: "应用中心", icon: LayoutGrid, placeholder: true },
   { href: "/assistant", label: "智能助手", icon: Bot, placeholder: true },
   { href: "/generate", label: "专业绘画", icon: Palette },
+  { href: "/generate/batch", label: "批量生成", icon: Layers },
   { href: "/prompts", label: "提示词库", icon: Sparkles },
   { href: "/leaderboard", label: "排行榜", icon: Trophy },
   { href: "/tools", label: "更多工具", icon: Wrench, placeholder: true },
@@ -73,6 +75,7 @@ const pageMeta: Record<string, { title: string; description: string }> = {
   "/apps": { title: "应用中心", description: "常用创作应用集合" },
   "/assistant": { title: "智能助手", description: "AI 创作对话助手" },
   "/generate": { title: "专业绘画", description: "AI 商业设计工作台" },
+  "/generate/batch": { title: "批量生成", description: "一段描述，多风格一次出图" },
   "/leaderboard": { title: "排行榜", description: "作品与创作者热度榜" },
   "/tools": { title: "更多工具", description: "实用创作工具集合" },
   "/favorites": { title: "我的收藏", description: "收藏的公开作品与精选" },
@@ -147,7 +150,12 @@ function WorkspaceShell({
   const [searchValue, setSearchValue] = useState("");
   const [inviteOpen, setInviteOpen] = useState(false);
   const [checkinOpen, setCheckinOpen] = useState(false);
-  const metaKey = navItems.find((item) => isActivePath(pathname, item.href))?.href || (pathname.startsWith("/account") ? "/account" : "/");
+  // 取最长匹配的导航项，避免 /generate/batch 命中父级 /generate。
+  const activeHref =
+    navItems
+      .filter((item) => !item.external && isActivePath(pathname, item.href))
+      .sort((a, b) => b.href.length - a.href.length)[0]?.href || "";
+  const metaKey = activeHref || (pathname.startsWith("/account") ? "/account" : "/");
   const meta = pageMeta[metaKey] || { title: settings.siteTitle, description: settings.siteSubtitle };
 
   function onSearchSubmit(event: FormEvent) {
@@ -165,7 +173,7 @@ function WorkspaceShell({
         <nav className="mt-6 flex flex-1 flex-col gap-1" aria-label="主导航">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const active = !item.external && isActivePath(pathname, item.href);
+            const active = !item.external && item.href === activeHref;
             const itemClass = clsx(
               "group flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-[14.5px] font-semibold transition",
               active ? "bg-brand-500 text-white shadow-chip" : "text-ink-secondary hover:bg-brand-50 hover:text-brand-600",
