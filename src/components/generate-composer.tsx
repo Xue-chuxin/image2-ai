@@ -3,8 +3,9 @@
 import { type ChangeEvent, type DragEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { Loader2, RotateCcw, Send, UploadCloud, Wand2, X } from "lucide-react";
+import { Check, Loader2, Palette, RotateCcw, Send, UploadCloud, Wand2, X } from "lucide-react";
 import { IMAGE_STYLE_CATEGORIES, type ImageStyleCategory } from "@/lib/image-categories";
+import type { StylePresetView } from "@/lib/style-presets";
 
 type ReferenceImageResult = {
   id: string;
@@ -82,6 +83,7 @@ type GenerateComposerProps = {
   compact?: boolean;
   referenceImagesEnabled?: boolean;
   redirectOnTerminal?: string;
+  stylePresets?: StylePresetView[];
 };
 
 const ratios = ["1:1", "3:4", "16:9", "9:16"] as const;
@@ -176,6 +178,7 @@ export function GenerateComposer({
   compact = false,
   referenceImagesEnabled = false,
   redirectOnTerminal,
+  stylePresets = [],
 }: GenerateComposerProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -194,6 +197,7 @@ export function GenerateComposer({
   const [isGenerating, setIsGenerating] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const [appliedPresetIds, setAppliedPresetIds] = useState<Set<string>>(() => new Set());
 
   const canGenerate = useMemo(() => prompt.trim().length > 0 && !isGenerating && !isUploadingReference, [prompt, isGenerating, isUploadingReference]);
 
@@ -509,6 +513,7 @@ export function GenerateComposer({
     setPolishedPromptEn("");
     setNegativePrompt("");
     setReferenceImages([]);
+    setAppliedPresetIds(new Set());
     setNotice("");
     setError("");
     updateJob(null);
@@ -516,6 +521,47 @@ export function GenerateComposer({
 
   function removeReferenceImage(id: string) {
     setReferenceImages((current) => current.filter((image) => image.id !== id));
+  }
+
+  // 去掉一段风格后缀（连同分隔符），用于取消已套用的风格预设。
+  function stripStyleSuffix(text: string, suffix: string) {
+    return text.replace(`，${suffix}`, "").split(suffix).join("").trim();
+  }
+
+  // 一键套用/取消风格预设：把正向后缀追加到描述、负向后缀并入负向词（可再次点击撤销）。
+  function toggleStylePreset(preset: StylePresetView) {
+    const applied = appliedPresetIds.has(preset.id);
+    setAppliedPresetIds((prev) => {
+      const next = new Set(prev);
+      if (applied) {
+        next.delete(preset.id);
+      } else {
+        next.add(preset.id);
+      }
+      return next;
+    });
+
+    setPrompt((current) => {
+      if (applied) {
+        return stripStyleSuffix(current, preset.promptSuffix);
+      }
+      const trimmed = current.trim();
+      return trimmed ? `${trimmed}，${preset.promptSuffix}` : preset.promptSuffix;
+    });
+
+    if (preset.negativeSuffix) {
+      const negativeSuffix = preset.negativeSuffix;
+      setNegativePrompt((current) => {
+        if (applied) {
+          return stripStyleSuffix(current, negativeSuffix);
+        }
+        const trimmed = current.trim();
+        return trimmed ? `${trimmed}，${negativeSuffix}` : negativeSuffix;
+      });
+    }
+
+    setError("");
+    setNotice(applied ? `已取消「${preset.name}」风格。` : `已套用「${preset.name}」风格到描述。`);
   }
 
   return (
@@ -600,6 +646,38 @@ export function GenerateComposer({
           ))}
         </div>
       </div>
+
+      {/* 风格预设：一键把风格化修饰追加到描述 */}
+      {stylePresets.length > 0 ? (
+        <div>
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="text-[13px] font-semibold text-ink-secondary">风格预设</p>
+            <span className="text-xs text-ink-faint">点击套用，再次点击取消</span>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {stylePresets.map((preset) => {
+              const applied = appliedPresetIds.has(preset.id);
+              return (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() => toggleStylePreset(preset)}
+                  title={preset.description || preset.promptSuffix}
+                  className={clsx(
+                    "inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-[13px] font-semibold transition",
+                    applied
+                      ? "border-brand-500 bg-brand-500 text-white shadow-chip"
+                      : "border-line bg-panel text-ink-secondary hover:border-brand-200 hover:bg-brand-50/50 hover:text-brand-600",
+                  )}
+                >
+                  {applied ? <Check size={14} /> : <Palette size={14} />}
+                  {preset.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
 
       {/* 画幅比例 / 质量 / 张数 */}
       <div className="grid gap-4 sm:grid-cols-3">

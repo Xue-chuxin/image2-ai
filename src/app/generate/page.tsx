@@ -1,5 +1,6 @@
 import { GenerateWorkbench } from "@/components/generate-workbench";
 import { getPublicAppSettings } from "@/lib/settings";
+import { listActiveStylePresets, type StylePresetView } from "@/lib/style-presets";
 
 const validRatios = new Set(["1:1", "3:4", "16:9", "9:16"]);
 const validQualities = new Set(["standard", "high", "low"]);
@@ -37,6 +38,13 @@ export default async function GeneratePage({
 }) {
   const resolvedSearchParams = searchParams ? await searchParams : {};
   const publicSettings = await getPublicAppSettings();
+
+  let stylePresets: StylePresetView[] = [];
+  try {
+    stylePresets = await listActiveStylePresets();
+  } catch {
+    stylePresets = [];
+  }
   const initialPrompt = firstValue(resolvedSearchParams.prompt);
   const initialPromptEn = firstValue(resolvedSearchParams.promptEn);
   const initialNegativePrompt = firstValue(resolvedSearchParams.negativePrompt);
@@ -71,6 +79,7 @@ export default async function GeneratePage({
         initialImageCount={initialImageCount}
         initialReferenceImages={initialReferenceImages.filter((image) => image.id)}
         referenceImagesEnabled={publicSettings.referenceImagesEnabled}
+        stylePresets={stylePresets}
       />
     </main>
   );

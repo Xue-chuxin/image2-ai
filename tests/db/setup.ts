@@ -17,6 +17,7 @@ const TABLES = [
   "PromptTag",
   "Prompt",
   "PromptCategory",
+  "StylePreset",
   "AppSetting",
   "User",
 ];

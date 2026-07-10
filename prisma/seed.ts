@@ -117,6 +117,75 @@ async function main() {
       }
     });
   }
+
+  const stylePresets = [
+    {
+      slug: "cyberpunk",
+      name: "赛博朋克",
+      description: "霓虹夜色、未来都市、高对比光影",
+      promptSuffix: "赛博朋克风格，霓虹灯光，未来都市夜景，高对比光影，电影质感",
+      negativeSuffix: "低分辨率，模糊，畸变"
+    },
+    {
+      slug: "minimalist",
+      name: "极简主义",
+      description: "干净留白、简洁构图、柔和色彩",
+      promptSuffix: "极简主义风格，干净背景，大量留白，简洁构图，柔和自然光",
+      negativeSuffix: "杂乱背景，过多元素"
+    },
+    {
+      slug: "film-photography",
+      name: "复古胶片",
+      description: "胶片颗粒、暖色调、怀旧氛围",
+      promptSuffix: "复古胶片摄影风格，胶片颗粒感，暖色调，柔和光线，怀旧氛围",
+      negativeSuffix: "数码感，过度锐化"
+    },
+    {
+      slug: "watercolor",
+      name: "水彩插画",
+      description: "水彩晕染、手绘质感、清新配色",
+      promptSuffix: "水彩插画风格，柔和晕染，手绘质感，清新配色，纸张纹理",
+      negativeSuffix: "照片写实，硬边缘"
+    },
+    {
+      slug: "3d-render",
+      name: "3D 渲染",
+      description: "C4D 质感、柔和全局光、清透材质",
+      promptSuffix: "3D 渲染风格，C4D，柔和全局光照，清透材质，细腻质感，柔和阴影",
+      negativeSuffix: "噪点，粗糙材质"
+    },
+    {
+      slug: "japanese-anime",
+      name: "日系动漫",
+      description: "赛璐璐上色、通透光影、精致线条",
+      promptSuffix: "日系动漫风格，赛璐璐上色，通透光影，精致线条，鲜明色彩",
+      negativeSuffix: "写实照片，脏乱线条"
+    }
+  ];
+
+  for (let index = 0; index < stylePresets.length; index += 1) {
+    const preset = stylePresets[index];
+    await prisma.stylePreset.upsert({
+      where: { slug: preset.slug },
+      update: {
+        name: preset.name,
+        description: preset.description,
+        promptSuffix: preset.promptSuffix,
+        negativeSuffix: preset.negativeSuffix,
+        sortOrder: index * 10,
+        isActive: true
+      },
+      create: {
+        slug: preset.slug,
+        name: preset.name,
+        description: preset.description,
+        promptSuffix: preset.promptSuffix,
+        negativeSuffix: preset.negativeSuffix,
+        sortOrder: index * 10,
+        isActive: true
+      }
+    });
+  }
 }
 
 main()

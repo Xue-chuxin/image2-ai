@@ -6,6 +6,7 @@ import { Check, Clock3, Coins, Sparkles } from "lucide-react";
 
 import { GenerateComposer } from "./generate-composer";
 import { GeneratedImagePreview } from "./generated-image-preview";
+import type { StylePresetView } from "@/lib/style-presets";
 
 type ReferenceImageResult = {
   id: string;
@@ -50,6 +51,7 @@ type GenerateWorkbenchProps = {
   initialImageCount?: number;
   initialReferenceImages?: ReferenceImageResult[];
   referenceImagesEnabled?: boolean;
+  stylePresets?: StylePresetView[];
 };
 
 function getStatusLabel(status?: string) {
@@ -154,6 +156,7 @@ export function GenerateWorkbench({
   initialImageCount,
   initialReferenceImages = [],
   referenceImagesEnabled = false,
+  stylePresets = [],
 }: GenerateWorkbenchProps) {
   const [job, setJob] = useState<GenerationJobResult | null>(null);
   const firstImage = job?.images[0];
@@ -199,6 +202,7 @@ export function GenerateWorkbench({
           initialReferenceImages={initialReferenceImages}
           onJobChange={setJob}
           referenceImagesEnabled={referenceImagesEnabled}
+          stylePresets={stylePresets}
         />
 
         {/* 右列：结果与任务信息 */}

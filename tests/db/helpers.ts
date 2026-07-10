@@ -127,6 +127,28 @@ export async function createGeneratedImage(options?: {
   return { job, image };
 }
 
+/** 建一个风格预设，可指定启用状态/排序/后缀，供风格预设列表测试使用。 */
+export async function createStylePreset(options?: {
+  name?: string;
+  slug?: string;
+  promptSuffix?: string;
+  negativeSuffix?: string | null;
+  sortOrder?: number;
+  isActive?: boolean;
+}) {
+  seq += 1;
+  return prisma.stylePreset.create({
+    data: {
+      name: options?.name ?? `风格 ${seq}`,
+      slug: options?.slug ?? `style-${seq}-${Date.now()}`,
+      promptSuffix: options?.promptSuffix ?? "测试风格后缀",
+      negativeSuffix: options?.negativeSuffix ?? null,
+      sortOrder: options?.sortOrder ?? 0,
+      isActive: options?.isActive ?? true,
+    },
+  });
+}
+
 /** 读取账户当前 available/frozen（不存在返回 null）。 */
 export async function getAccount(userId: string) {
   return prisma.creditAccount.findUnique({ where: { userId } });
