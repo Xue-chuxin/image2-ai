@@ -49,6 +49,7 @@ const navItems: NavItem[] = [
   { href: "/apps", label: "应用中心", icon: LayoutGrid, placeholder: true },
   { href: "/assistant", label: "智能助手", icon: Bot, placeholder: true },
   { href: "/generate", label: "专业绘画", icon: Palette },
+  { href: "/prompts", label: "提示词库", icon: Sparkles },
   { href: "/tools", label: "更多工具", icon: Wrench, placeholder: true },
   { href: "/favorites", label: "我的收藏", icon: Heart },
   { href: "/history", label: "生成历史", icon: Clock3 },

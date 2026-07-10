@@ -13,6 +13,10 @@ const TABLES = [
   "GalleryImageComment",
   "CuratedGalleryImage",
   "Notification",
+  "PromptFavorite",
+  "PromptTag",
+  "Prompt",
+  "PromptCategory",
   "AppSetting",
   "User",
 ];

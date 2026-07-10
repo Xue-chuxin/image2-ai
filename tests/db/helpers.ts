@@ -56,6 +56,44 @@ export async function createCuratedImage(options?: { isActive?: boolean }) {
   });
 }
 
+/** 建一个提示词分类，返回记录（含 slug）。 */
+export async function createPromptCategory(options?: { name?: string; slug?: string; sortOrder?: number }) {
+  seq += 1;
+  return prisma.promptCategory.create({
+    data: {
+      name: options?.name ?? `分类 ${seq}`,
+      slug: options?.slug ?? `cat-${seq}-${Date.now()}`,
+      sortOrder: options?.sortOrder ?? 0,
+    },
+  });
+}
+
+/** 建一个提示词模板，可指定分类/标题/摘要/标签，供收藏与列表测试使用。 */
+export async function createPrompt(options?: {
+  title?: string;
+  summary?: string;
+  categoryId?: string;
+  tags?: string[];
+  weight?: number;
+}) {
+  seq += 1;
+  return prisma.prompt.create({
+    data: {
+      title: options?.title ?? `模板 ${seq}`,
+      slug: `prompt-${seq}-${Date.now()}`,
+      summary: options?.summary ?? "测试用提示词模板",
+      promptZh: "测试中文提示词",
+      promptEn: "test english prompt",
+      negativePrompt: null,
+      categoryId: options?.categoryId ?? null,
+      weight: options?.weight ?? 0,
+      ...(options?.tags && options.tags.length
+        ? { tags: { create: options.tags.map((name) => ({ name })) } }
+        : {}),
+    },
+  });
+}
+
 /** 读取账户当前 available/frozen（不存在返回 null）。 */
 export async function getAccount(userId: string) {
   return prisma.creditAccount.findUnique({ where: { userId } });
