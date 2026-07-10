@@ -739,7 +739,7 @@ export function GenerateComposer({
           className="inline-flex items-center justify-center gap-2 rounded-xl border border-line bg-panel px-4 py-2.5 text-sm font-semibold text-ink-secondary transition hover:bg-page disabled:opacity-60"
         >
           {isPolishing ? <Loader2 className="animate-spin" size={16} /> : <Wand2 size={16} />}
-          整理描述
+          一键润色
         </button>
         <button
           type="button"

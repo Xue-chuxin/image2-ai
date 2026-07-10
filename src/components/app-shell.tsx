@@ -4,25 +4,19 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  Bot,
   CalendarCheck,
   Clock3,
   Gift,
   Heart,
   Images,
   Info,
-  Layers,
   LayoutGrid,
   Palette,
-  Receipt,
   Search,
   Settings2,
   Sparkles,
-  Star,
-  Trophy,
   UserRound,
   Wand2,
-  WandSparkles,
   Wrench,
   Zap,
 } from "lucide-react";
@@ -51,18 +45,10 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { href: "/", label: "画廊广场", icon: Images },
-  { href: "/curated", label: "官方精选", icon: Star },
-  { href: "/apps", label: "应用中心", icon: LayoutGrid },
-  { href: "/assistant", label: "智能助手", icon: Bot },
   { href: "/generate", label: "专业绘画", icon: Palette },
-  { href: "/generate/batch", label: "批量生成", icon: Layers },
-  { href: "/prompts", label: "提示词库", icon: Sparkles },
-  { href: "/prompts/polish", label: "提示词润色", icon: WandSparkles },
-  { href: "/leaderboard", label: "排行榜", icon: Trophy },
-  { href: "/tools", label: "更多工具", icon: Wrench },
-  { href: "/favorites", label: "我的收藏", icon: Heart },
+  { href: "/apps", label: "应用中心", icon: LayoutGrid },
   { href: "/history", label: "生成历史", icon: Clock3 },
-  { href: "/credits", label: "积分明细", icon: Receipt },
+  { href: "/favorites", label: "我的收藏", icon: Heart },
   { href: "/console", label: "后台管理", icon: Settings2, external: true },
 ];
 
