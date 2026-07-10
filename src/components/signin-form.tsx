@@ -41,8 +41,31 @@ export function SignInForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSendingCode, setIsSendingCode] = useState(false);
   const [codeCooldown, setCodeCooldown] = useState(0);
+  const [oauthProviders, setOauthProviders] = useState<Array<{ provider: string; label: string }>>([]);
   const isRegister = mode === "register";
   const switchHref = `${isRegister ? "/signin" : "/signup"}${nextPath ? `?next=${encodeURIComponent(nextPath)}` : ""}`;
+
+  useEffect(() => {
+    // 展示后台已开放的第三方登录入口。
+    fetch("/api/auth/oauth/providers")
+      .then((response) => response.json())
+      .then((data: { ok?: boolean; providers?: Array<{ provider: string; label: string }> }) => {
+        if (data?.providers?.length) {
+          setOauthProviders(data.providers);
+        }
+      })
+      .catch(() => undefined);
+
+    // 回显 OAuth 回调错误。
+    try {
+      const oauthError = new URLSearchParams(window.location.search).get("oauth_error");
+      if (oauthError) {
+        setError(oauthError);
+      }
+    } catch {
+      // 忽略。
+    }
+  }, []);
 
   useEffect(() => {
     if (codeCooldown <= 0) {
@@ -201,6 +224,27 @@ export function SignInForm({
           {isRegister ? "去登录" : "去注册"}
         </Link>
       </p>
+
+      {oauthProviders.length ? (
+        <div className="space-y-2.5 pt-1">
+          <div className="flex items-center gap-3 text-xs text-ink-faint">
+            <span className="h-px flex-1 bg-line" />
+            <span>或使用第三方账号</span>
+            <span className="h-px flex-1 bg-line" />
+          </div>
+          <div className="flex flex-col gap-2">
+            {oauthProviders.map((item) => (
+              <a
+                key={item.provider}
+                href={`/api/auth/oauth/${item.provider}/start`}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-line bg-panel px-4 py-2.5 text-sm font-semibold text-ink-secondary transition hover:bg-page"
+              >
+                使用 {item.label} 登录
+              </a>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </form>
   );
 }

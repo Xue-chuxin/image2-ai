@@ -86,6 +86,12 @@ export type AdminAppSettings = PublicAppSettings & {
   moderationBlockMessage: string;
   moderationSemanticEnabled: boolean;
   moderationSemanticModel: string;
+  oauthGithubEnabled: boolean;
+  oauthGithubClientId: string;
+  oauthGithubClientSecretConfigured: boolean;
+  oauthGoogleEnabled: boolean;
+  oauthGoogleClientId: string;
+  oauthGoogleClientSecretConfigured: boolean;
   emailSmtpEnabled: boolean;
   emailSmtpHost: string;
   emailSmtpPort: number;
@@ -113,6 +119,12 @@ export type SaveAdminSettingsInput = Partial<PublicAppSettings> & {
   moderationBlockMessage?: string;
   moderationSemanticEnabled?: boolean | string;
   moderationSemanticModel?: string;
+  oauthGithubEnabled?: boolean | string;
+  oauthGithubClientId?: string;
+  oauthGithubClientSecret?: string;
+  oauthGoogleEnabled?: boolean | string;
+  oauthGoogleClientId?: string;
+  oauthGoogleClientSecret?: string;
   deepseekApiKey?: string;
   openaiApiKey?: string;
   openaiCompatibleChannels?: Array<Partial<OpenAICompatibleChannelSetting> & { apiKey?: string }>;
@@ -159,6 +171,16 @@ export type ModerationRuntimeConfig = {
   semanticEnabled: boolean;
   semanticModel: string;
 };
+
+export type OAuthProviderName = "github" | "google";
+
+export type OAuthProviderRuntimeConfig = {
+  enabled: boolean;
+  clientId: string;
+  clientSecret: string;
+};
+
+export type OAuthRuntimeConfig = Record<OAuthProviderName, OAuthProviderRuntimeConfig>;
 
 export type EmailRuntimeConfig = {
   enabled: boolean;
@@ -1102,6 +1124,12 @@ export async function getAdminAppSettings(options?: { includeDiagnostics?: boole
     moderationBlockMessage: moderationSettings.blockMessage,
     moderationSemanticEnabled: moderationSettings.semanticEnabled,
     moderationSemanticModel: moderationSettings.semanticModel,
+    oauthGithubEnabled: normalizeBoolean(map.get("oauthGithubEnabled")?.value, false),
+    oauthGithubClientId: normalizeOptionalText(map.get("oauthGithubClientId")?.value ?? process.env.OAUTH_GITHUB_CLIENT_ID, "", 200),
+    oauthGithubClientSecretConfigured: Boolean(map.get("oauthGithubClientSecret")?.value || process.env.OAUTH_GITHUB_CLIENT_SECRET),
+    oauthGoogleEnabled: normalizeBoolean(map.get("oauthGoogleEnabled")?.value, false),
+    oauthGoogleClientId: normalizeOptionalText(map.get("oauthGoogleClientId")?.value ?? process.env.OAUTH_GOOGLE_CLIENT_ID, "", 200),
+    oauthGoogleClientSecretConfigured: Boolean(map.get("oauthGoogleClientSecret")?.value || process.env.OAUTH_GOOGLE_CLIENT_SECRET),
     ...emailSettings,
     deepseekApiKeyConfigured,
     openaiApiKeyConfigured,
@@ -1153,6 +1181,10 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
   );
   const moderationSemanticEnabled = normalizeBoolean(input.moderationSemanticEnabled, currentModerationSettings.semanticEnabled);
   const moderationSemanticModel = normalizeOptionalText(input.moderationSemanticModel, currentModerationSettings.semanticModel, 120);
+  const oauthGithubEnabled = normalizeBoolean(input.oauthGithubEnabled, normalizeBoolean(settingsMap.get("oauthGithubEnabled")?.value, false));
+  const oauthGithubClientId = normalizeOptionalText(input.oauthGithubClientId, settingsMap.get("oauthGithubClientId")?.value ?? "", 200);
+  const oauthGoogleEnabled = normalizeBoolean(input.oauthGoogleEnabled, normalizeBoolean(settingsMap.get("oauthGoogleEnabled")?.value, false));
+  const oauthGoogleClientId = normalizeOptionalText(input.oauthGoogleClientId, settingsMap.get("oauthGoogleClientId")?.value ?? "", 200);
   const defaultGenerationProvider = normalizeProvider(input.defaultGenerationProvider || currentPublicSettings.defaultGenerationProvider);
   const chatgptWebEnabled = normalizeBoolean(input.chatgptWebEnabled, currentPublicSettings.chatgptWebEnabled);
   const chatgptWebUserDataDir = normalizeText(input.chatgptWebUserDataDir, currentPublicSettings.chatgptWebUserDataDir, 300);
@@ -1181,6 +1213,8 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
   const submittedStabilityAiApiKey = normalizeSubmittedSecret(input.stabilityAiApiKey);
   const submittedStorageAccessKeyId = normalizeSubmittedSecret(input.storageAccessKeyId);
   const submittedStorageSecretAccessKey = normalizeSubmittedSecret(input.storageSecretAccessKey);
+  const submittedOAuthGithubClientSecret = normalizeSubmittedSecret(input.oauthGithubClientSecret);
+  const submittedOAuthGoogleClientSecret = normalizeSubmittedSecret(input.oauthGoogleClientSecret);
   const submittedEmailSmtpPassword = normalizeSubmittedSecret(input.emailSmtpPassword);
   const shouldSaveOpenAICompatibleChannels = shouldPersistSubmittedOpenAIChannels(input.openaiCompatibleChannels, settingsMap, openaiImageModel);
   if (shouldSaveOpenAICompatibleChannels && !canReadStoredOpenAICompatibleChannels && submittedChannelsHaveBlankApiKey(input.openaiCompatibleChannels)) {
@@ -1204,6 +1238,8 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
       submittedStabilityAiApiKey ||
       submittedStorageAccessKeyId ||
       submittedStorageSecretAccessKey ||
+      submittedOAuthGithubClientSecret ||
+      submittedOAuthGoogleClientSecret ||
       submittedEmailSmtpPassword ||
       openaiCompatibleChannels,
   );
@@ -1235,6 +1271,10 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
     { key: "moderationBlockMessage", value: moderationBlockMessage },
     { key: "moderationSemanticEnabled", value: String(moderationSemanticEnabled) },
     { key: "moderationSemanticModel", value: moderationSemanticModel },
+    { key: "oauthGithubEnabled", value: String(oauthGithubEnabled) },
+    { key: "oauthGithubClientId", value: oauthGithubClientId },
+    { key: "oauthGoogleEnabled", value: String(oauthGoogleEnabled) },
+    { key: "oauthGoogleClientId", value: oauthGoogleClientId },
     { key: "defaultGenerationProvider", value: defaultGenerationProvider },
     { key: "chatgptWebEnabled", value: String(chatgptWebEnabled) },
     { key: "chatgptWebUserDataDir", value: chatgptWebUserDataDir },
@@ -1288,11 +1328,27 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
     settingsToSave.push({ key: "emailSmtpPassword", value: encryptSecret(submittedEmailSmtpPassword), isEncrypted: true });
   }
 
+  if (submittedOAuthGithubClientSecret) {
+    settingsToSave.push({ key: "oauthGithubClientSecret", value: encryptSecret(submittedOAuthGithubClientSecret), isEncrypted: true });
+  }
+
+  if (submittedOAuthGoogleClientSecret) {
+    settingsToSave.push({ key: "oauthGoogleClientSecret", value: encryptSecret(submittedOAuthGoogleClientSecret), isEncrypted: true });
+  }
+
   await upsertSettings(settingsToSave);
 }
 
 async function getSecretValue(
-  key: "deepseekApiKey" | "openaiApiKey" | "stabilityAiApiKey" | "emailSmtpPassword" | "storageAccessKeyId" | "storageSecretAccessKey",
+  key:
+    | "deepseekApiKey"
+    | "openaiApiKey"
+    | "stabilityAiApiKey"
+    | "emailSmtpPassword"
+    | "storageAccessKeyId"
+    | "storageSecretAccessKey"
+    | "oauthGithubClientSecret"
+    | "oauthGoogleClientSecret",
   envValue?: string,
 ) {
   const map = toMap(await readSettingRows());
@@ -1303,6 +1359,23 @@ async function getSecretValue(
   }
 
   return row.isEncrypted ? decryptSecret(row.value) : row.value;
+}
+
+export async function getOAuthRuntimeConfig(): Promise<OAuthRuntimeConfig> {
+  const map = toMap(await readSettingRows());
+
+  return {
+    github: {
+      enabled: normalizeBoolean(map.get("oauthGithubEnabled")?.value, false),
+      clientId: normalizeOptionalText(map.get("oauthGithubClientId")?.value ?? process.env.OAUTH_GITHUB_CLIENT_ID, "", 200),
+      clientSecret: await getSecretValue("oauthGithubClientSecret", process.env.OAUTH_GITHUB_CLIENT_SECRET),
+    },
+    google: {
+      enabled: normalizeBoolean(map.get("oauthGoogleEnabled")?.value, false),
+      clientId: normalizeOptionalText(map.get("oauthGoogleClientId")?.value ?? process.env.OAUTH_GOOGLE_CLIENT_ID, "", 200),
+      clientSecret: await getSecretValue("oauthGoogleClientSecret", process.env.OAUTH_GOOGLE_CLIENT_SECRET),
+    },
+  };
 }
 
 export async function getDeepSeekRuntimeConfig() {

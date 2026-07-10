@@ -56,6 +56,23 @@ model User {
   promptFavorites    PromptFavorite[]
   creditTransactions CreditTransaction[]
   rechargeOrders     RechargeOrder[]
+  oauthAccounts      OAuthAccount[]
+}
+
+model OAuthAccount {
+  id                String   @id @default(cuid())
+  userId            String
+  provider          String
+  providerAccountId String
+  email             String?
+  displayName       String?
+  avatarUrl         String?
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
 }
 
 model EmailVerificationCode {

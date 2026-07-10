@@ -103,6 +103,12 @@ interface AdminAppSettings {
   moderationForbiddenWords: string;
   moderationSemanticEnabled: boolean;
   moderationSemanticModel: string;
+  oauthGithubClientId: string;
+  oauthGithubClientSecretConfigured: boolean;
+  oauthGithubEnabled: boolean;
+  oauthGoogleClientId: string;
+  oauthGoogleClientSecretConfigured: boolean;
+  oauthGoogleEnabled: boolean;
   openaiApiKeyConfigured: boolean;
   openaiCompatibleChannels: OpenAICompatibleChannelSetting[];
   openaiImageModel: string;
@@ -170,6 +176,12 @@ interface SaveSettingsPayload {
   moderationForbiddenWords: string;
   moderationSemanticEnabled: boolean;
   moderationSemanticModel: string;
+  oauthGithubClientId: string;
+  oauthGithubClientSecret?: string;
+  oauthGithubEnabled: boolean;
+  oauthGoogleClientId: string;
+  oauthGoogleClientSecret?: string;
+  oauthGoogleEnabled: boolean;
   openaiApiKey?: string;
   openaiCompatibleChannels: ChannelPayload[];
   openaiImageModel: string;
@@ -292,6 +304,12 @@ function createDefaultSettings(): AdminAppSettings {
     moderationForbiddenWords: '',
     moderationSemanticEnabled: false,
     moderationSemanticModel: '',
+    oauthGithubClientId: '',
+    oauthGithubClientSecretConfigured: false,
+    oauthGithubEnabled: false,
+    oauthGoogleClientId: '',
+    oauthGoogleClientSecretConfigured: false,
+    oauthGoogleEnabled: false,
     openaiApiKeyConfigured: false,
     openaiCompatibleChannels: [],
     openaiImageModel: '',
@@ -334,6 +352,8 @@ const storageAccessKeyId = ref('');
 const storageSecretAccessKey = ref('');
 const deepseekApiKey = ref('');
 const emailSmtpPassword = ref('');
+const oauthGithubClientSecret = ref('');
+const oauthGoogleClientSecret = ref('');
 
 /** 辅助操作 loading 与结果提示 */
 const checkingChannelId = ref('');
@@ -537,6 +557,8 @@ function applySettings(next: AdminAppSettings) {
   storageSecretAccessKey.value = '';
   deepseekApiKey.value = '';
   emailSmtpPassword.value = '';
+  oauthGithubClientSecret.value = '';
+  oauthGoogleClientSecret.value = '';
 }
 
 async function loadSettings() {
@@ -598,6 +620,10 @@ function buildPayload(friendLinks: FooterFriendLink[]): SaveSettingsPayload {
     moderationForbiddenWords: form.moderationForbiddenWords,
     moderationSemanticEnabled: form.moderationSemanticEnabled,
     moderationSemanticModel: form.moderationSemanticModel,
+    oauthGithubClientId: form.oauthGithubClientId,
+    oauthGithubEnabled: form.oauthGithubEnabled,
+    oauthGoogleClientId: form.oauthGoogleClientId,
+    oauthGoogleEnabled: form.oauthGoogleEnabled,
     openaiCompatibleChannels: channels.value.map((channel, index) => {
       const item: ChannelPayload = {
         baseUrl: channel.baseUrl,
@@ -650,6 +676,12 @@ function buildPayload(friendLinks: FooterFriendLink[]): SaveSettingsPayload {
   }
   if (emailSmtpPassword.value.trim()) {
     payload.emailSmtpPassword = emailSmtpPassword.value;
+  }
+  if (oauthGithubClientSecret.value.trim()) {
+    payload.oauthGithubClientSecret = oauthGithubClientSecret.value;
+  }
+  if (oauthGoogleClientSecret.value.trim()) {
+    payload.oauthGoogleClientSecret = oauthGoogleClientSecret.value;
   }
 
   return payload;
@@ -1188,6 +1220,50 @@ onMounted(() => {
                     Local 为本地磁盘存储；OSS / COS / S3 走 S3 兼容协议（一套配置覆盖三家）。
                     切换到对象存储需填写 Endpoint / Bucket / Region 及 AccessKey；自定义
                     endpoint（OSS/COS/MinIO）通常需开启路径风格寻址。支付凭证等私有文件仍走鉴权回源，不公开直链。
+                  </p>
+                </Form>
+              </Card>
+
+              <Card size="small" title="第三方登录（OAuth）">
+                <Form layout="vertical">
+                  <FormItem label="启用 GitHub 登录">
+                    <Switch v-model:checked="form.oauthGithubEnabled" />
+                  </FormItem>
+                  <FormItem label="GitHub Client ID">
+                    <Input v-model:value="form.oauthGithubClientId" placeholder="GitHub OAuth App 的 Client ID" />
+                  </FormItem>
+                  <FormItem label="GitHub Client Secret">
+                    <InputPassword
+                      v-model:value="oauthGithubClientSecret"
+                      :placeholder="
+                        form.oauthGithubClientSecretConfigured
+                          ? '已配置，留空表示不修改'
+                          : '未配置'
+                      "
+                      autocomplete="new-password"
+                    />
+                  </FormItem>
+                  <FormItem label="启用 Google 登录">
+                    <Switch v-model:checked="form.oauthGoogleEnabled" />
+                  </FormItem>
+                  <FormItem label="Google Client ID">
+                    <Input v-model:value="form.oauthGoogleClientId" placeholder="Google OAuth 客户端 ID" />
+                  </FormItem>
+                  <FormItem label="Google Client Secret">
+                    <InputPassword
+                      v-model:value="oauthGoogleClientSecret"
+                      :placeholder="
+                        form.oauthGoogleClientSecretConfigured
+                          ? '已配置，留空表示不修改'
+                          : '未配置'
+                      "
+                      autocomplete="new-password"
+                    />
+                  </FormItem>
+                  <p class="text-xs text-gray-400">
+                    回调地址为 {站点地址}/api/auth/oauth/github/callback 与
+                    /api/auth/oauth/google/callback，需在第三方应用后台登记。站点地址取
+                    NEXT_PUBLIC_SITE_URL，未配置时按请求域名推断。管理员账号不支持第三方登录。
                   </p>
                 </Form>
               </Card>

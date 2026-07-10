@@ -4,6 +4,8 @@
 
 ## 未发布
 
+- 第三方登录（OAuth）：登录/注册页新增「使用 GitHub / Google 登录」入口（控制台「安全与存储 → 第三方登录」配置，默认关闭）。已验证邮箱会自动关联到同邮箱的既有账号，否则创建新用户并发放新用户积分；管理员账号不支持第三方登录。回调地址为 `{站点地址}/api/auth/oauth/{github|google}/callback`，站点地址取 `NEXT_PUBLIC_SITE_URL`。新增数据表 `OAuthAccount`（需执行数据库迁移）。相关环境变量：`OAUTH_GITHUB_CLIENT_ID`、`OAUTH_GITHUB_CLIENT_SECRET`、`OAUTH_GOOGLE_CLIENT_ID`、`OAUTH_GOOGLE_CLIENT_SECRET`。
+
 - 创作页：生成任务状态改为 SSE 实时推送（`GET /api/generation/jobs/{id}/events`），到账更快、请求更省；浏览器不支持或连接异常时自动回退到原有 2s 轮询。离开页面或重新提交会自动断开连接。
 
 - 内容安全：违禁词拦截之外新增「语义审核」（控制台「安全与存储 → 内容安全」开关，默认关闭）。开启后关键词放行的提示词会再调用 DeepSeek 兼容通道做语义判断（复用「生图通道」的 DeepSeek 配置，可单独指定审核模型）。模型不可用/超时时自动放行，不阻断正常生成。相关环境变量：`MODERATION_TIMEOUT_MS`（可选，默认 15000）。

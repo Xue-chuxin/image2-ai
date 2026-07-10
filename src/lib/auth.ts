@@ -96,7 +96,7 @@ function shouldUseSecureSessionCookie(request?: Request) {
   return process.env.NODE_ENV === "production";
 }
 
-function getSessionCookieOptions(request: Request | undefined, maxAge: number) {
+export function getSessionCookieOptions(request: Request | undefined, maxAge: number) {
   return {
     httpOnly: true,
     sameSite: "lax" as const,
