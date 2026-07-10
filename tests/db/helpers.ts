@@ -41,6 +41,21 @@ export async function createUserWithAccount(options?: {
   return { user, account };
 }
 
+/** 建一张运营精选画廊作品（默认可见），供点赞/评论集成测试作为目标。 */
+export async function createCuratedImage(options?: { isActive?: boolean }) {
+  seq += 1;
+  return prisma.curatedGalleryImage.create({
+    data: {
+      title: `精选作品 ${seq}`,
+      summary: "测试用精选作品",
+      imageUrl: `https://example.local/img-${seq}.png`,
+      promptZh: "测试提示词",
+      isActive: options?.isActive ?? true,
+      publishedAt: new Date(),
+    },
+  });
+}
+
 /** 读取账户当前 available/frozen（不存在返回 null）。 */
 export async function getAccount(userId: string) {
   return prisma.creditAccount.findUnique({ where: { userId } });

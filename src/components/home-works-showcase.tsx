@@ -4,9 +4,10 @@ import type { MouseEvent } from "react";
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { Download, Heart, Search, X } from "lucide-react";
+import { Download, Heart, Loader2, MessageCircle, Search, Send, ThumbsUp, Trash2, X } from "lucide-react";
 import { CopyPromptButton } from "@/components/copy-prompt-button";
 import type { GalleryImageView } from "@/lib/gallery";
+import type { GalleryCommentView, GalleryStat } from "@/lib/gallery-social";
 import type { PromptCardData } from "@/lib/mock-data";
 import { hasChineseText, toPublicChineseTags, toPublicChineseText } from "@/lib/public-display";
 
@@ -183,6 +184,16 @@ export function HomeWorksShowcase({
   const [favoriteEnabled, setFavoriteEnabled] = useState(false);
   const [favoriteKeys, setFavoriteKeys] = useState<Set<string>>(new Set());
   const [pendingFavorite, setPendingFavorite] = useState<string | null>(null);
+  // 点赞与评论：likeEnabled 表示已登录（可交互）；stats 为各作品点赞/评论计数。
+  const [likeEnabled, setLikeEnabled] = useState(false);
+  const [likeKeys, setLikeKeys] = useState<Set<string>>(new Set());
+  const [pendingLike, setPendingLike] = useState<string | null>(null);
+  const [stats, setStats] = useState<Record<string, GalleryStat>>({});
+  const [comments, setComments] = useState<GalleryCommentView[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentInput, setCommentInput] = useState("");
+  const [commentSubmitting, setCommentSubmitting] = useState(false);
+  const [commentError, setCommentError] = useState("");
 
   const fallbackItems = useMemo(() => fallbackPrompts.map(promptToItem), [fallbackPrompts]);
   const realItems = useMemo(() => works.map(workToItem), [works]);
@@ -216,6 +227,73 @@ export function HomeWorksShowcase({
       });
     return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/gallery/likes", { signal: controller.signal })
+      .then((response) => (response.ok ? (response.json() as Promise<{ ok: boolean; keys?: string[] }>) : null))
+      .then((payload) => {
+        if (payload?.ok && payload.keys) {
+          setLikeEnabled(true);
+          setLikeKeys(new Set(payload.keys));
+        }
+      })
+      .catch(() => {
+        // 未登录或接口异常时静默降级：仅展示计数，不可交互。
+      });
+    return () => controller.abort();
+  }, []);
+
+  // 拉取当前展示作品的点赞/评论计数（仅真实作品，样例无计数）。
+  useEffect(() => {
+    const refs = works.map((work) => `${work.sourceType}:${work.id}`);
+    if (refs.length === 0) {
+      setStats({});
+      return;
+    }
+    const controller = new AbortController();
+    fetch(`/api/gallery/stats?refs=${encodeURIComponent(refs.join(","))}`, { signal: controller.signal })
+      .then((response) => (response.ok ? (response.json() as Promise<{ ok: boolean; stats?: Record<string, GalleryStat> }>) : null))
+      .then((payload) => {
+        if (payload?.ok && payload.stats) {
+          setStats(payload.stats);
+        }
+      })
+      .catch(() => {
+        // 计数拉取失败时静默降级为 0。
+      });
+    return () => controller.abort();
+  }, [works]);
+
+  // 打开详情弹窗时加载该作品评论列表（样例作品不支持评论）。
+  useEffect(() => {
+    if (!selectedItem || selectedItem.sourceType === "sample") {
+      setComments([]);
+      return;
+    }
+    const controller = new AbortController();
+    setCommentsLoading(true);
+    setCommentError("");
+    setCommentInput("");
+    fetch(`/api/gallery/comments?sourceType=${selectedItem.sourceType}&imageId=${encodeURIComponent(selectedItem.id)}`, {
+      signal: controller.signal,
+    })
+      .then((response) => response.json() as Promise<{ ok: boolean; comments?: GalleryCommentView[] }>)
+      .then((payload) => {
+        if (payload.ok && payload.comments) {
+          setComments(payload.comments);
+        }
+      })
+      .catch(() => {
+        // 忽略网络异常。
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setCommentsLoading(false);
+        }
+      });
+    return () => controller.abort();
+  }, [selectedItem]);
 
   useEffect(() => {
     if (usingFallback || hasGalleryError || !enableRemoteSearch) {
@@ -295,7 +373,113 @@ export function HomeWorksShowcase({
     }
   }
 
+  async function handleToggleLike(item: ShowcaseItem, event: MouseEvent) {
+    event.stopPropagation();
+    if (item.sourceType === "sample") {
+      return;
+    }
+    const key = `${item.sourceType}:${item.id}`;
+    if (pendingLike) {
+      return;
+    }
+    setPendingLike(key);
+    try {
+      const response = await fetch("/api/gallery/likes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sourceType: item.sourceType, imageId: item.id }),
+      });
+      const payload = (await response.json()) as { ok: boolean; liked?: boolean };
+      if (payload.ok) {
+        setLikeKeys((prev) => {
+          const next = new Set(prev);
+          if (payload.liked) {
+            next.add(key);
+          } else {
+            next.delete(key);
+          }
+          return next;
+        });
+        setStats((prev) => {
+          const current = prev[key] ?? { likes: 0, comments: 0 };
+          return {
+            ...prev,
+            [key]: {
+              ...current,
+              likes: Math.max(0, current.likes + (payload.liked ? 1 : -1)),
+            },
+          };
+        });
+      }
+    } catch {
+      // 忽略网络异常，保持当前点赞状态。
+    } finally {
+      setPendingLike(null);
+    }
+  }
+
+  async function handleSubmitComment() {
+    if (!selectedItem || selectedItem.sourceType === "sample" || commentSubmitting) {
+      return;
+    }
+    const content = commentInput.trim();
+    if (!content) {
+      return;
+    }
+    setCommentSubmitting(true);
+    setCommentError("");
+    try {
+      const response = await fetch("/api/gallery/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sourceType: selectedItem.sourceType, imageId: selectedItem.id, content }),
+      });
+      const payload = (await response.json()) as { ok: boolean; comment?: GalleryCommentView; error?: string };
+      if (payload.ok && payload.comment) {
+        const created = payload.comment;
+        setComments((prev) => [created, ...prev]);
+        setCommentInput("");
+        const key = `${selectedItem.sourceType}:${selectedItem.id}`;
+        setStats((prev) => {
+          const current = prev[key] ?? { likes: 0, comments: 0 };
+          return { ...prev, [key]: { ...current, comments: current.comments + 1 } };
+        });
+      } else {
+        setCommentError(payload.error || "评论失败，请稍后再试。");
+      }
+    } catch {
+      setCommentError("评论失败，请稍后再试。");
+    } finally {
+      setCommentSubmitting(false);
+    }
+  }
+
+  async function handleDeleteComment(commentId: string) {
+    if (!selectedItem) {
+      return;
+    }
+    try {
+      const response = await fetch(`/api/gallery/comments?id=${encodeURIComponent(commentId)}`, {
+        method: "DELETE",
+      });
+      const payload = (await response.json()) as { ok: boolean };
+      if (payload.ok) {
+        setComments((prev) => prev.filter((comment) => comment.id !== commentId));
+        const key = `${selectedItem.sourceType}:${selectedItem.id}`;
+        setStats((prev) => {
+          const current = prev[key] ?? { likes: 0, comments: 0 };
+          return { ...prev, [key]: { ...current, comments: Math.max(0, current.comments - 1) } };
+        });
+      }
+    } catch {
+      // 忽略网络异常。
+    }
+  }
+
   const selectedFavorited = selectedItem ? favoriteKeys.has(`${selectedItem.sourceType}:${selectedItem.id}`) : false;
+  const selectedKey = selectedItem ? `${selectedItem.sourceType}:${selectedItem.id}` : "";
+  const selectedLiked = selectedItem ? likeKeys.has(selectedKey) : false;
+  const selectedStat = stats[selectedKey] ?? { likes: 0, comments: 0 };
 
   return (
     <>
@@ -380,9 +564,23 @@ export function HomeWorksShowcase({
                 )}
                 <span className="pointer-events-none absolute inset-x-0 bottom-0 block bg-gradient-to-t from-slate-950/70 via-slate-950/25 to-transparent px-3.5 pb-3 pt-12">
                   <span className="block truncate text-sm font-bold text-white">{item.title}</span>
-                  <span className="mt-0.5 block text-xs font-medium text-white/80">
-                    {item.category}
-                    {item.isFallback ? ` · ${fallbackBadgeLabel}` : ""}
+                  <span className="mt-0.5 flex items-center justify-between gap-2 text-xs font-medium text-white/80">
+                    <span className="truncate">
+                      {item.category}
+                      {item.isFallback ? ` · ${fallbackBadgeLabel}` : ""}
+                    </span>
+                    {item.sourceType !== "sample" ? (
+                      <span className="flex shrink-0 items-center gap-2.5 text-[11px] text-white/85">
+                        <span className="inline-flex items-center gap-1">
+                          <ThumbsUp size={12} />
+                          {(stats[`${item.sourceType}:${item.id}`]?.likes ?? 0)}
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <MessageCircle size={12} />
+                          {(stats[`${item.sourceType}:${item.id}`]?.comments ?? 0)}
+                        </span>
+                      </span>
+                    ) : null}
                   </span>
                 </span>
               </span>
@@ -491,20 +689,43 @@ export function HomeWorksShowcase({
                     )}
                   </div>
 
-                  {favoriteEnabled && selectedItem.sourceType !== "sample" ? (
-                    <button
-                      type="button"
-                      onClick={(event) => handleToggleFavorite(selectedItem, event)}
-                      disabled={pendingFavorite === `${selectedItem.sourceType}:${selectedItem.id}`}
-                      className={`inline-flex w-full items-center justify-center gap-1.5 rounded-xl border px-4 py-2.5 text-sm font-semibold transition disabled:opacity-60 ${
-                        selectedFavorited
-                          ? "border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 dark:border-rose-500/40 dark:bg-rose-500/10"
-                          : "border-line bg-panel text-ink-secondary hover:bg-page"
-                      }`}
-                    >
-                      <Heart size={15} className={selectedFavorited ? "fill-rose-500 text-rose-500" : ""} />
-                      {selectedFavorited ? "已收藏" : "收藏作品"}
-                    </button>
+                  {selectedItem.sourceType !== "sample" ? (
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <button
+                        type="button"
+                        onClick={(event) => handleToggleLike(selectedItem, event)}
+                        disabled={!likeEnabled || pendingLike === selectedKey}
+                        title={likeEnabled ? undefined : "登录后可点赞"}
+                        className={`inline-flex w-full items-center justify-center gap-1.5 rounded-xl border px-4 py-2.5 text-sm font-semibold transition disabled:opacity-60 ${
+                          selectedLiked
+                            ? "border-brand-200 bg-brand-50 text-brand-600 hover:bg-brand-100 dark:border-brand-500/40 dark:bg-brand-500/10"
+                            : "border-line bg-panel text-ink-secondary hover:bg-page"
+                        }`}
+                      >
+                        <ThumbsUp size={15} className={selectedLiked ? "fill-brand-500 text-brand-500" : ""} />
+                        {selectedLiked ? "已赞" : "点赞"}
+                        <span className="text-xs text-ink-faint">{selectedStat.likes}</span>
+                      </button>
+                      {favoriteEnabled ? (
+                        <button
+                          type="button"
+                          onClick={(event) => handleToggleFavorite(selectedItem, event)}
+                          disabled={pendingFavorite === selectedKey}
+                          className={`inline-flex w-full items-center justify-center gap-1.5 rounded-xl border px-4 py-2.5 text-sm font-semibold transition disabled:opacity-60 ${
+                            selectedFavorited
+                              ? "border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 dark:border-rose-500/40 dark:bg-rose-500/10"
+                              : "border-line bg-panel text-ink-secondary hover:bg-page"
+                          }`}
+                        >
+                          <Heart size={15} className={selectedFavorited ? "fill-rose-500 text-rose-500" : ""} />
+                          {selectedFavorited ? "已收藏" : "收藏"}
+                        </button>
+                      ) : (
+                        <span className="inline-flex w-full cursor-default items-center justify-center rounded-xl border border-line bg-panel px-4 py-2.5 text-sm font-semibold text-ink-faint">
+                          登录后收藏
+                        </span>
+                      )}
+                    </div>
                   ) : null}
 
                   <div className="rounded-xl border border-line bg-page/60 p-4">
@@ -532,6 +753,90 @@ export function HomeWorksShowcase({
                       </div>
                     ))}
                   </div>
+
+                  {selectedItem.sourceType !== "sample" ? (
+                    <div className="rounded-xl border border-line bg-page/60 p-4">
+                      <div className="mb-3 flex items-center gap-1.5">
+                        <MessageCircle size={15} className="text-ink-secondary" />
+                        <p className="text-sm font-bold text-ink">评论</p>
+                        <span className="text-xs text-ink-faint">{selectedStat.comments}</span>
+                      </div>
+
+                      {likeEnabled ? (
+                        <div className="mb-3">
+                          <textarea
+                            value={commentInput}
+                            onChange={(event) => setCommentInput(event.target.value)}
+                            maxLength={500}
+                            rows={2}
+                            placeholder="友善地写下你的看法…"
+                            className="w-full resize-none rounded-xl border border-line bg-panel px-3 py-2 text-sm text-ink outline-none transition placeholder:text-ink-faint focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
+                          />
+                          {commentError ? (
+                            <p className="mt-1.5 text-xs font-medium text-rose-500">{commentError}</p>
+                          ) : null}
+                          <div className="mt-2 flex items-center justify-between">
+                            <span className="text-xs text-ink-faint">{commentInput.length}/500</span>
+                            <button
+                              type="button"
+                              onClick={() => void handleSubmitComment()}
+                              disabled={commentSubmitting || !commentInput.trim()}
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-brand-500 px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {commentSubmitting ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+                              发表
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="mb-3 rounded-xl bg-page px-3.5 py-2.5 text-xs font-medium text-ink-faint">
+                          登录后即可发表评论。
+                        </p>
+                      )}
+
+                      {commentsLoading ? (
+                        <div className="flex items-center justify-center py-4 text-ink-faint">
+                          <Loader2 size={16} className="animate-spin" />
+                        </div>
+                      ) : comments.length > 0 ? (
+                        <ul className="space-y-3">
+                          {comments.map((comment) => (
+                            <li key={comment.id} className="flex gap-2.5">
+                              <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-brand-400 to-brand-600 text-xs font-bold text-white">
+                                {comment.authorAvatar ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img src={comment.authorAvatar} alt={comment.authorName} className="h-full w-full object-cover" />
+                                ) : (
+                                  comment.authorName.slice(0, 1).toUpperCase()
+                                )}
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center justify-between gap-2">
+                                  <p className="truncate text-xs font-bold text-ink">{comment.authorName}</p>
+                                  <span className="flex shrink-0 items-center gap-2">
+                                    <span className="text-[11px] text-ink-faint">{formatDate(comment.createdAt)}</span>
+                                    {comment.isOwn ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => void handleDeleteComment(comment.id)}
+                                        aria-label="删除评论"
+                                        className="text-ink-faint transition hover:text-rose-500"
+                                      >
+                                        <Trash2 size={13} />
+                                      </button>
+                                    ) : null}
+                                  </span>
+                                </div>
+                                <p className="mt-0.5 break-words text-sm leading-6 text-ink-secondary">{comment.content}</p>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="py-2 text-center text-xs text-ink-faint">还没有评论，来说两句吧。</p>
+                      )}
+                    </div>
+                  ) : null}
 
                   <button
                     type="button"

@@ -5,7 +5,16 @@ import { invalidateSettingsCache } from "@/lib/settings";
 
 // 每个用例前清空测试库相关表（CASCADE 处理外键），保证用例间零污染。
 // 注意：不 mock @/lib/db —— 集成测试要连真实 Postgres。
-const TABLES = ["CreditTransaction", "CreditAccount", "ModerationLog", "AppSetting", "User"];
+const TABLES = [
+  "CreditTransaction",
+  "CreditAccount",
+  "ModerationLog",
+  "GalleryImageLike",
+  "GalleryImageComment",
+  "CuratedGalleryImage",
+  "AppSetting",
+  "User",
+];
 
 beforeEach(async () => {
   await prisma.$executeRawUnsafe(

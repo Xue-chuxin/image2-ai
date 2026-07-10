@@ -63,6 +63,8 @@ model User {
   subscription       Subscription?
   imageFavorites     ImageFavorite[]
   dailyCheckIns      DailyCheckIn[]
+  galleryLikes       GalleryImageLike[]
+  galleryComments    GalleryImageComment[]
 
   @@index([referredById])
 }
@@ -262,6 +264,34 @@ model ImageFavorite {
   createdAt  DateTime @default(now())
 
   @@unique([userId, sourceType, imageId])
+  @@index([userId, createdAt])
+}
+
+// 画廊作品点赞：一人对一张作品至多一条，unique(userId, sourceType, imageId) 做幂等。
+model GalleryImageLike {
+  id         String   @id @default(cuid())
+  userId     String
+  sourceType String // generated | curated
+  imageId    String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, sourceType, imageId])
+  @@index([sourceType, imageId])
+}
+
+// 画廊作品评论：软删（isDeleted）保留审计，按 (sourceType, imageId, createdAt) 拉列表。
+model GalleryImageComment {
+  id         String   @id @default(cuid())
+  userId     String
+  sourceType String // generated | curated
+  imageId    String
+  content    String
+  isDeleted  Boolean  @default(false)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@index([sourceType, imageId, createdAt])
   @@index([userId, createdAt])
 }
 
