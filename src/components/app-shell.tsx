@@ -21,6 +21,7 @@ import {
   Trophy,
   UserRound,
   Wand2,
+  WandSparkles,
   Wrench,
   Zap,
 } from "lucide-react";
@@ -54,6 +55,7 @@ const navItems: NavItem[] = [
   { href: "/generate", label: "专业绘画", icon: Palette },
   { href: "/generate/batch", label: "批量生成", icon: Layers },
   { href: "/prompts", label: "提示词库", icon: Sparkles },
+  { href: "/prompts/polish", label: "提示词润色", icon: WandSparkles },
   { href: "/leaderboard", label: "排行榜", icon: Trophy },
   { href: "/tools", label: "更多工具", icon: Wrench, placeholder: true },
   { href: "/favorites", label: "我的收藏", icon: Heart },
@@ -78,6 +80,7 @@ const pageMeta: Record<string, { title: string; description: string }> = {
   "/generate/batch": { title: "批量生成", description: "一段描述，多风格一次出图" },
   "/leaderboard": { title: "排行榜", description: "作品与创作者热度榜" },
   "/tools": { title: "更多工具", description: "实用创作工具集合" },
+  "/prompts/polish": { title: "提示词润色", description: "一句话扩写为可生图提示词" },
   "/favorites": { title: "我的收藏", description: "收藏的公开作品与精选" },
   "/history": { title: "生成历史", description: "我的生成任务与结果" },
   "/credits": { title: "积分明细", description: "积分余额与收支流水" },
