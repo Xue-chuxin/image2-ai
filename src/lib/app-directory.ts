@@ -6,7 +6,6 @@ import {
   MessagesSquare,
   Newspaper,
   PenLine,
-  Receipt,
   Sparkles,
   Star,
   Trophy,
@@ -88,13 +87,6 @@ export const APP_DIRECTORY: AppEntry[] = [
     icon: Heart,
     iconClass: "bg-rose-50 dark:bg-rose-500/10 text-rose-500 dark:text-rose-300",
     href: "/favorites",
-  },
-  {
-    name: "积分明细",
-    description: "查看积分余额与收支流水，消费一目了然。",
-    icon: Receipt,
-    iconClass: "bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300",
-    href: "/credits",
   },
   {
     name: "小红书爆款文案",
