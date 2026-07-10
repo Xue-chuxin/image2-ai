@@ -12,6 +12,7 @@ const TABLES = [
   "GalleryImageLike",
   "GalleryImageComment",
   "CuratedGalleryImage",
+  "Notification",
   "AppSetting",
   "User",
 ];

@@ -26,6 +26,7 @@ import type { PublicAppSettings } from "@/lib/settings";
 import { AccountMenu } from "@/components/account-menu";
 import { InviteDialog } from "@/components/invite-dialog";
 import { CheckinDialog } from "@/components/checkin-dialog";
+import { NotificationBell } from "@/components/notification-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 export type ShellUser = {
@@ -263,6 +264,8 @@ function WorkspaceShell({
               >
                 VIP 升级会员
               </button>
+
+              {user?.email ? <NotificationBell /> : null}
 
               <ThemeToggle className="flex h-9 w-9 items-center justify-center rounded-full text-ink-secondary transition hover:bg-brand-50 hover:text-brand-600" />
 

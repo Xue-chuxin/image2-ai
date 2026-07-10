@@ -6,6 +6,15 @@ import {
   type GalleryImageRef,
   type GallerySourceType,
 } from "@/lib/gallery";
+import { notifyGalleryOwner } from "@/lib/notifications";
+
+async function resolveActorName(userId: string): Promise<string> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { displayName: true, email: true },
+  });
+  return user?.displayName?.trim() || user?.email?.split("@")[0] || "有人";
+}
 
 const SOCIAL_SOURCE_TYPES: GallerySourceType[] = ["generated", "curated"];
 
@@ -68,6 +77,16 @@ export async function toggleLike(
 
   await assertImageAvailable(sourceType, imageId);
   await prisma.galleryImageLike.create({ data: { userId, sourceType, imageId } });
+
+  // 尽力通知作者（仅 generated 作品有作者；失败不影响点赞）。
+  await notifyGalleryOwner({
+    actorId: userId,
+    actorName: await resolveActorName(userId),
+    sourceType,
+    imageId,
+    kind: "like",
+  });
+
   return { liked: true };
 }
 
@@ -189,6 +208,16 @@ export async function addComment(
     include: {
       user: { select: { id: true, email: true, displayName: true, avatarUrl: true } },
     },
+  });
+
+  // 尽力通知作者（仅 generated 作品有作者；失败不影响评论）。
+  await notifyGalleryOwner({
+    actorId: userId,
+    actorName: comment.user?.displayName?.trim() || comment.user?.email?.split("@")[0] || "有人",
+    sourceType,
+    imageId,
+    kind: "comment",
+    commentExcerpt: content.length > 60 ? `${content.slice(0, 60)}…` : content,
   });
 
   return toCommentView(comment, userId);

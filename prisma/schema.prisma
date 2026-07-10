@@ -65,8 +65,26 @@ model User {
   dailyCheckIns      DailyCheckIn[]
   galleryLikes       GalleryImageLike[]
   galleryComments    GalleryImageComment[]
+  notifications      Notification[]
 
   @@index([referredById])
+}
+
+// 站内消息通知：收件人 userId，type 区分来源（gallery_like/gallery_comment/referral_reward/membership）。
+// link 可选跳转地址，isRead 标记已读。列表以时间倒序为主，未读数按 isRead 过滤。
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  body      String?
+  link      String?
+  isRead    Boolean  @default(false)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([userId, isRead])
 }
 
 // 每日签到领积分：一天一行（checkInDate 记当天 0 点），unique(userId, checkInDate) 做幂等。
