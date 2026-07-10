@@ -139,16 +139,10 @@ function WorkspaceShell({
 }) {
   const router = useRouter();
   const [searchValue, setSearchValue] = useState("");
-  const [toast, setToast] = useState("");
   const [inviteOpen, setInviteOpen] = useState(false);
   const [checkinOpen, setCheckinOpen] = useState(false);
   const metaKey = navItems.find((item) => isActivePath(pathname, item.href))?.href || (pathname.startsWith("/account") ? "/account" : "/");
   const meta = pageMeta[metaKey] || { title: settings.siteTitle, description: settings.siteSubtitle };
-
-  function showComingSoon(label: string) {
-    setToast(`「${label}」正在规划中，敬请期待`);
-    window.setTimeout(() => setToast(""), 2200);
-  }
 
   function onSearchSubmit(event: FormEvent) {
     event.preventDefault();
@@ -258,13 +252,12 @@ function WorkspaceShell({
                 </a>
               ) : null}
 
-              <button
-                type="button"
-                onClick={() => showComingSoon("VIP 会员")}
+              <Link
+                href="/membership"
                 className="hidden rounded-full bg-gradient-to-r from-brand-500 to-brand-600 px-3.5 py-1.5 text-[13px] font-bold italic text-white shadow-chip transition hover:opacity-90 lg:block"
               >
                 VIP 升级会员
-              </button>
+              </Link>
 
               {user?.email ? <NotificationBell /> : null}
 
@@ -319,15 +312,6 @@ function WorkspaceShell({
       {inviteOpen ? <InviteDialog onClose={() => setInviteOpen(false)} /> : null}
 
       {checkinOpen ? <CheckinDialog onClose={() => setCheckinOpen(false)} /> : null}
-
-      {/* 轻量占位提示 */}
-      {toast ? (
-        <div className="pointer-events-none fixed inset-x-0 top-20 z-[110] flex justify-center px-4">
-          <div className="animate-float-in rounded-full bg-slate-900/85 px-4 py-2 text-sm font-medium text-white shadow-pop backdrop-blur">
-            {toast}
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
