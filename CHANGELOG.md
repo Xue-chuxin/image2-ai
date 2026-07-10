@@ -4,6 +4,8 @@
 
 ## 未发布
 
+- 存储：新增对象存储支持（S3 兼容协议，一套配置覆盖 AWS S3 / 阿里云 OSS / 腾讯云 COS）。控制台「安全与存储」页签新增 Endpoint / Bucket / Region / AccessKey / 路径风格寻址配置；生成图与参考图上传后落对象存储并回写可访问 URL，支付凭证等私有文件仍走鉴权回源路由（不公开直链）。切回 local 本地存储行为不变。相关环境变量：`STORAGE_PROVIDER`、`STORAGE_ENDPOINT`、`STORAGE_BUCKET`、`STORAGE_REGION`、`STORAGE_FORCE_PATH_STYLE`、`STORAGE_ACCESS_KEY_ID`、`STORAGE_SECRET_ACCESS_KEY`。
+
 - 正式开放参考图生图：控制台「系统设置 → 生图通道」新增「开放参考图生图」开关（默认关闭，也可用环境变量 `REFERENCE_IMAGES_ENABLED` 开启）。开放后创作页支持上传最多 4 张参考图，「再次生成」会完整回填参考图。
 - 参考图视觉分析改走所配置的 OpenAI 兼容通道（原先硬编码官方域名，中转通道 Key 会 401 导致分析静默失效），分析模型新增「参考图视觉分析模型」配置项（默认 gpt-4o，留空关闭分析）。
 - Stability AI 图生图的引擎段改用后台配置的模型名（原先硬编码 stable-diffusion-xl-1024-v1-0）。

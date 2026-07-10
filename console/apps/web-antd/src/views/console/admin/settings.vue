@@ -113,6 +113,9 @@ interface AdminAppSettings {
   siteTitle: string;
   stabilityAiApiKeyConfigured: boolean;
   stabilityAiModel: string;
+  storageAccessKeyIdConfigured: boolean;
+  storageForcePathStyle: boolean;
+  storageSecretAccessKeyConfigured: boolean;
   storageBucket: string;
   storageEndpoint: string;
   storageGeneratedPrefix: string;
@@ -175,6 +178,9 @@ interface SaveSettingsPayload {
   siteTitle: string;
   stabilityAiApiKey?: string;
   stabilityAiModel: string;
+  storageAccessKeyId?: string;
+  storageForcePathStyle?: boolean;
+  storageSecretAccessKey?: string;
   storageBucket: string;
   storageEndpoint: string;
   storageGeneratedPrefix: string;
@@ -292,6 +298,9 @@ function createDefaultSettings(): AdminAppSettings {
     siteTitle: '',
     stabilityAiApiKeyConfigured: false,
     stabilityAiModel: '',
+    storageAccessKeyIdConfigured: false,
+    storageForcePathStyle: false,
+    storageSecretAccessKeyConfigured: false,
     storageBucket: '',
     storageEndpoint: '',
     storageGeneratedPrefix: '',
@@ -315,6 +324,8 @@ const friendLinksText = ref('');
 /** 敏感密钥输入框：留空表示不修改 */
 const openaiApiKey = ref('');
 const stabilityAiApiKey = ref('');
+const storageAccessKeyId = ref('');
+const storageSecretAccessKey = ref('');
 const deepseekApiKey = ref('');
 const emailSmtpPassword = ref('');
 
@@ -516,6 +527,8 @@ function applySettings(next: AdminAppSettings) {
   friendLinksText.value = formatFriendLinks(next.friendLinks);
   openaiApiKey.value = '';
   stabilityAiApiKey.value = '';
+  storageAccessKeyId.value = '';
+  storageSecretAccessKey.value = '';
   deepseekApiKey.value = '';
   emailSmtpPassword.value = '';
 }
@@ -606,6 +619,7 @@ function buildPayload(friendLinks: FooterFriendLink[]): SaveSettingsPayload {
     storageEndpoint: form.storageEndpoint,
     storageGeneratedPrefix: form.storageGeneratedPrefix,
     storageLocalBaseDir: form.storageLocalBaseDir,
+    storageForcePathStyle: form.storageForcePathStyle,
     storageProvider: form.storageProvider,
     storagePublicBaseUrl: form.storagePublicBaseUrl,
     storageRegion: form.storageRegion,
@@ -616,6 +630,12 @@ function buildPayload(friendLinks: FooterFriendLink[]): SaveSettingsPayload {
   if (openaiApiKey.value.trim()) payload.openaiApiKey = openaiApiKey.value;
   if (stabilityAiApiKey.value.trim()) {
     payload.stabilityAiApiKey = stabilityAiApiKey.value;
+  }
+  if (storageAccessKeyId.value.trim()) {
+    payload.storageAccessKeyId = storageAccessKeyId.value;
+  }
+  if (storageSecretAccessKey.value.trim()) {
+    payload.storageSecretAccessKey = storageSecretAccessKey.value;
   }
   if (deepseekApiKey.value.trim()) {
     payload.deepseekApiKey = deepseekApiKey.value;
@@ -1098,7 +1118,7 @@ onMounted(() => {
                   <FormItem label="公开访问域名">
                     <Input
                       v-model:value="form.storagePublicBaseUrl"
-                      placeholder="留空使用当前站点相对路径"
+                      placeholder="对象存储建议填 CDN / 自定义域名，留空按 endpoint 兜底"
                     />
                   </FormItem>
                   <FormItem label="生成图前缀">
@@ -1108,16 +1128,46 @@ onMounted(() => {
                     <Input v-model:value="form.storageUploadsPrefix" />
                   </FormItem>
                   <FormItem label="Endpoint">
-                    <Input v-model:value="form.storageEndpoint" placeholder="预留" />
+                    <Input
+                      v-model:value="form.storageEndpoint"
+                      placeholder="对象存储 S3 兼容 endpoint，如 https://oss-cn-hangzhou.aliyuncs.com"
+                    />
                   </FormItem>
                   <FormItem label="Bucket">
-                    <Input v-model:value="form.storageBucket" placeholder="预留" />
+                    <Input v-model:value="form.storageBucket" placeholder="对象存储 Bucket 名称" />
                   </FormItem>
                   <FormItem label="Region">
-                    <Input v-model:value="form.storageRegion" placeholder="预留" />
+                    <Input v-model:value="form.storageRegion" placeholder="如 cn-hangzhou / us-east-1" />
+                  </FormItem>
+                  <FormItem label="Access Key ID">
+                    <InputPassword
+                      v-model:value="storageAccessKeyId"
+                      :placeholder="
+                        form.storageAccessKeyIdConfigured
+                          ? '已配置，留空表示不修改'
+                          : '未配置'
+                      "
+                      autocomplete="new-password"
+                    />
+                  </FormItem>
+                  <FormItem label="Secret Access Key">
+                    <InputPassword
+                      v-model:value="storageSecretAccessKey"
+                      :placeholder="
+                        form.storageSecretAccessKeyConfigured
+                          ? '已配置，留空表示不修改'
+                          : '未配置'
+                      "
+                      autocomplete="new-password"
+                    />
+                  </FormItem>
+                  <FormItem label="路径风格寻址（force path style）">
+                    <Switch v-model:checked="form.storageForcePathStyle" />
                   </FormItem>
                   <p class="text-xs text-gray-400">
-                    目前仅 Local 本地存储已实现，OSS / COS / S3 为预留选项。
+                    Local 为本地磁盘存储；OSS / COS / S3 走 S3 兼容协议（一套配置覆盖三家）。
+                    切换到对象存储需填写 Endpoint / Bucket / Region 及 AccessKey；自定义
+                    endpoint（OSS/COS/MinIO）通常需开启路径风格寻址。支付凭证等私有文件仍走鉴权回源，不公开直链。
                   </p>
                 </Form>
               </Card>

@@ -5,6 +5,11 @@ import sharp from "sharp";
 
 import { AppError } from "@/lib/app-error";
 import { getStorageRuntimeConfig, type StorageProviderName, type StorageRuntimeConfig } from "@/lib/settings";
+import { buildS3PublicUrl, deleteS3Object, putS3Object } from "@/lib/storage-s3";
+
+// 公开命名空间（generated / reference）内容不可变，可长缓存；payment-proof 私有不缓存。
+const PUBLIC_CACHE_CONTROL = "public, max-age=31536000, immutable";
+const PRIVATE_CACHE_CONTROL = "private, no-store";
 
 export type StoredImage = {
   url: string;
@@ -164,17 +169,56 @@ export function createLocalStorageService(config: StorageRuntimeConfig): Storage
   };
 }
 
+/**
+ * 对象存储 URL：payment-proof 走鉴权回源路由（不可公开直链），其余返回公开直链。
+ * 回源路由按前缀识别命名空间并鉴权（见 src/app/storage/[...path]/route.ts）。
+ */
+function buildObjectStorageUrl(config: StorageRuntimeConfig, namespace: StorageSaveInput["namespace"], key: string) {
+  if (namespace === "payment-proof") {
+    return `/storage/${key}`;
+  }
+  return buildS3PublicUrl(config, key);
+}
+
+export function createObjectStorageService(config: StorageRuntimeConfig): StorageService {
+  return {
+    provider: config.provider,
+    async save(input: StorageSaveInput): Promise<StoredImage> {
+      const filename = createGeneratedFilename(input.ownerId, input.filename, input.mimeType);
+      const namespacePrefix = getNamespacePrefix(config, input.namespace);
+      const key = `${namespacePrefix}/${filename}`;
+      const isPrivate = input.namespace === "payment-proof";
+      const cacheControl = isPrivate ? PRIVATE_CACHE_CONTROL : PUBLIC_CACHE_CONTROL;
+
+      await putS3Object(config, key, input.buffer, input.mimeType, cacheControl);
+
+      const metadata = await inspectImage(input.buffer);
+
+      let thumbnailUrl: string | undefined;
+      if (!isPrivate) {
+        const thumbnailKey = `${namespacePrefix}/thumbs/${filename}`;
+        await putS3Object(config, thumbnailKey, await createThumbnail(input.buffer), input.mimeType, cacheControl);
+        thumbnailUrl = buildObjectStorageUrl(config, input.namespace, thumbnailKey);
+      }
+
+      return {
+        url: buildObjectStorageUrl(config, input.namespace, key),
+        thumbnailUrl,
+        width: metadata.width,
+        height: metadata.height,
+        fileSize: input.buffer.byteLength,
+        mimeType: input.mimeType,
+      };
+    },
+  };
+}
+
 export function createStorageService(config: StorageRuntimeConfig): StorageService {
   if (config.provider === "local") {
     return createLocalStorageService(config);
   }
 
-  return {
-    provider: config.provider,
-    async save() {
-      throw new AppError("PROVIDER_CONFIG", `当前版本仅实现 local 存储，${config.provider} 已预留配置但尚未接入对象存储 SDK。`, 500);
-    },
-  };
+  return createObjectStorageService(config);
 }
 
 export async function getStorageService() {
@@ -226,22 +270,29 @@ async function unlinkQuietly(filePath: string) {
 }
 
 /**
- * 删除参考图的原图与缩略图磁盘文件。
- * 仅本地存储实现落盘删除；对象存储尚未接入，暂不处理远端删除（软删除记录仍生效）。
+ * 删除参考图的原图与缩略图文件（本地磁盘或对象存储）。
+ * 清理场景使用，忽略「文件不存在」类错误；软删除记录始终生效。
  */
 export async function deleteReferenceImageFiles(url: string, thumbnailUrl?: string | null): Promise<void> {
   const config = await getStorageRuntimeConfig();
+  const referencePrefix = `${config.uploadsPrefix}/reference`;
+  const filename = safeStoredFilename(url);
+  const thumbFilename = safeStoredFilename(thumbnailUrl);
+
   if (config.provider !== "local") {
+    if (filename) {
+      await deleteS3Object(config, `${referencePrefix}/${filename}`);
+    }
+    if (thumbFilename) {
+      await deleteS3Object(config, `${referencePrefix}/thumbs/${thumbFilename}`);
+    }
     return;
   }
 
-  const referenceDir = path.join(config.localBaseDir, `${config.uploadsPrefix}/reference`);
-  const filename = safeStoredFilename(url);
+  const referenceDir = path.join(config.localBaseDir, referencePrefix);
   if (filename) {
     await unlinkQuietly(path.join(referenceDir, filename));
   }
-
-  const thumbFilename = safeStoredFilename(thumbnailUrl);
   if (thumbFilename) {
     await unlinkQuietly(path.join(referenceDir, "thumbs", thumbFilename));
   }

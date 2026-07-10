@@ -51,6 +51,7 @@ export type PublicAppSettings = {
   storageEndpoint: string;
   storageBucket: string;
   storageRegion: string;
+  storageForcePathStyle: boolean;
 };
 
 export type OpenAICompatibleChannelSetting = {
@@ -97,6 +98,8 @@ export type AdminAppSettings = PublicAppSettings & {
   openaiApiKeyConfigured: boolean;
   legacyOpenaiApiKeyConfigured: boolean;
   stabilityAiApiKeyConfigured: boolean;
+  storageAccessKeyIdConfigured: boolean;
+  storageSecretAccessKeyConfigured: boolean;
   encryptionReady: boolean;
   diagnostics: AdminDiagnosticItem[];
 };
@@ -110,6 +113,8 @@ export type SaveAdminSettingsInput = Partial<PublicAppSettings> & {
   openaiApiKey?: string;
   openaiCompatibleChannels?: Array<Partial<OpenAICompatibleChannelSetting> & { apiKey?: string }>;
   stabilityAiApiKey?: string;
+  storageAccessKeyId?: string;
+  storageSecretAccessKey?: string;
   emailSmtpEnabled?: boolean | string;
   emailSmtpHost?: string;
   emailSmtpPort?: number | string;
@@ -138,6 +143,9 @@ export type StorageRuntimeConfig = {
   endpoint: string;
   bucket: string;
   region: string;
+  forcePathStyle: boolean;
+  accessKeyId: string;
+  secretAccessKey: string;
 };
 
 export type ModerationRuntimeConfig = {
@@ -220,6 +228,7 @@ const defaultSettings: PublicAppSettings = {
   storageEndpoint: "",
   storageBucket: "",
   storageRegion: "",
+  storageForcePathStyle: false,
 };
 
 const defaultModerationSettings: ModerationRuntimeConfig = {
@@ -1050,6 +1059,7 @@ export async function getPublicAppSettings(): Promise<PublicAppSettings> {
     storageEndpoint: normalizeOptionalText(getStoredSetting(map, "storageEndpoint") || process.env.STORAGE_ENDPOINT, defaultSettings.storageEndpoint, 300),
     storageBucket: normalizeOptionalText(getStoredSetting(map, "storageBucket") || process.env.STORAGE_BUCKET, defaultSettings.storageBucket, 160),
     storageRegion: normalizeOptionalText(getStoredSetting(map, "storageRegion") || process.env.STORAGE_REGION, defaultSettings.storageRegion, 120),
+    storageForcePathStyle: getStoredBoolean(map, "storageForcePathStyle", process.env.STORAGE_FORCE_PATH_STYLE, defaultSettings.storageForcePathStyle),
   };
 }
 
@@ -1070,6 +1080,8 @@ export async function getAdminAppSettings(options?: { includeDiagnostics?: boole
   const legacyOpenaiApiKeyConfigured = Boolean(map.get("openaiApiKey")?.value || process.env.OPENAI_API_KEY);
   const openaiApiKeyConfigured = openaiCompatibleChannels.some((channel) => channel.enabled && channel.apiKeyConfigured);
   const stabilityAiApiKeyConfigured = Boolean(map.get("stabilityAiApiKey")?.value || process.env.STABILITY_AI_API_KEY);
+  const storageAccessKeyIdConfigured = Boolean(map.get("storageAccessKeyId")?.value || process.env.STORAGE_ACCESS_KEY_ID);
+  const storageSecretAccessKeyConfigured = Boolean(map.get("storageSecretAccessKey")?.value || process.env.STORAGE_SECRET_ACCESS_KEY);
 
   return {
     ...publicSettings,
@@ -1083,6 +1095,8 @@ export async function getAdminAppSettings(options?: { includeDiagnostics?: boole
     openaiApiKeyConfigured,
     legacyOpenaiApiKeyConfigured,
     stabilityAiApiKeyConfigured,
+    storageAccessKeyIdConfigured,
+    storageSecretAccessKeyConfigured,
     encryptionReady: hasSettingsEncryptionKey(),
     // 诊断含数据库探测（SELECT 1），仅后台设置页需要；运行时链路取配置时跳过。
     diagnostics: includeDiagnostics
@@ -1138,6 +1152,7 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
   const storageEndpoint = normalizeOptionalText(input.storageEndpoint, currentPublicSettings.storageEndpoint, 300);
   const storageBucket = normalizeOptionalText(input.storageBucket, currentPublicSettings.storageBucket, 160);
   const storageRegion = normalizeOptionalText(input.storageRegion, currentPublicSettings.storageRegion, 120);
+  const storageForcePathStyle = normalizeBoolean(input.storageForcePathStyle, currentPublicSettings.storageForcePathStyle);
   const emailSmtpEnabled = normalizeBoolean(input.emailSmtpEnabled, currentEmailSettings.emailSmtpEnabled);
   const emailSmtpHost = normalizeOptionalText(input.emailSmtpHost, currentEmailSettings.emailSmtpHost, 300);
   const emailSmtpPort = normalizePort(input.emailSmtpPort, currentEmailSettings.emailSmtpPort);
@@ -1150,6 +1165,8 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
   const submittedDeepSeekApiKey = normalizeSubmittedSecret(input.deepseekApiKey);
   const submittedOpenaiApiKey = normalizeSubmittedSecret(input.openaiApiKey);
   const submittedStabilityAiApiKey = normalizeSubmittedSecret(input.stabilityAiApiKey);
+  const submittedStorageAccessKeyId = normalizeSubmittedSecret(input.storageAccessKeyId);
+  const submittedStorageSecretAccessKey = normalizeSubmittedSecret(input.storageSecretAccessKey);
   const submittedEmailSmtpPassword = normalizeSubmittedSecret(input.emailSmtpPassword);
   const shouldSaveOpenAICompatibleChannels = shouldPersistSubmittedOpenAIChannels(input.openaiCompatibleChannels, settingsMap, openaiImageModel);
   if (shouldSaveOpenAICompatibleChannels && !canReadStoredOpenAICompatibleChannels && submittedChannelsHaveBlankApiKey(input.openaiCompatibleChannels)) {
@@ -1171,6 +1188,8 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
     submittedDeepSeekApiKey ||
       submittedOpenaiApiKey ||
       submittedStabilityAiApiKey ||
+      submittedStorageAccessKeyId ||
+      submittedStorageSecretAccessKey ||
       submittedEmailSmtpPassword ||
       openaiCompatibleChannels,
   );
@@ -1213,6 +1232,7 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
     { key: "storageEndpoint", value: storageEndpoint },
     { key: "storageBucket", value: storageBucket },
     { key: "storageRegion", value: storageRegion },
+    { key: "storageForcePathStyle", value: String(storageForcePathStyle) },
     { key: "emailSmtpEnabled", value: String(emailSmtpEnabled) },
     { key: "emailSmtpHost", value: emailSmtpHost },
     { key: "emailSmtpPort", value: String(emailSmtpPort) },
@@ -1240,6 +1260,14 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
     settingsToSave.push({ key: "stabilityAiApiKey", value: encryptSecret(submittedStabilityAiApiKey), isEncrypted: true });
   }
 
+  if (submittedStorageAccessKeyId) {
+    settingsToSave.push({ key: "storageAccessKeyId", value: encryptSecret(submittedStorageAccessKeyId), isEncrypted: true });
+  }
+
+  if (submittedStorageSecretAccessKey) {
+    settingsToSave.push({ key: "storageSecretAccessKey", value: encryptSecret(submittedStorageSecretAccessKey), isEncrypted: true });
+  }
+
   if (submittedEmailSmtpPassword) {
     settingsToSave.push({ key: "emailSmtpPassword", value: encryptSecret(submittedEmailSmtpPassword), isEncrypted: true });
   }
@@ -1247,7 +1275,10 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
   await upsertSettings(settingsToSave);
 }
 
-async function getSecretValue(key: "deepseekApiKey" | "openaiApiKey" | "stabilityAiApiKey" | "emailSmtpPassword", envValue?: string) {
+async function getSecretValue(
+  key: "deepseekApiKey" | "openaiApiKey" | "stabilityAiApiKey" | "emailSmtpPassword" | "storageAccessKeyId" | "storageSecretAccessKey",
+  envValue?: string,
+) {
   const map = toMap(await readSettingRows());
   const row = map.get(key);
 
@@ -1348,6 +1379,9 @@ export async function getStorageRuntimeConfig(): Promise<StorageRuntimeConfig> {
     endpoint: settings.storageEndpoint,
     bucket: settings.storageBucket,
     region: settings.storageRegion,
+    forcePathStyle: settings.storageForcePathStyle,
+    accessKeyId: await getSecretValue("storageAccessKeyId", process.env.STORAGE_ACCESS_KEY_ID),
+    secretAccessKey: await getSecretValue("storageSecretAccessKey", process.env.STORAGE_SECRET_ACCESS_KEY),
   };
 }
 

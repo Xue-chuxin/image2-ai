@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 
 import { getAdminSession, getUserSession } from "@/lib/auth";
 import { getStorageRuntimeConfig, type StorageRuntimeConfig } from "@/lib/settings";
+import { getS3Object } from "@/lib/storage-s3";
 
 const contentTypes: Record<string, string> = {
   ".avif": "image/avif",
@@ -62,6 +63,15 @@ function resolveStorageFile(localBaseDir: string, segments: string[]) {
   return insideBaseDir ? { baseDir, filePath } : null;
 }
 
+/** 校验路径段并拼成对象存储 Key（拒绝空段与穿越段）。 */
+function resolveObjectStorageKey(segments: string[]) {
+  if (!segments.length || segments.some((segment) => !segment || segment === "." || segment === ".." || segment.includes("\\"))) {
+    return null;
+  }
+
+  return segments.join("/");
+}
+
 function jsonNoStore(body: unknown, status: number) {
   return NextResponse.json(body, { status, headers: { "Cache-Control": NO_STORE } });
 }
@@ -80,20 +90,65 @@ async function canAccessPaymentProof(filename: string) {
   return sanitizedUserId.length > 0 && filename.startsWith(`${sanitizedUserId}-`);
 }
 
-async function serveStorageFile(request: Request, { params }: { params: Promise<{ path: string[] }> }) {
-  const config = await getStorageRuntimeConfig();
-
-  if (config.provider !== "local") {
-    return jsonNoStore({ ok: false, error: "当前存储不是本地存储。" }, 404);
-  }
-
-  const { path: requestedPath } = await params;
-  const resolved = resolveStorageFile(config.localBaseDir, requestedPath);
-
-  if (!resolved) {
+/** 对象存储回源：主要用于 payment-proof 等私有文件（公开文件走直链，不经此路由）。 */
+async function serveObjectStorageFile(request: Request, config: StorageRuntimeConfig, segments: string[], policy: StoragePolicy) {
+  const key = resolveObjectStorageKey(segments);
+  if (!key) {
     return jsonNoStore({ ok: false, error: "文件路径无效。" }, 400);
   }
 
+  let object;
+  try {
+    object = await getS3Object(config, key);
+  } catch {
+    return jsonNoStore({ ok: false, error: "文件读取失败。" }, 502);
+  }
+
+  if (!object) {
+    return jsonNoStore({ ok: false, error: "文件不存在。" }, 404);
+  }
+
+  const contentLength = object.contentLength ?? object.body.byteLength;
+  const lastModified = object.lastModified?.toUTCString();
+
+  // 条件请求：非敏感文件参与协商缓存（敏感文件 no-store，不参与）。
+  if (!policy.sensitive && object.etag) {
+    const ifNoneMatch = request.headers.get("if-none-match");
+    if (ifNoneMatch && ifNoneMatch === object.etag) {
+      return new Response(null, {
+        status: 304,
+        headers: {
+          "Cache-Control": policy.cacheControl,
+          ETag: object.etag,
+          ...(lastModified ? { "Last-Modified": lastModified } : {}),
+        },
+      });
+    }
+  }
+
+  const headers = new Headers({
+    "Cache-Control": policy.cacheControl,
+    "Content-Length": String(contentLength),
+    "Content-Type": object.contentType || getContentType(key),
+  });
+  if (lastModified) {
+    headers.set("Last-Modified", lastModified);
+  }
+  if (!policy.sensitive && object.etag) {
+    headers.set("ETag", object.etag);
+  }
+
+  if (request.method === "HEAD") {
+    return new Response(null, { headers });
+  }
+
+  return new Response(new Uint8Array(object.body), { headers });
+}
+
+async function serveStorageFile(request: Request, { params }: { params: Promise<{ path: string[] }> }) {
+  const config = await getStorageRuntimeConfig();
+
+  const { path: requestedPath } = await params;
   const policy = resolveStoragePolicy(requestedPath, config);
 
   if (policy.sensitive) {
@@ -102,6 +157,16 @@ async function serveStorageFile(request: Request, { params }: { params: Promise<
     if (!allowed) {
       return jsonNoStore({ ok: false, error: "文件不存在。" }, 404);
     }
+  }
+
+  if (config.provider !== "local") {
+    return serveObjectStorageFile(request, config, requestedPath, policy);
+  }
+
+  const resolved = resolveStorageFile(config.localBaseDir, requestedPath);
+
+  if (!resolved) {
+    return jsonNoStore({ ok: false, error: "文件路径无效。" }, 400);
   }
 
   try {

@@ -19,6 +19,7 @@
         "build:console": "cd console && npx -y pnpm@11.10.0 install --frozen-lockfile && npx -y pnpm@11.10.0 run build:antd && rm -rf ../public/console && cp -R apps/web-antd/dist ../public/console"
     },
     "dependencies": {
+        "@aws-sdk/client-s3": "^3.1084.0",
         "@prisma/client": "^5.22.0",
         "clsx": "^2.1.1",
         "lucide-react": "^0.468.0",
