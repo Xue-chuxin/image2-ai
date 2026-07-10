@@ -3,11 +3,13 @@ import { PromptTrendingBoard } from "@/components/prompt-trending-board";
 import { getUserSession } from "@/lib/auth";
 import {
   listPromptCategories,
+  listPromptTags,
   listPrompts,
   listTrendingPrompts,
   listUserPromptFavoriteIds,
   type PromptCardView,
   type PromptCategoryView,
+  type PromptTagView,
 } from "@/lib/prompts";
 
 export const dynamic = "force-dynamic";
@@ -19,13 +21,15 @@ export default async function PromptsPage() {
   let categories: PromptCategoryView[] = [];
   let favoriteIds: string[] = [];
   let trending: PromptCardView[] = [];
+  let tags: PromptTagView[] = [];
 
   try {
-    [prompts, categories, favoriteIds, trending] = await Promise.all([
+    [prompts, categories, favoriteIds, trending, tags] = await Promise.all([
       listPrompts({ limit: 120 }),
       listPromptCategories(),
       session ? listUserPromptFavoriteIds(session.userId) : Promise.resolve<string[]>([]),
       listTrendingPrompts({ limit: 8 }),
+      listPromptTags({ limit: 30 }),
     ]);
   } catch {
     // 数据库暂不可用时渲染空态。
@@ -39,7 +43,7 @@ export default async function PromptsPage() {
         <p className="text-sm leading-6 text-ink-secondary">精选可直接套用的提示词模板，一键带入创作页，收藏喜欢的模板方便下次复用。</p>
       </section>
       <PromptTrendingBoard prompts={trending} />
-      <PromptLibrary prompts={prompts} categories={categories} initialFavoriteIds={favoriteIds} isLoggedIn={Boolean(session)} />
+      <PromptLibrary prompts={prompts} categories={categories} tags={tags} initialFavoriteIds={favoriteIds} isLoggedIn={Boolean(session)} />
     </main>
   );
 }

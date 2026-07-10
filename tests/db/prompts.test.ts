@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { prisma } from "@/lib/db";
 import {
   listPromptCategories,
+  listPromptTags,
   listPrompts,
   listTrendingPrompts,
   listUserPromptFavoriteIds,
@@ -58,6 +59,27 @@ describe.skipIf(!hasDb)("prompts DB 集成", () => {
       expect(cats.map((c) => c.slug)).toEqual(["first", "second"]);
       expect(cats[0].count).toBe(2);
       expect(cats[1].count).toBe(1);
+    });
+  });
+
+  describe("listPromptTags", () => {
+    it("按引用次数降序聚合，同数按名称升序", async () => {
+      await createPrompt({ tags: ["人像", "风景"] });
+      await createPrompt({ tags: ["人像", "电影"] });
+      await createPrompt({ tags: ["人像"] });
+      await createPrompt({ tags: ["风景"] });
+
+      const tags = await listPromptTags();
+      expect(tags[0]).toEqual({ name: "人像", count: 3 });
+      // 风景与电影：风景 2 次在前；电影 1 次在后
+      expect(tags.map((t) => t.name)).toEqual(["人像", "风景", "电影"]);
+    });
+
+    it("limit 生效并夹到 [1,100]", async () => {
+      await createPrompt({ tags: ["a", "b", "c"] });
+
+      const tags = await listPromptTags({ limit: 2 });
+      expect(tags).toHaveLength(2);
     });
   });
 

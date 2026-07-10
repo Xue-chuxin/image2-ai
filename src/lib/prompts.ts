@@ -7,6 +7,11 @@ export type PromptCategoryView = {
   count: number;
 };
 
+export type PromptTagView = {
+  name: string;
+  count: number;
+};
+
 export type PromptCardView = {
   id: string;
   slug: string;
@@ -56,6 +61,18 @@ export async function listPromptCategories(): Promise<PromptCategoryView[]> {
     name: category.name,
     count: category._count.prompts,
   }));
+}
+
+/** 提示词标签热度列表：按引用次数降序（同数按名称升序），取前 N 个，供前台标签筛选。 */
+export async function listPromptTags({ limit = 30 }: { limit?: number } = {}): Promise<PromptTagView[]> {
+  const cleanLimit = Math.min(Math.max(Math.floor(limit), 1), 100);
+  const rows = await prisma.promptTag.groupBy({
+    by: ["name"],
+    _count: { name: true },
+    orderBy: [{ _count: { name: "desc" } }, { name: "asc" }],
+    take: cleanLimit,
+  });
+  return rows.map((row) => ({ name: row.name, count: row._count.name }));
 }
 
 /**

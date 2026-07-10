@@ -2,15 +2,16 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Heart, Search, Sparkles, Wand2 } from "lucide-react";
+import { Heart, Search, Sparkles, Tag, Wand2, X } from "lucide-react";
 import clsx from "clsx";
 
 import { CopyPromptButton } from "@/components/copy-prompt-button";
-import type { PromptCardView, PromptCategoryView } from "@/lib/prompts";
+import type { PromptCardView, PromptCategoryView, PromptTagView } from "@/lib/prompts";
 
 type PromptLibraryProps = {
   prompts: PromptCardView[];
   categories: PromptCategoryView[];
+  tags: PromptTagView[];
   initialFavoriteIds: string[];
   isLoggedIn: boolean;
 };
@@ -42,9 +43,10 @@ function recordPromptView(promptId: string) {
   }
 }
 
-export function PromptLibrary({ prompts, categories, initialFavoriteIds, isLoggedIn }: PromptLibraryProps) {
+export function PromptLibrary({ prompts, categories, tags, initialFavoriteIds, isLoggedIn }: PromptLibraryProps) {
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string>("");
+  const [activeTags, setActiveTags] = useState<Set<string>>(() => new Set());
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(() => new Set(initialFavoriteIds));
   const [pendingId, setPendingId] = useState<string>("");
@@ -54,13 +56,32 @@ export function PromptLibrary({ prompts, categories, initialFavoriteIds, isLogge
     return prompts.filter((prompt) => {
       if (activeCategory && prompt.categorySlug !== activeCategory) return false;
       if (favoritesOnly && !favoriteIds.has(prompt.id)) return false;
+      // 标签筛选：命中所有选中标签（AND），逐步收窄结果。
+      if (activeTags.size) {
+        const promptTags = new Set(prompt.tags);
+        for (const tag of activeTags) {
+          if (!promptTags.has(tag)) return false;
+        }
+      }
       if (keyword) {
         const haystack = `${prompt.title} ${prompt.summary} ${prompt.tags.join(" ")}`.toLowerCase();
         if (!haystack.includes(keyword)) return false;
       }
       return true;
     });
-  }, [prompts, query, activeCategory, favoritesOnly, favoriteIds]);
+  }, [prompts, query, activeCategory, activeTags, favoritesOnly, favoriteIds]);
+
+  function toggleTag(name: string) {
+    setActiveTags((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) {
+        next.delete(name);
+      } else {
+        next.add(name);
+      }
+      return next;
+    });
+  }
 
   async function toggleFavorite(prompt: PromptCardView) {
     if (!isLoggedIn) {
@@ -170,6 +191,44 @@ export function PromptLibrary({ prompts, categories, initialFavoriteIds, isLogge
         ))}
       </div>
 
+      {tags.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-1 text-[13px] font-semibold text-ink-faint">
+            <Tag className="h-3.5 w-3.5" />
+            标签
+          </span>
+          {tags.map((tag) => {
+            const active = activeTags.has(tag.name);
+            return (
+              <button
+                key={tag.name}
+                type="button"
+                onClick={() => toggleTag(tag.name)}
+                className={clsx(
+                  "inline-flex items-center gap-1 rounded-full px-3 py-1 text-[12px] font-semibold transition",
+                  active
+                    ? "bg-brand-500 text-white shadow-chip"
+                    : "bg-page text-ink-secondary hover:bg-brand-50 hover:text-brand-600",
+                )}
+              >
+                #{tag.name}
+                <span className={clsx(active ? "text-white/80" : "text-ink-faint")}>{tag.count}</span>
+              </button>
+            );
+          })}
+          {activeTags.size > 0 ? (
+            <button
+              type="button"
+              onClick={() => setActiveTags(new Set())}
+              className="inline-flex items-center gap-1 rounded-full border border-line px-2.5 py-1 text-[12px] font-semibold text-ink-faint transition hover:bg-page"
+            >
+              <X className="h-3 w-3" />
+              清除
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
       {filtered.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-line bg-panel/60 px-6 py-16 text-center">
           <Sparkles className="mx-auto h-8 w-8 text-ink-faint" />
@@ -217,9 +276,19 @@ export function PromptLibrary({ prompts, categories, initialFavoriteIds, isLogge
                 {prompt.tags.length > 0 ? (
                   <div className="mt-3 flex flex-wrap gap-1.5">
                     {prompt.tags.slice(0, 4).map((tag) => (
-                      <span key={tag} className="rounded-md bg-page px-2 py-0.5 text-[11px] text-ink-faint">
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => toggleTag(tag)}
+                        className={clsx(
+                          "rounded-md px-2 py-0.5 text-[11px] transition",
+                          activeTags.has(tag)
+                            ? "bg-brand-500 text-white"
+                            : "bg-page text-ink-faint hover:bg-brand-50 hover:text-brand-600",
+                        )}
+                      >
                         #{tag}
-                      </span>
+                      </button>
                     ))}
                   </div>
                 ) : null}
