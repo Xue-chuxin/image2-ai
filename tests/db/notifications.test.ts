@@ -19,7 +19,10 @@ describe.skipIf(!hasDb)("notifications DB 集成", () => {
   describe("createNotification / listNotifications", () => {
     it("写入后倒序返回，未读数正确", async () => {
       const user = await createUser();
-      await createNotification({ userId: user.id, type: "gallery_like", title: "第一条" });
+      // 第一条显式回拨 1 秒，避免两次插入落在同一毫秒导致倒序断言 flaky。
+      await prisma.notification.create({
+        data: { userId: user.id, type: "gallery_like", title: "第一条", createdAt: new Date(Date.now() - 1000) },
+      });
       await createNotification({ userId: user.id, type: "gallery_comment", title: "第二条", body: "内容" });
 
       const list = await listNotifications(user.id);

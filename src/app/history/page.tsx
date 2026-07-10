@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ImageOff, Loader2, LockKeyhole, Palette } from "lucide-react";
+import { Download, ImageOff, Loader2, LockKeyhole, Palette } from "lucide-react";
 
 import { GeneratedImagePreview } from "@/components/generated-image-preview";
 import { HistoryJobActions } from "@/components/history-job-actions";
@@ -239,6 +239,31 @@ export default async function HistoryPage() {
     <main className="mx-auto w-full max-w-[1200px] space-y-5">
       {jobs.length ? (
         <>
+          <section aria-label="导出" className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h1 className="text-lg font-bold text-ink">生成历史</h1>
+              <p className="mt-0.5 text-xs text-ink-faint">导出你的生图任务清单（含提示词、参数与图片地址）。</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <a
+                href="/api/history/export?format=csv"
+                download
+                className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-panel px-3.5 py-2 text-sm font-semibold text-ink-secondary transition hover:bg-page"
+              >
+                <Download className="h-3.5 w-3.5" />
+                导出 CSV
+              </a>
+              <a
+                href="/api/history/export?format=json"
+                download
+                className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-panel px-3.5 py-2 text-sm font-semibold text-ink-secondary transition hover:bg-page"
+              >
+                <Download className="h-3.5 w-3.5" />
+                导出 JSON
+              </a>
+            </div>
+          </section>
+
           <section aria-label="历史概览" className="grid grid-cols-2 gap-3 md:grid-cols-5">
             {stats.map((item) => (
               <div key={item.label} className="rounded-2xl border border-line bg-panel px-4 py-3.5 shadow-card">
