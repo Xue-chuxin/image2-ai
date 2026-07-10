@@ -4,7 +4,9 @@ import { AppError } from "@/lib/app-error";
 import { getOAuthRuntimeConfig, type OAuthProviderName, type OAuthProviderRuntimeConfig } from "@/lib/settings";
 
 export const OAUTH_STATE_COOKIE = "image2_oauth_state";
+export const OAUTH_LINK_COOKIE = "image2_oauth_link";
 const OAUTH_STATE_TTL_SECONDS = 10 * 60;
+const OAUTH_LINK_TTL_SECONDS = 10 * 60;
 const NEW_USER_INITIAL_CREDITS = (() => {
   const value = Number(process.env.NEW_USER_INITIAL_CREDITS || 0);
   return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
@@ -176,6 +178,40 @@ export function verifyOAuthState(value: string | undefined, expectedProvider: OA
     return false;
   }
   return Number(expValue) >= Math.floor(Date.now() / 1000);
+}
+
+/** 绑定流程令牌：`${userId}.${provider}.${exp}` + HMAC，写入 cookie 记录“为谁绑定”。 */
+export function createOAuthLinkToken(userId: string, provider: OAuthProviderName) {
+  const exp = Math.floor(Date.now() / 1000) + OAUTH_LINK_TTL_SECONDS;
+  const payload = `${userId}.${provider}.${exp}`;
+  const signature = createHmac("sha256", getAuthSecret()).update(payload).digest("base64url");
+  return `${payload}.${signature}`;
+}
+
+/** 校验绑定令牌，成功返回 userId，失败返回 null。 */
+export function verifyOAuthLinkToken(value: string | undefined, expectedProvider: OAuthProviderName): string | null {
+  if (!value) {
+    return null;
+  }
+  const parts = value.split(".");
+  if (parts.length !== 4) {
+    return null;
+  }
+  const [userId, provider, expValue, signature] = parts;
+  const payload = `${userId}.${provider}.${expValue}`;
+  const expected = createHmac("sha256", getAuthSecret()).update(payload).digest("base64url");
+  const signatureBuffer = Buffer.from(signature);
+  const expectedBuffer = Buffer.from(expected);
+  if (signatureBuffer.length !== expectedBuffer.length || !timingSafeEqual(signatureBuffer, expectedBuffer)) {
+    return null;
+  }
+  if (provider !== expectedProvider) {
+    return null;
+  }
+  if (Number(expValue) < Math.floor(Date.now() / 1000)) {
+    return null;
+  }
+  return userId;
 }
 
 export function buildAuthorizeUrl(
@@ -355,4 +391,107 @@ export async function listEnabledOAuthProviders() {
   return (Object.keys(providers) as OAuthProviderName[])
     .filter((provider) => runtime[provider].enabled && runtime[provider].clientId && runtime[provider].clientSecret)
     .map((provider) => ({ provider, label: providers[provider].label }));
+}
+
+export type OAuthBindingView = {
+  provider: OAuthProviderName;
+  label: string;
+  email: string | null;
+  displayName: string | null;
+  createdAt: string;
+};
+
+/** 列出当前用户已绑定的第三方账号（仅识别受支持的 provider）。 */
+export async function listUserOAuthBindings(userId: string): Promise<OAuthBindingView[]> {
+  const { prisma } = await import("@/lib/db");
+  const rows = await prisma.oAuthAccount.findMany({
+    where: { userId },
+    orderBy: { createdAt: "asc" },
+  });
+  return rows
+    .filter((row) => isOAuthProvider(row.provider))
+    .map((row) => ({
+      provider: row.provider as OAuthProviderName,
+      label: getOAuthProviderLabel(row.provider as OAuthProviderName),
+      email: row.email,
+      displayName: row.displayName,
+      createdAt: row.createdAt.toISOString(),
+    }));
+}
+
+/**
+ * 把第三方账号绑定到指定用户：
+ * - 该第三方账号已被别的用户绑定 → 冲突报错。
+ * - 该用户已绑定同一 provider 的其它账号 → 需先解绑，避免一个 provider 多个绑定。
+ * - 已绑定到本人 → 幂等返回。
+ * 拒绝为管理员账号绑定。
+ */
+export async function bindOAuthAccountToUser(userId: string, provider: OAuthProviderName, profile: OAuthProfile) {
+  const { prisma } = await import("@/lib/db");
+  const label = getOAuthProviderLabel(provider);
+
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+  if (!user) {
+    throw new AppError("NOT_FOUND", "用户不存在。", 404);
+  }
+  if (user.role === "ADMIN") {
+    throw new AppError("FORBIDDEN", "管理员账号不支持第三方登录绑定。", 403);
+  }
+
+  const existing = await prisma.oAuthAccount.findUnique({
+    where: {
+      provider_providerAccountId: { provider, providerAccountId: profile.providerAccountId },
+    },
+  });
+  if (existing) {
+    if (existing.userId === userId) {
+      return; // 已绑定到本人，幂等。
+    }
+    throw new AppError("CONFLICT", `该 ${label} 账号已被其他用户绑定。`, 409);
+  }
+
+  const sameProvider = await prisma.oAuthAccount.findFirst({ where: { userId, provider } });
+  if (sameProvider) {
+    throw new AppError("CONFLICT", `你已绑定其它 ${label} 账号，请先解绑后再绑定。`, 409);
+  }
+
+  await prisma.oAuthAccount.create({
+    data: {
+      userId,
+      provider,
+      providerAccountId: profile.providerAccountId,
+      email: profile.email,
+      displayName: profile.displayName,
+      avatarUrl: profile.avatarUrl,
+    },
+  });
+}
+
+/**
+ * 解绑第三方账号。若用户未设置登录密码且这是最后一种登录方式，则拒绝以免锁死账号。
+ */
+export async function unbindUserOAuthAccount(userId: string, provider: OAuthProviderName) {
+  const { prisma } = await import("@/lib/db");
+  const [user, bindings] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId }, select: { passwordHash: true } }),
+    prisma.oAuthAccount.findMany({ where: { userId }, select: { provider: true } }),
+  ]);
+
+  if (!user) {
+    throw new AppError("NOT_FOUND", "用户不存在。", 404);
+  }
+  if (!bindings.some((item) => item.provider === provider)) {
+    throw new AppError("NOT_FOUND", "未找到该第三方绑定。", 404);
+  }
+
+  const remaining = bindings.filter((item) => item.provider !== provider).length;
+  if (!user.passwordHash && remaining <= 0) {
+    throw new AppError(
+      "CONFLICT",
+      "解绑后将无法登录，请先设置登录密码或保留至少一种登录方式。",
+      409,
+    );
+  }
+
+  await prisma.oAuthAccount.deleteMany({ where: { userId, provider } });
 }

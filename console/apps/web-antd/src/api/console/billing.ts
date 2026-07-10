@@ -145,3 +145,33 @@ export async function changePasswordApi(data: {
 }) {
   return requestClient.post<boolean>('/console/user/password', data);
 }
+
+export interface OAuthBindingView {
+  provider: 'github' | 'google';
+  label: string;
+  email: null | string;
+  displayName: null | string;
+  createdAt: string;
+}
+
+export interface OAuthProviderOption {
+  provider: 'github' | 'google';
+  label: string;
+}
+
+export interface OAuthAccountsView {
+  bindings: OAuthBindingView[];
+  providers: OAuthProviderOption[];
+  hasPassword: boolean;
+  isAdmin: boolean;
+}
+
+/** 第三方账号绑定情况（已绑定列表 + 可绑定渠道） */
+export async function getOAuthAccountsApi() {
+  return requestClient.get<OAuthAccountsView>('/console/user/oauth/accounts');
+}
+
+/** 解绑第三方账号 */
+export async function unbindOAuthAccountApi(provider: string) {
+  return requestClient.post<boolean>(`/console/user/oauth/${provider}/unbind`);
+}

@@ -2,7 +2,9 @@
 import type { FormInstance } from 'ant-design-vue';
 import type { Rule } from 'ant-design-vue/es/form';
 
-import { computed, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
+
+import { useRoute } from 'vue-router';
 
 import { useUserStore } from '@vben/stores';
 
@@ -12,17 +14,26 @@ import {
   Card,
   Descriptions,
   DescriptionsItem,
+  Empty,
   Form,
   FormItem,
   InputPassword,
   message,
+  Popconfirm,
+  Spin,
   Tag,
 } from 'ant-design-vue';
 
-import { changePasswordApi } from '#/api/console/billing';
+import {
+  changePasswordApi,
+  getOAuthAccountsApi,
+  type OAuthAccountsView,
+  unbindOAuthAccountApi,
+} from '#/api/console/billing';
 
 defineOptions({ name: 'AccountProfile' });
 
+const route = useRoute();
 const userStore = useUserStore();
 
 const email = computed(() => userStore.userInfo?.username ?? '--');
@@ -92,6 +103,77 @@ async function handleSubmit() {
     submitting.value = false;
   }
 }
+
+const oauthLoading = ref(false);
+const oauthData = ref<OAuthAccountsView | null>(null);
+const unbindingProvider = ref('');
+
+// 可绑定渠道 + 当前绑定状态合并成行，未绑定渠道也展示以便发起绑定。
+const providerRows = computed(() => {
+  const data = oauthData.value;
+  if (!data) {
+    return [];
+  }
+  return data.providers.map((option) => ({
+    ...option,
+    binding: data.bindings.find((item) => item.provider === option.provider) ?? null,
+  }));
+});
+
+// 仅剩最后一种登录方式且未设置密码时，禁止解绑以免锁死账号。
+function canUnbind(provider: string) {
+  const data = oauthData.value;
+  if (!data) {
+    return false;
+  }
+  if (data.hasPassword) {
+    return true;
+  }
+  const boundCount = data.bindings.length;
+  const isBound = data.bindings.some((item) => item.provider === provider);
+  return !(isBound && boundCount <= 1);
+}
+
+async function loadOAuthAccounts() {
+  oauthLoading.value = true;
+  try {
+    oauthData.value = await getOAuthAccountsApi();
+  } catch {
+    // requestClient 已提示错误
+  } finally {
+    oauthLoading.value = false;
+  }
+}
+
+function bindProvider(provider: string) {
+  // 绑定需经浏览器跳转到第三方授权页，走整页导航而非 XHR。
+  window.location.href = `/api/console/user/oauth/${provider}/start`;
+}
+
+async function unbindProvider(provider: string) {
+  unbindingProvider.value = provider;
+  try {
+    await unbindOAuthAccountApi(provider);
+    message.success('已解绑');
+    await loadOAuthAccounts();
+  } catch {
+    // requestClient 已提示错误
+  } finally {
+    unbindingProvider.value = '';
+  }
+}
+
+onMounted(() => {
+  // 绑定回调通过 URL 查询参数回传结果。
+  if (route.query.oauth_link === 'success') {
+    message.success('第三方账号绑定成功');
+  } else if (typeof route.query.oauth_link_error === 'string') {
+    message.error(route.query.oauth_link_error);
+  }
+  if (!isAdmin.value) {
+    loadOAuthAccounts();
+  }
+});
 </script>
 
 <template>
@@ -147,6 +229,67 @@ async function handleSubmit() {
             </Button>
           </FormItem>
         </Form>
+      </Card>
+
+      <Card v-if="!isAdmin" :bordered="false" title="第三方账号绑定">
+        <Spin :spinning="oauthLoading">
+          <Empty
+            v-if="!oauthLoading && providerRows.length === 0"
+            description="管理员尚未开放任何第三方登录渠道"
+          />
+          <ul v-else class="divide-y divide-gray-100">
+            <li
+              v-for="row in providerRows"
+              :key="row.provider"
+              class="flex items-center justify-between gap-3 py-3"
+            >
+              <div class="min-w-0">
+                <div class="flex items-center gap-2">
+                  <span class="font-medium">{{ row.label }}</span>
+                  <Tag v-if="row.binding" color="green">已绑定</Tag>
+                  <Tag v-else color="default">未绑定</Tag>
+                </div>
+                <p
+                  v-if="row.binding"
+                  class="mt-1 truncate text-xs text-gray-400"
+                >
+                  {{ row.binding.email || row.binding.displayName || '已授权' }}
+                </p>
+              </div>
+              <Popconfirm
+                v-if="row.binding"
+                :disabled="!canUnbind(row.provider)"
+                cancel-text="取消"
+                ok-text="解绑"
+                title="确认解绑该第三方账号？"
+                @confirm="unbindProvider(row.provider)"
+              >
+                <Button
+                  :disabled="!canUnbind(row.provider)"
+                  :loading="unbindingProvider === row.provider"
+                  danger
+                  size="small"
+                >
+                  解绑
+                </Button>
+              </Popconfirm>
+              <Button
+                v-else
+                size="small"
+                type="primary"
+                @click="bindProvider(row.provider)"
+              >
+                绑定
+              </Button>
+            </li>
+          </ul>
+          <p
+            v-if="oauthData && !oauthData.hasPassword"
+            class="mt-3 text-xs text-gray-400"
+          >
+            你尚未设置登录密码，请至少保留一种第三方登录方式，或先设置密码后再解绑。
+          </p>
+        </Spin>
       </Card>
 
       <Card :bordered="false" title="安全提示">
