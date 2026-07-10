@@ -10,6 +10,7 @@ type ApiResponse = {
   ok: boolean;
   message?: string;
   error?: string;
+  twoFactorRequired?: boolean;
 };
 
 async function readApiResponse(response: Response): Promise<ApiResponse> {
@@ -36,6 +37,8 @@ export function SignInForm({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
+  const [twoFactorRequired, setTwoFactorRequired] = useState(false);
+  const [twoFactorCode, setTwoFactorCode] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -127,9 +130,17 @@ export function SignInForm({
           password,
           intent: mode,
           verificationCode: isRegister ? verificationCode : undefined,
+          twoFactorCode: !isRegister && twoFactorRequired ? twoFactorCode : undefined,
         }),
       });
       const data = await readApiResponse(response);
+
+      // 账号开启了二步验证：进入验证码步骤，展示邮箱验证码输入框。
+      if (!isRegister && data.twoFactorRequired) {
+        setTwoFactorRequired(true);
+        setMessage(data.message || "验证码已发送至你的邮箱，请输入验证码完成登录。");
+        return;
+      }
 
       if (!response.ok || !data.ok) {
         throw new Error(data.error || (isRegister ? "注册失败。" : "登录失败。"));
@@ -204,6 +215,25 @@ export function SignInForm({
           </div>
           <p className="mt-2 text-xs leading-5 text-ink-faint">新用户注册需要邮箱验证码，验证码 10 分钟内有效。</p>
         </div>
+      ) : null}
+
+      {!isRegister && twoFactorRequired ? (
+        <label className="block">
+          <span className="text-sm font-semibold text-ink-secondary">邮箱验证码</span>
+          <div className="mt-1.5 flex items-center gap-2.5 rounded-xl border border-line bg-page/60 px-3.5 py-2.5 transition focus-within:border-brand-400 focus-within:bg-panel focus-within:ring-2 focus-within:ring-brand-100">
+            <ShieldCheck size={15} className="shrink-0 text-ink-faint" />
+            <input
+              value={twoFactorCode}
+              onChange={(event) => setTwoFactorCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+              className="w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink-faint"
+              placeholder="6 位登录验证码"
+              inputMode="numeric"
+              maxLength={6}
+              autoFocus
+            />
+          </div>
+          <p className="mt-2 text-xs leading-5 text-ink-faint">该账号已开启二步验证，请输入邮箱收到的 6 位验证码，10 分钟内有效。</p>
+        </label>
       ) : null}
 
       {message ? <p className="rounded-xl bg-emerald-50 dark:bg-emerald-500/10 px-3.5 py-2.5 text-sm font-medium text-emerald-600 dark:text-emerald-300">{message}</p> : null}

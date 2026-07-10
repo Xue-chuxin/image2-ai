@@ -19,16 +19,21 @@ import {
   FormItem,
   InputPassword,
   message,
+  Modal,
   Popconfirm,
   Spin,
+  Switch,
   Tag,
 } from 'ant-design-vue';
 
 import {
   changePasswordApi,
   getOAuthAccountsApi,
+  getTwoFactorStatusApi,
   type OAuthAccountsView,
+  type TwoFactorStatusView,
   unbindOAuthAccountApi,
+  updateTwoFactorApi,
 } from '#/api/console/billing';
 
 defineOptions({ name: 'AccountProfile' });
@@ -163,6 +168,52 @@ async function unbindProvider(provider: string) {
   }
 }
 
+// 二步验证（邮箱验证码）开关。
+const twoFactorLoading = ref(false);
+const twoFactorStatus = ref<TwoFactorStatusView | null>(null);
+const twoFactorModalOpen = ref(false);
+const twoFactorSubmitting = ref(false);
+const twoFactorPassword = ref('');
+const twoFactorTargetEnable = ref(false);
+
+async function loadTwoFactorStatus() {
+  twoFactorLoading.value = true;
+  try {
+    twoFactorStatus.value = await getTwoFactorStatusApi();
+  } catch {
+    // requestClient 已提示错误
+  } finally {
+    twoFactorLoading.value = false;
+  }
+}
+
+function openTwoFactorModal(enable: boolean) {
+  twoFactorTargetEnable.value = enable;
+  twoFactorPassword.value = '';
+  twoFactorModalOpen.value = true;
+}
+
+async function confirmTwoFactor() {
+  if (!twoFactorPassword.value) {
+    message.warning('请输入当前密码');
+    return;
+  }
+  twoFactorSubmitting.value = true;
+  try {
+    await updateTwoFactorApi({
+      enable: twoFactorTargetEnable.value,
+      currentPassword: twoFactorPassword.value,
+    });
+    message.success(twoFactorTargetEnable.value ? '已开启二步验证' : '已关闭二步验证');
+    twoFactorModalOpen.value = false;
+    await loadTwoFactorStatus();
+  } catch {
+    // requestClient 已提示错误
+  } finally {
+    twoFactorSubmitting.value = false;
+  }
+}
+
 onMounted(() => {
   // 绑定回调通过 URL 查询参数回传结果。
   if (route.query.oauth_link === 'success') {
@@ -173,6 +224,7 @@ onMounted(() => {
   if (!isAdmin.value) {
     loadOAuthAccounts();
   }
+  loadTwoFactorStatus();
 });
 </script>
 
@@ -292,6 +344,51 @@ onMounted(() => {
         </Spin>
       </Card>
 
+      <Card :bordered="false" title="二步验证">
+        <Spin :spinning="twoFactorLoading">
+          <div class="flex items-center justify-between gap-4">
+            <div class="min-w-0">
+              <div class="flex items-center gap-2">
+                <span class="font-medium">登录二步验证（邮箱验证码）</span>
+                <Tag v-if="twoFactorStatus?.enabled" color="green">已开启</Tag>
+                <Tag v-else color="default">未开启</Tag>
+              </div>
+              <p class="mt-1 text-xs text-gray-400">
+                开启后，登录时除密码外还需输入邮箱收到的 6 位验证码，账号更安全。
+              </p>
+            </div>
+            <Switch
+              :checked="twoFactorStatus?.enabled ?? false"
+              :disabled="
+                !twoFactorStatus ||
+                (!twoFactorStatus.enabled && !twoFactorStatus.canEnable)
+              "
+              @change="(checked: boolean | string | number) => openTwoFactorModal(Boolean(checked))"
+            />
+          </div>
+          <Alert
+            v-if="twoFactorStatus && !twoFactorStatus.emailEnabled"
+            class="mt-3"
+            description="系统尚未启用邮件发送（SMTP），开启二步验证后将无法收到验证码。请先联系管理员配置邮件服务。"
+            message="邮件服务未启用"
+            show-icon
+            type="warning"
+          />
+          <Alert
+            v-else-if="
+              twoFactorStatus &&
+              !twoFactorStatus.enabled &&
+              !twoFactorStatus.hasPassword
+            "
+            class="mt-3"
+            description="请先设置登录密码后再开启二步验证。"
+            message="尚未设置密码"
+            show-icon
+            type="warning"
+          />
+        </Spin>
+      </Card>
+
       <Card :bordered="false" title="安全提示">
         <Alert
           description="修改密码后，已登录的会话在令牌过期前仍然有效；如怀疑账号泄露，请尽快修改密码并等待旧会话自然过期。"
@@ -306,5 +403,28 @@ onMounted(() => {
         </ul>
       </Card>
     </div>
+
+    <Modal
+      v-model:open="twoFactorModalOpen"
+      :confirm-loading="twoFactorSubmitting"
+      :title="twoFactorTargetEnable ? '开启二步验证' : '关闭二步验证'"
+      cancel-text="取消"
+      ok-text="确认"
+      @ok="confirmTwoFactor"
+    >
+      <p class="mb-3 text-sm text-gray-500">
+        {{
+          twoFactorTargetEnable
+            ? '开启后，下次登录需额外输入邮箱验证码。请输入当前密码以确认操作。'
+            : '关闭后，登录将仅校验密码。请输入当前密码以确认操作。'
+        }}
+      </p>
+      <InputPassword
+        v-model:value="twoFactorPassword"
+        autocomplete="current-password"
+        placeholder="请输入当前密码"
+        @press-enter="confirmTwoFactor"
+      />
+    </Modal>
   </div>
 </template>

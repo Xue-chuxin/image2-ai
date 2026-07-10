@@ -5,11 +5,15 @@ export namespace AuthApi {
   export interface LoginParams {
     password?: string;
     username?: string;
+    /** 二步验证邮箱验证码（账号开启二步验证后需要） */
+    code?: string;
   }
 
   /** 登录接口返回值 */
   export interface LoginResult {
-    accessToken: string;
+    accessToken?: string;
+    /** 账号开启了二步验证，需补充邮箱验证码后重新提交 */
+    twoFactorRequired?: boolean;
   }
 
   export interface RefreshTokenResult {

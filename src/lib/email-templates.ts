@@ -132,6 +132,30 @@ export function buildVerificationCodeEmail(brand: EmailBrand, options: { code: s
   };
 }
 
+/** 登录二步验证码邮件 */
+export function buildTwoFactorCodeEmail(brand: EmailBrand, options: { code: string }): RenderedEmail {
+  const { code } = options;
+  const heading = `${brand.siteName} 登录验证`;
+  const bodyHtml = [
+    `<p style="margin:0 0 16px;">你正在登录 ${escapeHtml(brand.siteName)}，请在页面输入以下验证码完成二步验证：</p>`,
+    `<p style="margin:0 0 16px;font-size:30px;font-weight:800;letter-spacing:8px;color:${BRAND_COLOR};">${escapeHtml(code)}</p>`,
+    '<p style="margin:0;color:#6b7280;">验证码 10 分钟内有效。如果不是你本人操作，请立即修改账号密码。</p>',
+  ].join("");
+  const text = renderTextLayout(brand, [
+    `你正在登录 ${brand.siteName}。`,
+    "",
+    `验证码：${code}`,
+    "",
+    "验证码 10 分钟内有效。如果不是你本人操作，请立即修改账号密码。",
+  ]);
+
+  return {
+    subject: `${brand.siteName}登录验证码`,
+    text,
+    html: renderEmailLayout({ brand, heading, bodyHtml }),
+  };
+}
+
 /** SMTP 配置测试邮件 */
 export function buildTestEmail(brand: EmailBrand): RenderedEmail {
   const heading = "SMTP 发信测试";

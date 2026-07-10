@@ -175,3 +175,23 @@ export async function getOAuthAccountsApi() {
 export async function unbindOAuthAccountApi(provider: string) {
   return requestClient.post<boolean>(`/console/user/oauth/${provider}/unbind`);
 }
+
+export interface TwoFactorStatusView {
+  enabled: boolean;
+  hasPassword: boolean;
+  emailEnabled: boolean;
+  canEnable: boolean;
+}
+
+/** 二步验证开关状态 */
+export async function getTwoFactorStatusApi() {
+  return requestClient.get<TwoFactorStatusView>('/console/user/2fa');
+}
+
+/** 开启/关闭二步验证（需校验当前密码） */
+export async function updateTwoFactorApi(data: {
+  enable: boolean;
+  currentPassword: string;
+}) {
+  return requestClient.post<{ enabled: boolean }>('/console/user/2fa', data);
+}

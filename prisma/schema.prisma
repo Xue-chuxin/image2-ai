@@ -47,6 +47,7 @@ model User {
   avatarUrl          String?
   passwordHash       String?
   role               UserRole            @default(USER)
+  twoFactorEnabled   Boolean             @default(false)
   lastLoginAt        DateTime?
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt

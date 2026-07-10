@@ -10,6 +10,7 @@ import {
 } from "@/lib/auth";
 import { getAppErrorMessage, getAppErrorStatus } from "@/lib/app-error";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { enforceLoginTwoFactor } from "@/lib/two-factor";
 
 export const runtime = "nodejs";
 
@@ -22,9 +23,10 @@ export async function POST(request: Request) {
     return consoleError(rateLimit.message, 429);
   }
 
-  const payload = (await request.json().catch(() => null)) as { username?: string; password?: string } | null;
+  const payload = (await request.json().catch(() => null)) as { username?: string; password?: string; code?: string } | null;
   const email = payload?.username?.trim().toLowerCase();
   const password = payload?.password || "";
+  const twoFactorCode = payload?.code;
 
   if (!email || !password) {
     return consoleError("请输入邮箱和密码。", 400);
@@ -39,6 +41,14 @@ export async function POST(request: Request) {
       if (!admin.email || !verifyPassword(password, admin.passwordHash)) {
         return consoleError("账号或密码错误。", 401);
       }
+      const gate = await enforceLoginTwoFactor({
+        email: admin.email,
+        enabled: admin.twoFactorEnabled,
+        code: twoFactorCode,
+      });
+      if (gate.required) {
+        return consoleOk({ twoFactorRequired: true });
+      }
       await markAdminLoggedIn(admin.id);
       const response = consoleOk({ accessToken: "cookie-session" });
       setAdminSessionCookie(response, { id: admin.id, email: admin.email }, request);
@@ -46,6 +56,14 @@ export async function POST(request: Request) {
     }
 
     const user = await loginOrCreateUser(email, password, undefined, "login");
+    const gate = await enforceLoginTwoFactor({
+      email: user.email || email,
+      enabled: user.twoFactorEnabled,
+      code: twoFactorCode,
+    });
+    if (gate.required) {
+      return consoleOk({ twoFactorRequired: true });
+    }
     const response = consoleOk({ accessToken: "cookie-session" });
     setUserSessionCookie(response, { id: user.id, email: user.email || email }, request);
     return response;
