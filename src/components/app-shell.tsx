@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Bot,
+  CalendarCheck,
   Clock3,
   Gift,
   Heart,
@@ -24,6 +25,7 @@ import { clsx } from "clsx";
 import type { PublicAppSettings } from "@/lib/settings";
 import { AccountMenu } from "@/components/account-menu";
 import { InviteDialog } from "@/components/invite-dialog";
+import { CheckinDialog } from "@/components/checkin-dialog";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 export type ShellUser = {
@@ -135,6 +137,7 @@ function WorkspaceShell({
   const [searchValue, setSearchValue] = useState("");
   const [toast, setToast] = useState("");
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [checkinOpen, setCheckinOpen] = useState(false);
   const metaKey = navItems.find((item) => isActivePath(pathname, item.href))?.href || (pathname.startsWith("/account") ? "/account" : "/");
   const meta = pageMeta[metaKey] || { title: settings.siteTitle, description: settings.siteSubtitle };
 
@@ -223,6 +226,15 @@ function WorkspaceShell({
             <div className="ml-auto flex shrink-0 items-center gap-2 md:gap-2.5">
               <button
                 type="button"
+                onClick={() => (user ? setCheckinOpen(true) : router.push(`/signin?next=${encodeURIComponent(pathname)}`))}
+                className="hidden items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1.5 text-[13px] font-bold text-emerald-600 dark:text-emerald-300 transition hover:bg-emerald-100 dark:hover:bg-emerald-500/20 lg:flex"
+              >
+                <CalendarCheck size={14} />
+                每日签到
+              </button>
+
+              <button
+                type="button"
                 onClick={() => (user ? setInviteOpen(true) : router.push(`/signin?next=${encodeURIComponent(pathname)}`))}
                 className="hidden items-center gap-1.5 rounded-full bg-amber-50 dark:bg-amber-500/10 px-3 py-1.5 text-[13px] font-bold text-amber-600 dark:text-amber-300 transition hover:bg-amber-100 dark:hover:bg-amber-500/20 lg:flex"
               >
@@ -299,6 +311,8 @@ function WorkspaceShell({
       </nav>
 
       {inviteOpen ? <InviteDialog onClose={() => setInviteOpen(false)} /> : null}
+
+      {checkinOpen ? <CheckinDialog onClose={() => setCheckinOpen(false)} /> : null}
 
       {/* 轻量占位提示 */}
       {toast ? (

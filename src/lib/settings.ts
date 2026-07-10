@@ -93,6 +93,10 @@ export type AdminAppSettings = PublicAppSettings & {
   inviteEnabled: boolean;
   inviteInviterCredits: number;
   inviteInviteeCredits: number;
+  checkinEnabled: boolean;
+  checkinBaseCredits: number;
+  checkinStreakBonus: number;
+  checkinMaxStreakBonusDays: number;
   oauthGithubEnabled: boolean;
   oauthGithubClientId: string;
   oauthGithubClientSecretConfigured: boolean;
@@ -133,6 +137,10 @@ export type SaveAdminSettingsInput = Partial<PublicAppSettings> & {
   inviteEnabled?: boolean | string;
   inviteInviterCredits?: number | string;
   inviteInviteeCredits?: number | string;
+  checkinEnabled?: boolean | string;
+  checkinBaseCredits?: number | string;
+  checkinStreakBonus?: number | string;
+  checkinMaxStreakBonusDays?: number | string;
   oauthGithubEnabled?: boolean | string;
   oauthGithubClientId?: string;
   oauthGithubClientSecret?: string;
@@ -197,6 +205,13 @@ export type InviteRuntimeConfig = {
   enabled: boolean;
   inviterCredits: number;
   inviteeCredits: number;
+};
+
+export type CheckinRuntimeConfig = {
+  enabled: boolean;
+  baseCredits: number;
+  streakBonus: number;
+  maxStreakBonusDays: number;
 };
 
 export type OAuthProviderName = "github" | "google";
@@ -305,6 +320,13 @@ const defaultInviteSettings: InviteRuntimeConfig = {
   enabled: false,
   inviterCredits: 30,
   inviteeCredits: 20,
+};
+
+const defaultCheckinSettings: CheckinRuntimeConfig = {
+  enabled: false,
+  baseCredits: 5,
+  streakBonus: 1,
+  maxStreakBonusDays: 6,
 };
 
 const defaultEmailSettings: Omit<EmailRuntimeConfig, "password"> = {
@@ -873,6 +895,15 @@ function getInviteSettings(map: Map<string, SettingRow>): InviteRuntimeConfig {
   };
 }
 
+function getCheckinSettings(map: Map<string, SettingRow>): CheckinRuntimeConfig {
+  return {
+    enabled: normalizeBoolean(map.get("checkinEnabled")?.value, defaultCheckinSettings.enabled),
+    baseCredits: normalizeNonNegativeInt(map.get("checkinBaseCredits")?.value, defaultCheckinSettings.baseCredits, 100000),
+    streakBonus: normalizeNonNegativeInt(map.get("checkinStreakBonus")?.value, defaultCheckinSettings.streakBonus, 100000),
+    maxStreakBonusDays: normalizeNonNegativeInt(map.get("checkinMaxStreakBonusDays")?.value, defaultCheckinSettings.maxStreakBonusDays, 365),
+  };
+}
+
 function getEmailAdminSettings(map: Map<string, SettingRow>) {
   return {
     emailSmtpEnabled: normalizeBoolean(map.get("emailSmtpEnabled")?.value, normalizeBoolean(process.env.EMAIL_SMTP_ENABLED, defaultEmailSettings.enabled)),
@@ -1183,6 +1214,7 @@ export async function getAdminAppSettings(options?: { includeDiagnostics?: boole
   const moderationSettings = getModerationSettings(map);
   const membershipSettings = getMembershipSettings(map);
   const inviteSettings = getInviteSettings(map);
+  const checkinSettings = getCheckinSettings(map);
   const emailSettings = getEmailAdminSettings(map);
   const deepseekApiKeyConfigured = Boolean(map.get("deepseekApiKey")?.value || process.env.DEEPSEEK_API_KEY);
   const legacyOpenaiApiKeyConfigured = Boolean(map.get("openaiApiKey")?.value || process.env.OPENAI_API_KEY);
@@ -1207,6 +1239,10 @@ export async function getAdminAppSettings(options?: { includeDiagnostics?: boole
     inviteEnabled: inviteSettings.enabled,
     inviteInviterCredits: inviteSettings.inviterCredits,
     inviteInviteeCredits: inviteSettings.inviteeCredits,
+    checkinEnabled: checkinSettings.enabled,
+    checkinBaseCredits: checkinSettings.baseCredits,
+    checkinStreakBonus: checkinSettings.streakBonus,
+    checkinMaxStreakBonusDays: checkinSettings.maxStreakBonusDays,
     oauthGithubEnabled: normalizeBoolean(map.get("oauthGithubEnabled")?.value, false),
     oauthGithubClientId: normalizeOptionalText(map.get("oauthGithubClientId")?.value ?? process.env.OAUTH_GITHUB_CLIENT_ID, "", 200),
     oauthGithubClientSecretConfigured: Boolean(map.get("oauthGithubClientSecret")?.value || process.env.OAUTH_GITHUB_CLIENT_SECRET),
@@ -1236,6 +1272,7 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
   const currentModerationSettings = getModerationSettings(settingsMap);
   const currentMembershipSettings = getMembershipSettings(settingsMap);
   const currentInviteSettings = getInviteSettings(settingsMap);
+  const currentCheckinSettings = getCheckinSettings(settingsMap);
   const currentEmailSettings = getEmailAdminSettings(settingsMap);
   const browserTitle = normalizeText(input.browserTitle, currentPublicSettings.browserTitle);
   const siteTitle = normalizeText(input.siteTitle, currentPublicSettings.siteTitle);
@@ -1273,6 +1310,10 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
   const inviteEnabled = normalizeBoolean(input.inviteEnabled, currentInviteSettings.enabled);
   const inviteInviterCredits = normalizeNonNegativeInt(input.inviteInviterCredits, currentInviteSettings.inviterCredits, 100000);
   const inviteInviteeCredits = normalizeNonNegativeInt(input.inviteInviteeCredits, currentInviteSettings.inviteeCredits, 100000);
+  const checkinEnabled = normalizeBoolean(input.checkinEnabled, currentCheckinSettings.enabled);
+  const checkinBaseCredits = normalizeNonNegativeInt(input.checkinBaseCredits, currentCheckinSettings.baseCredits, 100000);
+  const checkinStreakBonus = normalizeNonNegativeInt(input.checkinStreakBonus, currentCheckinSettings.streakBonus, 100000);
+  const checkinMaxStreakBonusDays = normalizeNonNegativeInt(input.checkinMaxStreakBonusDays, currentCheckinSettings.maxStreakBonusDays, 365);
   const oauthGithubEnabled = normalizeBoolean(input.oauthGithubEnabled, normalizeBoolean(settingsMap.get("oauthGithubEnabled")?.value, false));
   const oauthGithubClientId = normalizeOptionalText(input.oauthGithubClientId, settingsMap.get("oauthGithubClientId")?.value ?? "", 200);
   const oauthGoogleEnabled = normalizeBoolean(input.oauthGoogleEnabled, normalizeBoolean(settingsMap.get("oauthGoogleEnabled")?.value, false));
@@ -1370,6 +1411,10 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
     { key: "inviteEnabled", value: String(inviteEnabled) },
     { key: "inviteInviterCredits", value: String(inviteInviterCredits) },
     { key: "inviteInviteeCredits", value: String(inviteInviteeCredits) },
+    { key: "checkinEnabled", value: String(checkinEnabled) },
+    { key: "checkinBaseCredits", value: String(checkinBaseCredits) },
+    { key: "checkinStreakBonus", value: String(checkinStreakBonus) },
+    { key: "checkinMaxStreakBonusDays", value: String(checkinMaxStreakBonusDays) },
     { key: "oauthGithubEnabled", value: String(oauthGithubEnabled) },
     { key: "oauthGithubClientId", value: oauthGithubClientId },
     { key: "oauthGoogleEnabled", value: String(oauthGoogleEnabled) },
@@ -1601,4 +1646,8 @@ export async function getMembershipRuntimeConfig(): Promise<MembershipRuntimeCon
 
 export async function getInviteRuntimeConfig(): Promise<InviteRuntimeConfig> {
   return getInviteSettings(toMap(await readSettingRows()));
+}
+
+export async function getCheckinRuntimeConfig(): Promise<CheckinRuntimeConfig> {
+  return getCheckinSettings(toMap(await readSettingRows()));
 }

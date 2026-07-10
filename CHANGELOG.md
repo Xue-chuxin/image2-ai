@@ -4,6 +4,8 @@
 
 ## 未发布
 
+- 每日签到领积分：顶栏新增「每日签到」入口——登录用户点击后弹出签到弹窗，展示连续签到进度、今日可得积分、累计签到天数与累计获得积分，一键签到即时到账。连续签到奖励更高：首日发放基础积分，之后每多连续一天递增，加成天数封顶后不再增长；断签自动从第 1 天重新累计，同日重复签到幂等不重复发放。是否开启、基础积分、每日递增积分、连续加成封顶天数均可在控制台「安全与存储 → 每日签到」配置（默认关闭，基础 5 / 递增 1 / 封顶 6 天）。奖励在事务内原子发放，`unique(userId, checkInDate)` 保证每日仅一次。新增数据表 `DailyCheckIn`（需执行数据库迁移）。
+
 - 核心钱/安全逻辑的数据库集成测试：在纯逻辑单测之外，新增连真实 Postgres 的集成测试（`npm run test:db`），覆盖用 mock 测不到的「涉及钱」条件更新 SQL 与幂等保证——积分冻结/结算/退款/充值（`reserveCreditsForJob`/`spendReservedCreditsForJob`/`refundReservedCreditsForJob`/`grantPurchasedCredits`，含余额不足 402、重复结算/退款不双扣、reserve→spend/refund 全链路账实一致）、邀请码解析与返积分发放（`resolveReferrerByCode`/`getOrCreateReferralCode`/`grantReferralRewardsInTx`）、内容审核关键词拦截与审计落库、以及语义审核分支（`checkModerationText`：mock DeepSeek 请求，覆盖语义命中拦截落库、放行、模型不可用/网络异常 fail-open、未配置 Key 时不发起请求）。集成测试独立成组：仅当设置环境变量 `DATABASE_URL_TEST` 时运行，未设置则自动跳过（`npm test` 纯逻辑测试保持零数据库依赖）。首次使用需 `createdb image2_app_test` 建独立测试库并执行 `DATABASE_URL=$DATABASE_URL_TEST npm run test:db:setup`。此为纯开发侧改动，不影响运行时行为与部署。
 
 - 引入 Vitest 与核心纯逻辑单测：新增 Vitest 测试基建（`vitest.config.ts`、`tests/setup.ts`，通过 `npm test` 运行），并为一批高价值纯逻辑函数补充单元测试——出图积分估价（`estimateGenerationCreditCost`）、接口限流（`checkRateLimit`）、内容审核关键词匹配与语义判定解析（`parseForbiddenWords`/`checkForbiddenWords`/`parseSemanticVerdict`）、设置项归一化器（布尔/非负整数/会员折扣/保留天数/超时秒数）、邀请码生成（`createReferralCode`），以及参考图 magic-byte 类型探测（`detectReferenceImageMimeType`，验证伪造 Content-Type 无效）。此为纯开发侧改动，不影响运行时行为与部署。

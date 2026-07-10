@@ -101,6 +101,10 @@ interface AdminAppSettings {
   inviteEnabled: boolean;
   inviteInviterCredits: number;
   inviteInviteeCredits: number;
+  checkinEnabled: boolean;
+  checkinBaseCredits: number;
+  checkinStreakBonus: number;
+  checkinMaxStreakBonusDays: number;
   membershipDailyCredits: number;
   membershipDiscountPercent: number;
   membershipGenerationRateLimit: number;
@@ -181,6 +185,10 @@ interface SaveSettingsPayload {
   inviteEnabled: boolean;
   inviteInviterCredits: number;
   inviteInviteeCredits: number;
+  checkinEnabled: boolean;
+  checkinBaseCredits: number;
+  checkinStreakBonus: number;
+  checkinMaxStreakBonusDays: number;
   membershipDailyCredits: number;
   membershipDiscountPercent: number;
   membershipGenerationRateLimit: number;
@@ -316,6 +324,10 @@ function createDefaultSettings(): AdminAppSettings {
     inviteEnabled: false,
     inviteInviterCredits: 30,
     inviteInviteeCredits: 20,
+    checkinEnabled: false,
+    checkinBaseCredits: 5,
+    checkinStreakBonus: 1,
+    checkinMaxStreakBonusDays: 6,
     membershipDailyCredits: 0,
     membershipDiscountPercent: 0,
     membershipGenerationRateLimit: 30,
@@ -639,6 +651,10 @@ function buildPayload(friendLinks: FooterFriendLink[]): SaveSettingsPayload {
     inviteEnabled: form.inviteEnabled,
     inviteInviterCredits: Number(form.inviteInviterCredits || 0),
     inviteInviteeCredits: Number(form.inviteInviteeCredits || 0),
+    checkinEnabled: form.checkinEnabled,
+    checkinBaseCredits: Number(form.checkinBaseCredits || 0),
+    checkinStreakBonus: Number(form.checkinStreakBonus || 0),
+    checkinMaxStreakBonusDays: Number(form.checkinMaxStreakBonusDays || 0),
     membershipDailyCredits: Number(form.membershipDailyCredits || 0),
     membershipDiscountPercent: Number(form.membershipDiscountPercent || 0),
     membershipGenerationRateLimit: Number(form.membershipGenerationRateLimit || 0),
@@ -1377,6 +1393,53 @@ onMounted(() => {
                     />
                     <p class="mt-1 text-xs text-gray-400">
                       新用户凭邀请码注册后，额外获得的积分（叠加在新用户注册赠送积分之上），0 表示不奖励。
+                    </p>
+                  </FormItem>
+                </Form>
+              </Card>
+
+              <Card size="small" title="每日签到">
+                <Form layout="vertical">
+                  <FormItem label="开启每日签到">
+                    <Switch v-model:checked="form.checkinEnabled" />
+                    <p class="mt-1 text-xs text-gray-400">
+                      开启后，用户每天可签到领取积分，连续签到奖励更高。
+                    </p>
+                  </FormItem>
+                  <FormItem label="基础签到积分">
+                    <InputNumber
+                      v-model:value="form.checkinBaseCredits"
+                      :max="100000"
+                      :min="0"
+                      :precision="0"
+                      class="w-full"
+                    />
+                    <p class="mt-1 text-xs text-gray-400">
+                      每日签到的基础积分（连续第 1 天获得的积分）。
+                    </p>
+                  </FormItem>
+                  <FormItem label="连续签到每日递增积分">
+                    <InputNumber
+                      v-model:value="form.checkinStreakBonus"
+                      :max="100000"
+                      :min="0"
+                      :precision="0"
+                      class="w-full"
+                    />
+                    <p class="mt-1 text-xs text-gray-400">
+                      每多连续签到一天额外增加的积分，0 表示每天固定发放基础积分。
+                    </p>
+                  </FormItem>
+                  <FormItem label="连续加成封顶天数">
+                    <InputNumber
+                      v-model:value="form.checkinMaxStreakBonusDays"
+                      :max="365"
+                      :min="0"
+                      :precision="0"
+                      class="w-full"
+                    />
+                    <p class="mt-1 text-xs text-gray-400">
+                      连续加成的最大天数，连续第（封顶天数+1）天起奖励不再增长。
                     </p>
                   </FormItem>
                 </Form>

@@ -62,8 +62,24 @@ model User {
   oauthAccounts      OAuthAccount[]
   subscription       Subscription?
   imageFavorites     ImageFavorite[]
+  dailyCheckIns      DailyCheckIn[]
 
   @@index([referredById])
+}
+
+// 每日签到领积分：一天一行（checkInDate 记当天 0 点），unique(userId, checkInDate) 做幂等。
+// streak 记录截至该次的连续签到天数，credits 记录该次实际发放的积分。
+model DailyCheckIn {
+  id          String   @id @default(cuid())
+  userId      String
+  checkInDate DateTime
+  credits     Int
+  streak      Int
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, checkInDate])
+  @@index([userId, checkInDate])
 }
 
 model OAuthAccount {
