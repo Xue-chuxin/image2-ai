@@ -52,7 +52,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   { href: "/", label: "画廊广场", icon: Images },
   { href: "/curated", label: "官方精选", icon: Star },
-  { href: "/apps", label: "应用中心", icon: LayoutGrid, placeholder: true },
+  { href: "/apps", label: "应用中心", icon: LayoutGrid },
   { href: "/assistant", label: "智能助手", icon: Bot },
   { href: "/generate", label: "专业绘画", icon: Palette },
   { href: "/generate/batch", label: "批量生成", icon: Layers },
