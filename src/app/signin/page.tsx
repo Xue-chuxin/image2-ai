@@ -1,9 +1,7 @@
 import { ShieldCheck } from "lucide-react";
 import { redirect } from "next/navigation";
 
-import { BlurText, SpotlightCard } from "@/components/front/react-bits";
 import { SignInForm } from "@/components/signin-form";
-import { getPublicAppSettings } from "@/lib/settings";
 
 function getSafeNextPath(value: string | undefined, fallback: string) {
   if (!value || !value.startsWith("/") || value.startsWith("//") || value.startsWith("/admin")) {
@@ -17,48 +15,25 @@ export default async function SignInPage({
 }: {
   searchParams?: Promise<{ next?: string; mode?: string }>;
 }) {
-  const settings = await getPublicAppSettings();
   const resolvedSearchParams = searchParams ? await searchParams : {};
   if (resolvedSearchParams.mode === "admin") {
-    const isAdminNext = resolvedSearchParams.next === "/admin" || Boolean(resolvedSearchParams.next?.startsWith("/admin/"));
-    const adminNext = isAdminNext && resolvedSearchParams.next ? resolvedSearchParams.next : "/admin/settings";
-    redirect(`/admin/signin?next=${encodeURIComponent(adminNext)}`);
+    // 管理员登录已并入控制台统一登录页。
+    redirect("/console");
   }
 
   const nextPath = getSafeNextPath(resolvedSearchParams.next, "/generate");
 
-  if (settings.frontTemplate === "tdesign_workspace") {
-    return (
-      <main className="front-td-signin-page">
-        <section className="td-front-card td-signin-card">
-          <div className="td-signin-head">
-            <div className="td-signin-icon">
-              <ShieldCheck className="h-6 w-6" />
-            </div>
-            <div>
-              <p>ACCOUNT</p>
-              <h1>用户登录</h1>
-              <span>登录后可进入创作工作台、查看历史记录和管理个人积分。</span>
-            </div>
-          </div>
-          <SignInForm nextPath={nextPath} mode="login" variant="tdesign" />
-        </section>
-      </main>
-    );
-  }
-
   return (
-    <main className="mx-auto max-w-md pb-28">
-      <SpotlightCard className="p-6">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-ocean-800 text-white shadow-glow">
-          <ShieldCheck className="h-6 w-6" />
-        </div>
-        <BlurText as="h1" text="账号登录" className="mt-5 text-3xl font-black text-slate-950" delay={0.035} />
-        <p className="mt-2 text-sm leading-6 text-slate-500">
-          已有账号可直接登录，登录后进入创作工作台、历史记录和个人中心。
-        </p>
+    <section className="w-full max-w-[420px] animate-float-in rounded-2xl border border-line bg-panel p-7 shadow-card">
+      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 text-white shadow-chip">
+        <ShieldCheck size={20} />
+      </div>
+      <h1 className="mt-4 text-2xl font-extrabold text-ink">登录造图台</h1>
+      <p className="mt-1.5 text-sm leading-6 text-ink-secondary">使用邮箱账号登录，继续创作、查看生成历史并管理积分。</p>
+
+      <div className="mt-6">
         <SignInForm nextPath={nextPath} mode="login" />
-      </SpotlightCard>
-    </main>
+      </div>
+    </section>
   );
 }

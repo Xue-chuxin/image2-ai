@@ -1,3 +1,4 @@
+import { getAppErrorMessage } from "@/lib/app-error";
 import { NextResponse } from "next/server";
 
 import { listActiveCreditPackages } from "@/lib/billing";
@@ -13,7 +14,7 @@ export async function GET() {
     return NextResponse.json(
       {
         ok: false,
-        error: error instanceof Error ? error.message : "读取积分套餐失败",
+        error: getAppErrorMessage(error, "读取积分套餐失败"),
       },
       {
         status: 500,

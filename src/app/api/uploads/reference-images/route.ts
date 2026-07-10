@@ -1,12 +1,10 @@
+import { getAppErrorMessage } from "@/lib/app-error";
 import { NextResponse } from "next/server";
 
 import { getUserSession } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { createUploadedReferenceImage, MAX_REFERENCE_IMAGE_BYTES } from "@/lib/uploads";
-
-function isReferenceImageUploadEnabled() {
-  return false;
-}
+import { getPublicAppSettings } from "@/lib/settings";
+import { createUploadedReferenceImage, maybePurgeExpiredReferenceImages, MAX_REFERENCE_IMAGE_BYTES } from "@/lib/uploads";
 
 export async function POST(request: Request) {
   const session = await getUserSession();
@@ -14,8 +12,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "请先登录后再上传参考图。" }, { status: 401 });
   }
 
-  if (!isReferenceImageUploadEnabled()) {
-    return NextResponse.json({ ok: false, error: "当前正式版暂未开放参考图上传。" }, { status: 403 });
+  const { referenceImagesEnabled, referenceImageRetentionDays } = await getPublicAppSettings();
+  if (!referenceImagesEnabled) {
+    return NextResponse.json({ ok: false, error: "管理员暂未开放参考图上传。" }, { status: 403 });
   }
 
   const rateLimit = checkRateLimit(request, `upload:reference:${session.userId}`, {
@@ -45,8 +44,10 @@ export async function POST(request: Request) {
     const image = await createUploadedReferenceImage({
       userId: session.userId,
       buffer,
-      mimeType: file.type || "application/octet-stream",
     });
+
+    // 上传成功后惰性触发一次过期参考图清理（带节流），无需额外后台进程。
+    maybePurgeExpiredReferenceImages(referenceImageRetentionDays);
 
     return NextResponse.json({
       ok: true,
@@ -56,7 +57,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         ok: false,
-        error: error instanceof Error ? error.message : "上传参考图失败",
+        error: getAppErrorMessage(error, "上传参考图失败"),
       },
       {
         status: 400,

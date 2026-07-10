@@ -1,3 +1,4 @@
+import { getAppErrorMessage } from "@/lib/app-error";
 import { NextResponse } from "next/server";
 
 import { getAdminSession } from "@/lib/auth";
@@ -28,7 +29,7 @@ export async function GET() {
     return NextResponse.json(
       {
         ok: false,
-        error: error instanceof Error ? error.message : "读取套餐失败",
+        error: getAppErrorMessage(error, "读取套餐失败"),
       },
       {
         status: 500,
@@ -53,6 +54,8 @@ export async function POST(request: Request) {
       bonusCredits: normalizeNumber(body.bonusCredits),
       priceCents: Math.round(normalizeNumber(body.priceYuan) * 100 || normalizeNumber(body.priceCents)),
       currency: normalizeString(body.currency) || "CNY",
+      packageType: normalizeString(body.packageType) || "RECHARGE",
+      durationDays: normalizeNumber(body.durationDays),
       sortOrder: normalizeNumber(body.sortOrder),
       isActive: body.isActive === false ? false : true,
     });
@@ -65,7 +68,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         ok: false,
-        error: error instanceof Error ? error.message : "保存套餐失败",
+        error: getAppErrorMessage(error, "保存套餐失败"),
       },
       {
         status: 400,

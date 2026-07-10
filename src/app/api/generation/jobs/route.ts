@@ -8,6 +8,11 @@ import {
 import { jsonError } from "@/lib/app-error";
 import { getUserSession } from "@/lib/auth";
 import { checkModerationText } from "@/lib/moderation";
+import {
+  getMembershipContext,
+  grantDailyMembershipCreditsIfDue,
+  resolveMembershipRateLimit,
+} from "@/lib/membership";
 import { checkRateLimit } from "@/lib/rate-limit";
 import type { GenerationProviderName } from "@/lib/settings";
 
@@ -72,8 +77,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "请先登录普通用户账号再生成图片。" }, { status: 401 });
   }
 
+  const membership = await getMembershipContext(session.userId);
   const rateLimit = checkRateLimit(request, `generation:create:${session.userId}`, {
-    limit: 10,
+    limit: resolveMembershipRateLimit(10, membership),
     windowMs: 10 * 60 * 1000,
   });
   if (!rateLimit.ok) {
@@ -102,23 +108,15 @@ export async function POST(request: Request) {
     const promptEn = normalizeString(body.promptEn);
     const negativePrompt = normalizeString(body.negativePrompt);
     const referenceImageIds = normalizeStringArray(body.referenceImageIds);
-    if (referenceImageIds.length) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: "当前正式版暂未开放参考图参与生图，请先移除参考图后再生成。",
-        },
-        {
-          status: 400,
-        },
-      );
-    }
 
-    const moderation = await checkModerationText([
-      { value: promptZh, label: "中文提示词" },
-      { value: promptEn, label: "英文提示词" },
-      { value: negativePrompt, label: "反向提示词" },
-    ]);
+    const moderation = await checkModerationText(
+      [
+        { value: promptZh, label: "中文提示词" },
+        { value: promptEn, label: "英文提示词" },
+        { value: negativePrompt, label: "反向提示词" },
+      ],
+      { userId: session.userId, email: session.email },
+    );
 
     if (!moderation.ok) {
       return NextResponse.json(
@@ -142,6 +140,9 @@ export async function POST(request: Request) {
       provider: normalizeProvider(body.provider),
       referenceImageIds,
     };
+
+    // 会员每日赠送积分：出图前惰性发放一次，让本次生成即可使用当天赠送额度。
+    await grantDailyMembershipCreditsIfDue(session.userId, membership);
 
     const job = await createAndRunGenerationJob(session.userId, input);
     if (!job) {

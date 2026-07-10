@@ -35,6 +35,9 @@ export type PublicAppSettings = {
   deepseekBaseUrl: string;
   deepseekModel: string;
   openaiImageModel: string;
+  openaiVisionModel: string;
+  referenceImagesEnabled: boolean;
+  referenceImageRetentionDays: number;
   stabilityAiModel: string;
   chatgptWebEnabled: boolean;
   chatgptWebUserDataDir: string;
@@ -48,6 +51,7 @@ export type PublicAppSettings = {
   storageEndpoint: string;
   storageBucket: string;
   storageRegion: string;
+  storageForcePathStyle: boolean;
 };
 
 export type OpenAICompatibleChannelSetting = {
@@ -80,6 +84,25 @@ export type AdminAppSettings = PublicAppSettings & {
   moderationEnabled: boolean;
   moderationForbiddenWords: string;
   moderationBlockMessage: string;
+  moderationSemanticEnabled: boolean;
+  moderationSemanticModel: string;
+  membershipDiscountPercent: number;
+  membershipDailyCredits: number;
+  membershipGenerationRateLimit: number;
+  membershipExpiryReminderDays: number;
+  inviteEnabled: boolean;
+  inviteInviterCredits: number;
+  inviteInviteeCredits: number;
+  checkinEnabled: boolean;
+  checkinBaseCredits: number;
+  checkinStreakBonus: number;
+  checkinMaxStreakBonusDays: number;
+  oauthGithubEnabled: boolean;
+  oauthGithubClientId: string;
+  oauthGithubClientSecretConfigured: boolean;
+  oauthGoogleEnabled: boolean;
+  oauthGoogleClientId: string;
+  oauthGoogleClientSecretConfigured: boolean;
   emailSmtpEnabled: boolean;
   emailSmtpHost: string;
   emailSmtpPort: number;
@@ -94,6 +117,8 @@ export type AdminAppSettings = PublicAppSettings & {
   openaiApiKeyConfigured: boolean;
   legacyOpenaiApiKeyConfigured: boolean;
   stabilityAiApiKeyConfigured: boolean;
+  storageAccessKeyIdConfigured: boolean;
+  storageSecretAccessKeyConfigured: boolean;
   encryptionReady: boolean;
   diagnostics: AdminDiagnosticItem[];
 };
@@ -103,10 +128,31 @@ export type SaveAdminSettingsInput = Partial<PublicAppSettings> & {
   moderationEnabled?: boolean | string;
   moderationForbiddenWords?: string;
   moderationBlockMessage?: string;
+  moderationSemanticEnabled?: boolean | string;
+  moderationSemanticModel?: string;
+  membershipDiscountPercent?: number | string;
+  membershipDailyCredits?: number | string;
+  membershipGenerationRateLimit?: number | string;
+  membershipExpiryReminderDays?: number | string;
+  inviteEnabled?: boolean | string;
+  inviteInviterCredits?: number | string;
+  inviteInviteeCredits?: number | string;
+  checkinEnabled?: boolean | string;
+  checkinBaseCredits?: number | string;
+  checkinStreakBonus?: number | string;
+  checkinMaxStreakBonusDays?: number | string;
+  oauthGithubEnabled?: boolean | string;
+  oauthGithubClientId?: string;
+  oauthGithubClientSecret?: string;
+  oauthGoogleEnabled?: boolean | string;
+  oauthGoogleClientId?: string;
+  oauthGoogleClientSecret?: string;
   deepseekApiKey?: string;
   openaiApiKey?: string;
   openaiCompatibleChannels?: Array<Partial<OpenAICompatibleChannelSetting> & { apiKey?: string }>;
   stabilityAiApiKey?: string;
+  storageAccessKeyId?: string;
+  storageSecretAccessKey?: string;
   emailSmtpEnabled?: boolean | string;
   emailSmtpHost?: string;
   emailSmtpPort?: number | string;
@@ -135,13 +181,48 @@ export type StorageRuntimeConfig = {
   endpoint: string;
   bucket: string;
   region: string;
+  forcePathStyle: boolean;
+  accessKeyId: string;
+  secretAccessKey: string;
 };
 
 export type ModerationRuntimeConfig = {
   enabled: boolean;
   forbiddenWords: string;
   blockMessage: string;
+  semanticEnabled: boolean;
+  semanticModel: string;
 };
+
+export type MembershipRuntimeConfig = {
+  discountPercent: number;
+  dailyCredits: number;
+  generationRateLimit: number;
+  expiryReminderDays: number;
+};
+
+export type InviteRuntimeConfig = {
+  enabled: boolean;
+  inviterCredits: number;
+  inviteeCredits: number;
+};
+
+export type CheckinRuntimeConfig = {
+  enabled: boolean;
+  baseCredits: number;
+  streakBonus: number;
+  maxStreakBonusDays: number;
+};
+
+export type OAuthProviderName = "github" | "google";
+
+export type OAuthProviderRuntimeConfig = {
+  enabled: boolean;
+  clientId: string;
+  clientSecret: string;
+};
+
+export type OAuthRuntimeConfig = Record<OAuthProviderName, OAuthProviderRuntimeConfig>;
 
 export type EmailRuntimeConfig = {
   enabled: boolean;
@@ -201,6 +282,9 @@ const defaultSettings: PublicAppSettings = {
   deepseekBaseUrl: "https://api.deepseek.com",
   deepseekModel: "deepseek-chat",
   openaiImageModel: "gpt-image-2",
+  openaiVisionModel: "gpt-4o",
+  referenceImagesEnabled: false,
+  referenceImageRetentionDays: 30,
   stabilityAiModel: "stable-diffusion-xl-1024-v1-0",
   chatgptWebEnabled: false,
   chatgptWebUserDataDir: "chatgpt-web-profile",
@@ -214,12 +298,35 @@ const defaultSettings: PublicAppSettings = {
   storageEndpoint: "",
   storageBucket: "",
   storageRegion: "",
+  storageForcePathStyle: false,
 };
 
 const defaultModerationSettings: ModerationRuntimeConfig = {
   enabled: true,
   forbiddenWords: "",
   blockMessage: "内容包含不适合生成的词语，请调整后再试。",
+  semanticEnabled: false,
+  semanticModel: "",
+};
+
+const defaultMembershipSettings: MembershipRuntimeConfig = {
+  discountPercent: 0,
+  dailyCredits: 0,
+  generationRateLimit: 30,
+  expiryReminderDays: 7,
+};
+
+const defaultInviteSettings: InviteRuntimeConfig = {
+  enabled: false,
+  inviterCredits: 30,
+  inviteeCredits: 20,
+};
+
+const defaultCheckinSettings: CheckinRuntimeConfig = {
+  enabled: false,
+  baseCredits: 5,
+  streakBonus: 1,
+  maxStreakBonusDays: 6,
 };
 
 const defaultEmailSettings: Omit<EmailRuntimeConfig, "password"> = {
@@ -503,7 +610,7 @@ function normalizeStoragePrefix(value: unknown, fallback: string) {
   return clean || fallback;
 }
 
-function normalizeBoolean(value: unknown, fallback: boolean) {
+export function normalizeBoolean(value: unknown, fallback: boolean) {
   if (typeof value === "boolean") {
     return value;
   }
@@ -521,13 +628,40 @@ function normalizeBoolean(value: unknown, fallback: boolean) {
   return fallback;
 }
 
-function normalizeTimeoutSeconds(value: unknown, fallback: number) {
+export function normalizeTimeoutSeconds(value: unknown, fallback: number) {
   const numeric = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(numeric)) {
     return fallback;
   }
 
   return Math.min(Math.max(Math.floor(numeric), 30), 900);
+}
+
+export function normalizeRetentionDays(value: unknown, fallback: number) {
+  const numeric = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(numeric)) {
+    return fallback;
+  }
+
+  // 1 天到 10 年，避免误填 0 导致立即清理或极端值。
+  return Math.min(Math.max(Math.floor(numeric), 1), 3650);
+}
+
+export function normalizeMembershipDiscount(value: unknown, fallback: number) {
+  const numeric = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(numeric)) {
+    return fallback;
+  }
+  // 折扣百分比 0-90，避免免费出图或负值。
+  return Math.min(Math.max(Math.floor(numeric), 0), 90);
+}
+
+export function normalizeNonNegativeInt(value: unknown, fallback: number, max: number) {
+  const numeric = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(numeric)) {
+    return fallback;
+  }
+  return Math.min(Math.max(Math.floor(numeric), 0), max);
 }
 
 function normalizePort(value: unknown, fallback: number) {
@@ -739,6 +873,34 @@ function getModerationSettings(map: Map<string, SettingRow>): ModerationRuntimeC
       defaultModerationSettings.blockMessage,
       200,
     ),
+    semanticEnabled: normalizeBoolean(map.get("moderationSemanticEnabled")?.value, defaultModerationSettings.semanticEnabled),
+    semanticModel: normalizeOptionalText(map.get("moderationSemanticModel")?.value, defaultModerationSettings.semanticModel, 120),
+  };
+}
+
+function getMembershipSettings(map: Map<string, SettingRow>): MembershipRuntimeConfig {
+  return {
+    discountPercent: normalizeMembershipDiscount(map.get("membershipDiscountPercent")?.value, defaultMembershipSettings.discountPercent),
+    dailyCredits: normalizeNonNegativeInt(map.get("membershipDailyCredits")?.value, defaultMembershipSettings.dailyCredits, 100000),
+    generationRateLimit: normalizeNonNegativeInt(map.get("membershipGenerationRateLimit")?.value, defaultMembershipSettings.generationRateLimit, 100000),
+    expiryReminderDays: normalizeNonNegativeInt(map.get("membershipExpiryReminderDays")?.value, defaultMembershipSettings.expiryReminderDays, 60),
+  };
+}
+
+function getInviteSettings(map: Map<string, SettingRow>): InviteRuntimeConfig {
+  return {
+    enabled: normalizeBoolean(map.get("inviteEnabled")?.value, defaultInviteSettings.enabled),
+    inviterCredits: normalizeNonNegativeInt(map.get("inviteInviterCredits")?.value, defaultInviteSettings.inviterCredits, 100000),
+    inviteeCredits: normalizeNonNegativeInt(map.get("inviteInviteeCredits")?.value, defaultInviteSettings.inviteeCredits, 100000),
+  };
+}
+
+function getCheckinSettings(map: Map<string, SettingRow>): CheckinRuntimeConfig {
+  return {
+    enabled: normalizeBoolean(map.get("checkinEnabled")?.value, defaultCheckinSettings.enabled),
+    baseCredits: normalizeNonNegativeInt(map.get("checkinBaseCredits")?.value, defaultCheckinSettings.baseCredits, 100000),
+    streakBonus: normalizeNonNegativeInt(map.get("checkinStreakBonus")?.value, defaultCheckinSettings.streakBonus, 100000),
+    maxStreakBonusDays: normalizeNonNegativeInt(map.get("checkinMaxStreakBonusDays")?.value, defaultCheckinSettings.maxStreakBonusDays, 365),
   };
 }
 
@@ -783,18 +945,45 @@ function resolveStorageLocalBaseDir(value: string) {
   return path.isAbsolute(value) ? value : path.resolve(process.cwd(), value);
 }
 
+// 配置行内存缓存：单进程部署下把"每个 getter 一次整表查询"收敛为 30 秒一次。
+// 异常时不写缓存，返回过期旧值兜底（stale-on-error），避免数据库抖动让全站配置瞬间回落默认值。
+const SETTINGS_CACHE_TTL_MS = 30_000;
+let settingsRowsCache: { rows: SettingRow[]; expiresAt: number } | null = null;
+let settingsRowsInflight: Promise<SettingRow[]> | null = null;
+
+export function invalidateSettingsCache() {
+  settingsRowsCache = null;
+  settingsRowsInflight = null;
+}
+
 async function readSettingRows() {
   if (!process.env.DATABASE_URL) {
     return [];
   }
 
-  try {
-    const { Prisma } = await import("@prisma/client");
-    const { prisma } = await import("@/lib/db");
-    return await prisma.$queryRaw<SettingRow[]>(Prisma.sql`SELECT "key", "value", "isEncrypted" FROM "AppSetting"`);
-  } catch {
-    return [];
+  if (settingsRowsCache && settingsRowsCache.expiresAt > Date.now()) {
+    return settingsRowsCache.rows;
   }
+
+  if (settingsRowsInflight) {
+    return settingsRowsInflight;
+  }
+
+  settingsRowsInflight = (async () => {
+    try {
+      const { Prisma } = await import("@prisma/client");
+      const { prisma } = await import("@/lib/db");
+      const rows = await prisma.$queryRaw<SettingRow[]>(Prisma.sql`SELECT "key", "value", "isEncrypted" FROM "AppSetting"`);
+      settingsRowsCache = { rows, expiresAt: Date.now() + SETTINGS_CACHE_TTL_MS };
+      return rows;
+    } catch {
+      return settingsRowsCache?.rows ?? [];
+    } finally {
+      settingsRowsInflight = null;
+    }
+  })();
+
+  return settingsRowsInflight;
 }
 
 function toMap(rows: SettingRow[]) {
@@ -803,7 +992,7 @@ function toMap(rows: SettingRow[]) {
 
 async function upsertSettings(settings: SettingWrite[]) {
   if (!process.env.DATABASE_URL) {
-    throw new Error("缺少 DATABASE_URL，无法保存后台配置。");
+    throw new AppError("PROVIDER_CONFIG", "缺少 DATABASE_URL，无法保存后台配置。", 500);
   }
 
   const { Prisma } = await import("@prisma/client");
@@ -819,6 +1008,9 @@ async function upsertSettings(settings: SettingWrite[]) {
       );
     }
   });
+
+  // 保存成功后立即失效缓存，让新配置对后续请求即时生效。
+  invalidateSettingsCache();
 }
 
 async function checkDatabase(): Promise<AdminDiagnosticItem> {
@@ -980,6 +1172,12 @@ export async function getPublicAppSettings(): Promise<PublicAppSettings> {
     deepseekBaseUrl: normalizeText(getStoredSetting(map, "deepseekBaseUrl") || process.env.DEEPSEEK_BASE_URL, defaultSettings.deepseekBaseUrl, 200),
     deepseekModel: normalizeText(getStoredSetting(map, "deepseekModel") || process.env.DEEPSEEK_MODEL, defaultSettings.deepseekModel),
     openaiImageModel,
+    openaiVisionModel: normalizeOptionalText(getStoredSetting(map, "openaiVisionModel") ?? process.env.OPENAI_VISION_MODEL, defaultSettings.openaiVisionModel),
+    referenceImagesEnabled: getStoredBoolean(map, "referenceImagesEnabled", process.env.REFERENCE_IMAGES_ENABLED, defaultSettings.referenceImagesEnabled),
+    referenceImageRetentionDays: normalizeRetentionDays(
+      getStoredSetting(map, "referenceImageRetentionDays") ?? process.env.REFERENCE_IMAGE_RETENTION_DAYS,
+      defaultSettings.referenceImageRetentionDays,
+    ),
     stabilityAiModel: normalizeText(getStoredSetting(map, "stabilityAiModel") || process.env.STABILITY_AI_MODEL, defaultSettings.stabilityAiModel),
     chatgptWebEnabled: getStoredBoolean(map, "chatgptWebEnabled", process.env.CHATGPT_WEB_ENABLED, defaultSettings.chatgptWebEnabled),
     chatgptWebUserDataDir,
@@ -998,6 +1196,7 @@ export async function getPublicAppSettings(): Promise<PublicAppSettings> {
     storageEndpoint: normalizeOptionalText(getStoredSetting(map, "storageEndpoint") || process.env.STORAGE_ENDPOINT, defaultSettings.storageEndpoint, 300),
     storageBucket: normalizeOptionalText(getStoredSetting(map, "storageBucket") || process.env.STORAGE_BUCKET, defaultSettings.storageBucket, 160),
     storageRegion: normalizeOptionalText(getStoredSetting(map, "storageRegion") || process.env.STORAGE_REGION, defaultSettings.storageRegion, 120),
+    storageForcePathStyle: getStoredBoolean(map, "storageForcePathStyle", process.env.STORAGE_FORCE_PATH_STYLE, defaultSettings.storageForcePathStyle),
   };
 }
 
@@ -1007,16 +1206,22 @@ export async function getOpenAICompatibleChannelSettings(): Promise<OpenAICompat
   return toPublicOpenAICompatibleChannels(map, { openaiImageModel });
 }
 
-export async function getAdminAppSettings(): Promise<AdminAppSettings> {
+export async function getAdminAppSettings(options?: { includeDiagnostics?: boolean }): Promise<AdminAppSettings> {
+  const includeDiagnostics = options?.includeDiagnostics ?? true;
   const map = toMap(await readSettingRows());
   const publicSettings = await getPublicAppSettings();
   const openaiCompatibleChannels = toPublicOpenAICompatibleChannels(map, { openaiImageModel: publicSettings.openaiImageModel });
   const moderationSettings = getModerationSettings(map);
+  const membershipSettings = getMembershipSettings(map);
+  const inviteSettings = getInviteSettings(map);
+  const checkinSettings = getCheckinSettings(map);
   const emailSettings = getEmailAdminSettings(map);
   const deepseekApiKeyConfigured = Boolean(map.get("deepseekApiKey")?.value || process.env.DEEPSEEK_API_KEY);
   const legacyOpenaiApiKeyConfigured = Boolean(map.get("openaiApiKey")?.value || process.env.OPENAI_API_KEY);
   const openaiApiKeyConfigured = openaiCompatibleChannels.some((channel) => channel.enabled && channel.apiKeyConfigured);
   const stabilityAiApiKeyConfigured = Boolean(map.get("stabilityAiApiKey")?.value || process.env.STABILITY_AI_API_KEY);
+  const storageAccessKeyIdConfigured = Boolean(map.get("storageAccessKeyId")?.value || process.env.STORAGE_ACCESS_KEY_ID);
+  const storageSecretAccessKeyConfigured = Boolean(map.get("storageSecretAccessKey")?.value || process.env.STORAGE_SECRET_ACCESS_KEY);
 
   return {
     ...publicSettings,
@@ -1025,13 +1230,37 @@ export async function getAdminAppSettings(): Promise<AdminAppSettings> {
     moderationEnabled: moderationSettings.enabled,
     moderationForbiddenWords: moderationSettings.forbiddenWords,
     moderationBlockMessage: moderationSettings.blockMessage,
+    moderationSemanticEnabled: moderationSettings.semanticEnabled,
+    moderationSemanticModel: moderationSettings.semanticModel,
+    membershipDiscountPercent: membershipSettings.discountPercent,
+    membershipDailyCredits: membershipSettings.dailyCredits,
+    membershipGenerationRateLimit: membershipSettings.generationRateLimit,
+    membershipExpiryReminderDays: membershipSettings.expiryReminderDays,
+    inviteEnabled: inviteSettings.enabled,
+    inviteInviterCredits: inviteSettings.inviterCredits,
+    inviteInviteeCredits: inviteSettings.inviteeCredits,
+    checkinEnabled: checkinSettings.enabled,
+    checkinBaseCredits: checkinSettings.baseCredits,
+    checkinStreakBonus: checkinSettings.streakBonus,
+    checkinMaxStreakBonusDays: checkinSettings.maxStreakBonusDays,
+    oauthGithubEnabled: normalizeBoolean(map.get("oauthGithubEnabled")?.value, false),
+    oauthGithubClientId: normalizeOptionalText(map.get("oauthGithubClientId")?.value ?? process.env.OAUTH_GITHUB_CLIENT_ID, "", 200),
+    oauthGithubClientSecretConfigured: Boolean(map.get("oauthGithubClientSecret")?.value || process.env.OAUTH_GITHUB_CLIENT_SECRET),
+    oauthGoogleEnabled: normalizeBoolean(map.get("oauthGoogleEnabled")?.value, false),
+    oauthGoogleClientId: normalizeOptionalText(map.get("oauthGoogleClientId")?.value ?? process.env.OAUTH_GOOGLE_CLIENT_ID, "", 200),
+    oauthGoogleClientSecretConfigured: Boolean(map.get("oauthGoogleClientSecret")?.value || process.env.OAUTH_GOOGLE_CLIENT_SECRET),
     ...emailSettings,
     deepseekApiKeyConfigured,
     openaiApiKeyConfigured,
     legacyOpenaiApiKeyConfigured,
     stabilityAiApiKeyConfigured,
+    storageAccessKeyIdConfigured,
+    storageSecretAccessKeyConfigured,
     encryptionReady: hasSettingsEncryptionKey(),
-    diagnostics: await buildDiagnostics(publicSettings, openaiCompatibleChannels, deepseekApiKeyConfigured, openaiApiKeyConfigured, stabilityAiApiKeyConfigured, moderationSettings, emailSettings),
+    // 诊断含数据库探测（SELECT 1），仅后台设置页需要；运行时链路取配置时跳过。
+    diagnostics: includeDiagnostics
+      ? await buildDiagnostics(publicSettings, openaiCompatibleChannels, deepseekApiKeyConfigured, openaiApiKeyConfigured, stabilityAiApiKeyConfigured, moderationSettings, emailSettings)
+      : [],
   };
 }
 
@@ -1041,6 +1270,9 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
   const canReadStoredOpenAICompatibleChannels = canDecryptSetting(openAICompatibleChannelsRow);
   const currentPublicSettings = await getPublicAppSettings();
   const currentModerationSettings = getModerationSettings(settingsMap);
+  const currentMembershipSettings = getMembershipSettings(settingsMap);
+  const currentInviteSettings = getInviteSettings(settingsMap);
+  const currentCheckinSettings = getCheckinSettings(settingsMap);
   const currentEmailSettings = getEmailAdminSettings(settingsMap);
   const browserTitle = normalizeText(input.browserTitle, currentPublicSettings.browserTitle);
   const siteTitle = normalizeText(input.siteTitle, currentPublicSettings.siteTitle);
@@ -1054,6 +1286,9 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
   const deepseekBaseUrl = normalizeText(input.deepseekBaseUrl, currentPublicSettings.deepseekBaseUrl, 200);
   const deepseekModel = normalizeText(input.deepseekModel, currentPublicSettings.deepseekModel);
   const openaiImageModel = normalizeText(input.openaiImageModel, currentPublicSettings.openaiImageModel);
+  const openaiVisionModel = normalizeOptionalText(input.openaiVisionModel, currentPublicSettings.openaiVisionModel);
+  const referenceImagesEnabled = normalizeBoolean(input.referenceImagesEnabled, currentPublicSettings.referenceImagesEnabled);
+  const referenceImageRetentionDays = normalizeRetentionDays(input.referenceImageRetentionDays, currentPublicSettings.referenceImageRetentionDays);
   const stabilityAiModel = normalizeText(input.stabilityAiModel, currentPublicSettings.stabilityAiModel);
   const deepseekPolishPrompt = normalizeText(input.deepseekPolishPrompt, getStoredSetting(settingsMap, "deepseekPolishPrompt") || defaultDeepSeekPolishPrompt, 6000);
   const moderationEnabled = normalizeBoolean(input.moderationEnabled, currentModerationSettings.enabled);
@@ -1066,6 +1301,23 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
     currentModerationSettings.blockMessage,
     200,
   );
+  const moderationSemanticEnabled = normalizeBoolean(input.moderationSemanticEnabled, currentModerationSettings.semanticEnabled);
+  const moderationSemanticModel = normalizeOptionalText(input.moderationSemanticModel, currentModerationSettings.semanticModel, 120);
+  const membershipDiscountPercent = normalizeMembershipDiscount(input.membershipDiscountPercent, currentMembershipSettings.discountPercent);
+  const membershipDailyCredits = normalizeNonNegativeInt(input.membershipDailyCredits, currentMembershipSettings.dailyCredits, 100000);
+  const membershipGenerationRateLimit = normalizeNonNegativeInt(input.membershipGenerationRateLimit, currentMembershipSettings.generationRateLimit, 100000);
+  const membershipExpiryReminderDays = normalizeNonNegativeInt(input.membershipExpiryReminderDays, currentMembershipSettings.expiryReminderDays, 60);
+  const inviteEnabled = normalizeBoolean(input.inviteEnabled, currentInviteSettings.enabled);
+  const inviteInviterCredits = normalizeNonNegativeInt(input.inviteInviterCredits, currentInviteSettings.inviterCredits, 100000);
+  const inviteInviteeCredits = normalizeNonNegativeInt(input.inviteInviteeCredits, currentInviteSettings.inviteeCredits, 100000);
+  const checkinEnabled = normalizeBoolean(input.checkinEnabled, currentCheckinSettings.enabled);
+  const checkinBaseCredits = normalizeNonNegativeInt(input.checkinBaseCredits, currentCheckinSettings.baseCredits, 100000);
+  const checkinStreakBonus = normalizeNonNegativeInt(input.checkinStreakBonus, currentCheckinSettings.streakBonus, 100000);
+  const checkinMaxStreakBonusDays = normalizeNonNegativeInt(input.checkinMaxStreakBonusDays, currentCheckinSettings.maxStreakBonusDays, 365);
+  const oauthGithubEnabled = normalizeBoolean(input.oauthGithubEnabled, normalizeBoolean(settingsMap.get("oauthGithubEnabled")?.value, false));
+  const oauthGithubClientId = normalizeOptionalText(input.oauthGithubClientId, settingsMap.get("oauthGithubClientId")?.value ?? "", 200);
+  const oauthGoogleEnabled = normalizeBoolean(input.oauthGoogleEnabled, normalizeBoolean(settingsMap.get("oauthGoogleEnabled")?.value, false));
+  const oauthGoogleClientId = normalizeOptionalText(input.oauthGoogleClientId, settingsMap.get("oauthGoogleClientId")?.value ?? "", 200);
   const defaultGenerationProvider = normalizeProvider(input.defaultGenerationProvider || currentPublicSettings.defaultGenerationProvider);
   const chatgptWebEnabled = normalizeBoolean(input.chatgptWebEnabled, currentPublicSettings.chatgptWebEnabled);
   const chatgptWebUserDataDir = normalizeText(input.chatgptWebUserDataDir, currentPublicSettings.chatgptWebUserDataDir, 300);
@@ -1079,6 +1331,7 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
   const storageEndpoint = normalizeOptionalText(input.storageEndpoint, currentPublicSettings.storageEndpoint, 300);
   const storageBucket = normalizeOptionalText(input.storageBucket, currentPublicSettings.storageBucket, 160);
   const storageRegion = normalizeOptionalText(input.storageRegion, currentPublicSettings.storageRegion, 120);
+  const storageForcePathStyle = normalizeBoolean(input.storageForcePathStyle, currentPublicSettings.storageForcePathStyle);
   const emailSmtpEnabled = normalizeBoolean(input.emailSmtpEnabled, currentEmailSettings.emailSmtpEnabled);
   const emailSmtpHost = normalizeOptionalText(input.emailSmtpHost, currentEmailSettings.emailSmtpHost, 300);
   const emailSmtpPort = normalizePort(input.emailSmtpPort, currentEmailSettings.emailSmtpPort);
@@ -1091,6 +1344,10 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
   const submittedDeepSeekApiKey = normalizeSubmittedSecret(input.deepseekApiKey);
   const submittedOpenaiApiKey = normalizeSubmittedSecret(input.openaiApiKey);
   const submittedStabilityAiApiKey = normalizeSubmittedSecret(input.stabilityAiApiKey);
+  const submittedStorageAccessKeyId = normalizeSubmittedSecret(input.storageAccessKeyId);
+  const submittedStorageSecretAccessKey = normalizeSubmittedSecret(input.storageSecretAccessKey);
+  const submittedOAuthGithubClientSecret = normalizeSubmittedSecret(input.oauthGithubClientSecret);
+  const submittedOAuthGoogleClientSecret = normalizeSubmittedSecret(input.oauthGoogleClientSecret);
   const submittedEmailSmtpPassword = normalizeSubmittedSecret(input.emailSmtpPassword);
   const shouldSaveOpenAICompatibleChannels = shouldPersistSubmittedOpenAIChannels(input.openaiCompatibleChannels, settingsMap, openaiImageModel);
   if (shouldSaveOpenAICompatibleChannels && !canReadStoredOpenAICompatibleChannels && submittedChannelsHaveBlankApiKey(input.openaiCompatibleChannels)) {
@@ -1112,6 +1369,10 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
     submittedDeepSeekApiKey ||
       submittedOpenaiApiKey ||
       submittedStabilityAiApiKey ||
+      submittedStorageAccessKeyId ||
+      submittedStorageSecretAccessKey ||
+      submittedOAuthGithubClientSecret ||
+      submittedOAuthGoogleClientSecret ||
       submittedEmailSmtpPassword ||
       openaiCompatibleChannels,
   );
@@ -1133,11 +1394,31 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
     { key: "deepseekBaseUrl", value: deepseekBaseUrl },
     { key: "deepseekModel", value: deepseekModel },
     { key: "openaiImageModel", value: openaiImageModel },
+    { key: "openaiVisionModel", value: openaiVisionModel },
+    { key: "referenceImagesEnabled", value: String(referenceImagesEnabled) },
+    { key: "referenceImageRetentionDays", value: String(referenceImageRetentionDays) },
     { key: "stabilityAiModel", value: stabilityAiModel },
     { key: "deepseekPolishPrompt", value: deepseekPolishPrompt },
     { key: "moderationEnabled", value: String(moderationEnabled) },
     { key: "moderationForbiddenWords", value: moderationForbiddenWords },
     { key: "moderationBlockMessage", value: moderationBlockMessage },
+    { key: "moderationSemanticEnabled", value: String(moderationSemanticEnabled) },
+    { key: "moderationSemanticModel", value: moderationSemanticModel },
+    { key: "membershipDiscountPercent", value: String(membershipDiscountPercent) },
+    { key: "membershipDailyCredits", value: String(membershipDailyCredits) },
+    { key: "membershipGenerationRateLimit", value: String(membershipGenerationRateLimit) },
+    { key: "membershipExpiryReminderDays", value: String(membershipExpiryReminderDays) },
+    { key: "inviteEnabled", value: String(inviteEnabled) },
+    { key: "inviteInviterCredits", value: String(inviteInviterCredits) },
+    { key: "inviteInviteeCredits", value: String(inviteInviteeCredits) },
+    { key: "checkinEnabled", value: String(checkinEnabled) },
+    { key: "checkinBaseCredits", value: String(checkinBaseCredits) },
+    { key: "checkinStreakBonus", value: String(checkinStreakBonus) },
+    { key: "checkinMaxStreakBonusDays", value: String(checkinMaxStreakBonusDays) },
+    { key: "oauthGithubEnabled", value: String(oauthGithubEnabled) },
+    { key: "oauthGithubClientId", value: oauthGithubClientId },
+    { key: "oauthGoogleEnabled", value: String(oauthGoogleEnabled) },
+    { key: "oauthGoogleClientId", value: oauthGoogleClientId },
     { key: "defaultGenerationProvider", value: defaultGenerationProvider },
     { key: "chatgptWebEnabled", value: String(chatgptWebEnabled) },
     { key: "chatgptWebUserDataDir", value: chatgptWebUserDataDir },
@@ -1151,6 +1432,7 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
     { key: "storageEndpoint", value: storageEndpoint },
     { key: "storageBucket", value: storageBucket },
     { key: "storageRegion", value: storageRegion },
+    { key: "storageForcePathStyle", value: String(storageForcePathStyle) },
     { key: "emailSmtpEnabled", value: String(emailSmtpEnabled) },
     { key: "emailSmtpHost", value: emailSmtpHost },
     { key: "emailSmtpPort", value: String(emailSmtpPort) },
@@ -1178,14 +1460,41 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
     settingsToSave.push({ key: "stabilityAiApiKey", value: encryptSecret(submittedStabilityAiApiKey), isEncrypted: true });
   }
 
+  if (submittedStorageAccessKeyId) {
+    settingsToSave.push({ key: "storageAccessKeyId", value: encryptSecret(submittedStorageAccessKeyId), isEncrypted: true });
+  }
+
+  if (submittedStorageSecretAccessKey) {
+    settingsToSave.push({ key: "storageSecretAccessKey", value: encryptSecret(submittedStorageSecretAccessKey), isEncrypted: true });
+  }
+
   if (submittedEmailSmtpPassword) {
     settingsToSave.push({ key: "emailSmtpPassword", value: encryptSecret(submittedEmailSmtpPassword), isEncrypted: true });
+  }
+
+  if (submittedOAuthGithubClientSecret) {
+    settingsToSave.push({ key: "oauthGithubClientSecret", value: encryptSecret(submittedOAuthGithubClientSecret), isEncrypted: true });
+  }
+
+  if (submittedOAuthGoogleClientSecret) {
+    settingsToSave.push({ key: "oauthGoogleClientSecret", value: encryptSecret(submittedOAuthGoogleClientSecret), isEncrypted: true });
   }
 
   await upsertSettings(settingsToSave);
 }
 
-async function getSecretValue(key: "deepseekApiKey" | "openaiApiKey" | "stabilityAiApiKey" | "emailSmtpPassword", envValue?: string) {
+async function getSecretValue(
+  key:
+    | "deepseekApiKey"
+    | "openaiApiKey"
+    | "stabilityAiApiKey"
+    | "emailSmtpPassword"
+    | "storageAccessKeyId"
+    | "storageSecretAccessKey"
+    | "oauthGithubClientSecret"
+    | "oauthGoogleClientSecret",
+  envValue?: string,
+) {
   const map = toMap(await readSettingRows());
   const row = map.get(key);
 
@@ -1196,15 +1505,33 @@ async function getSecretValue(key: "deepseekApiKey" | "openaiApiKey" | "stabilit
   return row.isEncrypted ? decryptSecret(row.value) : row.value;
 }
 
+export async function getOAuthRuntimeConfig(): Promise<OAuthRuntimeConfig> {
+  const map = toMap(await readSettingRows());
+
+  return {
+    github: {
+      enabled: normalizeBoolean(map.get("oauthGithubEnabled")?.value, false),
+      clientId: normalizeOptionalText(map.get("oauthGithubClientId")?.value ?? process.env.OAUTH_GITHUB_CLIENT_ID, "", 200),
+      clientSecret: await getSecretValue("oauthGithubClientSecret", process.env.OAUTH_GITHUB_CLIENT_SECRET),
+    },
+    google: {
+      enabled: normalizeBoolean(map.get("oauthGoogleEnabled")?.value, false),
+      clientId: normalizeOptionalText(map.get("oauthGoogleClientId")?.value ?? process.env.OAUTH_GOOGLE_CLIENT_ID, "", 200),
+      clientSecret: await getSecretValue("oauthGoogleClientSecret", process.env.OAUTH_GOOGLE_CLIENT_SECRET),
+    },
+  };
+}
+
 export async function getDeepSeekRuntimeConfig() {
   const settings = await getPublicAppSettings();
-  const adminSettings = await getAdminAppSettings();
+  // 直接从配置行取润色提示词，避免为一个字段走 getAdminAppSettings 的完整诊断链路。
+  const map = toMap(await readSettingRows());
 
   return {
     apiKey: await getSecretValue("deepseekApiKey", process.env.DEEPSEEK_API_KEY),
     baseUrl: settings.deepseekBaseUrl,
     model: settings.deepseekModel,
-    polishPrompt: adminSettings.deepseekPolishPrompt,
+    polishPrompt: normalizeText(getStoredSetting(map, "deepseekPolishPrompt"), defaultDeepSeekPolishPrompt, 6000),
   };
 }
 
@@ -1285,6 +1612,9 @@ export async function getStorageRuntimeConfig(): Promise<StorageRuntimeConfig> {
     endpoint: settings.storageEndpoint,
     bucket: settings.storageBucket,
     region: settings.storageRegion,
+    forcePathStyle: settings.storageForcePathStyle,
+    accessKeyId: await getSecretValue("storageAccessKeyId", process.env.STORAGE_ACCESS_KEY_ID),
+    secretAccessKey: await getSecretValue("storageSecretAccessKey", process.env.STORAGE_SECRET_ACCESS_KEY),
   };
 }
 
@@ -1308,4 +1638,16 @@ export async function getEmailRuntimeConfig(): Promise<EmailRuntimeConfig> {
 
 export async function getModerationRuntimeConfig(): Promise<ModerationRuntimeConfig> {
   return getModerationSettings(toMap(await readSettingRows()));
+}
+
+export async function getMembershipRuntimeConfig(): Promise<MembershipRuntimeConfig> {
+  return getMembershipSettings(toMap(await readSettingRows()));
+}
+
+export async function getInviteRuntimeConfig(): Promise<InviteRuntimeConfig> {
+  return getInviteSettings(toMap(await readSettingRows()));
+}
+
+export async function getCheckinRuntimeConfig(): Promise<CheckinRuntimeConfig> {
+  return getCheckinSettings(toMap(await readSettingRows()));
 }

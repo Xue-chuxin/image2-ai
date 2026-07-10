@@ -20,3 +20,5 @@ dev-server.err.log
 *.log
 .DS_Store
 Thumbs.db
+tsconfig.tsbuildinfo
+public/console/

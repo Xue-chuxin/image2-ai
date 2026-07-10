@@ -47,6 +47,9 @@ model User {
   avatarUrl          String?
   passwordHash       String?
   role               UserRole            @default(USER)
+  twoFactorEnabled   Boolean             @default(false)
+  referralCode       String?             @unique
+  referredById       String?
   lastLoginAt        DateTime?
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
@@ -56,6 +59,63 @@ model User {
   promptFavorites    PromptFavorite[]
   creditTransactions CreditTransaction[]
   rechargeOrders     RechargeOrder[]
+  oauthAccounts      OAuthAccount[]
+  subscription       Subscription?
+  imageFavorites     ImageFavorite[]
+  dailyCheckIns      DailyCheckIn[]
+  galleryLikes       GalleryImageLike[]
+  galleryComments    GalleryImageComment[]
+  notifications      Notification[]
+
+  @@index([referredById])
+}
+
+// 站内消息通知：收件人 userId，type 区分来源（gallery_like/gallery_comment/referral_reward/membership）。
+// link 可选跳转地址，isRead 标记已读。列表以时间倒序为主，未读数按 isRead 过滤。
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  body      String?
+  link      String?
+  isRead    Boolean  @default(false)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([userId, isRead])
+}
+
+// 每日签到领积分：一天一行（checkInDate 记当天 0 点），unique(userId, checkInDate) 做幂等。
+// streak 记录截至该次的连续签到天数，credits 记录该次实际发放的积分。
+model DailyCheckIn {
+  id          String   @id @default(cuid())
+  userId      String
+  checkInDate DateTime
+  credits     Int
+  streak      Int
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, checkInDate])
+  @@index([userId, checkInDate])
+}
+
+model OAuthAccount {
+  id                String   @id @default(cuid())
+  userId            String
+  provider          String
+  providerAccountId String
+  email             String?
+  displayName       String?
+  avatarUrl         String?
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
 }
 
 model EmailVerificationCode {
@@ -211,6 +271,48 @@ model GeneratedImage {
   @@index([publishedAt])
 }
 
+// 用户收藏画廊作品：sourceType 区分自动出图（generated）与官方精选（curated），
+// imageId 仅做快照关联、不设外键，方便同时覆盖两张来源表并在原图删除后保留收藏记录。
+model ImageFavorite {
+  id         String   @id @default(cuid())
+  userId     String
+  sourceType String // generated | curated
+  imageId    String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, sourceType, imageId])
+  @@index([userId, createdAt])
+}
+
+// 画廊作品点赞：一人对一张作品至多一条，unique(userId, sourceType, imageId) 做幂等。
+model GalleryImageLike {
+  id         String   @id @default(cuid())
+  userId     String
+  sourceType String // generated | curated
+  imageId    String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, sourceType, imageId])
+  @@index([sourceType, imageId])
+}
+
+// 画廊作品评论：软删（isDeleted）保留审计，按 (sourceType, imageId, createdAt) 拉列表。
+model GalleryImageComment {
+  id         String   @id @default(cuid())
+  userId     String
+  sourceType String // generated | curated
+  imageId    String
+  content    String
+  isDeleted  Boolean  @default(false)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@index([sourceType, imageId, createdAt])
+  @@index([userId, createdAt])
+}
+
 model CuratedGalleryImage {
   id              String   @id @default(cuid())
   title           String
@@ -279,6 +381,8 @@ model CreditPackage {
   bonusCredits  Int             @default(0)
   priceCents    Int
   currency      String          @default("CNY")
+  packageType   String          @default("RECHARGE")
+  durationDays  Int             @default(0)
   sortOrder     Int             @default(0)
   isActive      Boolean         @default(true)
   orders        RechargeOrder[]
@@ -296,6 +400,8 @@ model RechargeOrder {
   packageNameSnapshot String
   credits             Int
   bonusCredits        Int                 @default(0)
+  packageType         String              @default("RECHARGE")
+  durationDays        Int                 @default(0)
   amountCents         Int
   currency            String              @default("CNY")
   status              RechargeOrderStatus @default(PENDING)
@@ -330,6 +436,26 @@ model RechargeOrder {
   @@index([providerTradeNo])
 }
 
+model Subscription {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  packageId   String?
+  packageName String
+  startedAt   DateTime @default(now())
+  expiresAt   DateTime
+  lastOrderId String?
+  lastDailyGrantAt DateTime?
+  // 到期提醒去重：记录已针对哪个 expiresAt 值发送过「即将到期」「已到期」邮件，
+  // 续期后 expiresAt 变化，存值不再匹配即可为新周期重新提醒。
+  expiringRemindedFor DateTime?
+  expiredRemindedFor  DateTime?
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([expiresAt])
+}
+
 model PaymentEvent {
   id              String   @id @default(cuid())
   provider        String
@@ -356,4 +482,37 @@ model AppSetting {
   isEncrypted Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+// 风格预设：一键把风格化的提示词修饰（正向后缀 + 可选负向后缀）追加到创作输入。
+// 由运营维护，前台按 sortOrder 展示 isActive 的预设。
+model StylePreset {
+  id             String   @id @default(cuid())
+  name           String
+  slug           String   @unique
+  description    String?
+  promptSuffix   String
+  negativeSuffix String?
+  coverUrl       String?
+  sortOrder      Int      @default(0)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
+// 内容审核命中审计日志：仅记录被拦截（rejected）的请求，便于管理员回溯误伤与滥用。
+// userId 仅做快照关联，不设外键，用户删除后日志仍可留存。
+model ModerationLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  userEmail String?
+  method    String // keyword | semantic
+  field     String? // 命中的输入项标签，如“中文提示词”
+  category  String? // 违规类别（语义审核返回），关键词命中记命中词
+  prompt    String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
 }

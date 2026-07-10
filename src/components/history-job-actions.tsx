@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Download, EyeOff, Globe2, RefreshCcw, Send, Trash2 } from "lucide-react";
+import { Download, EyeOff, Globe2, RefreshCcw, Send, Sparkles, Trash2 } from "lucide-react";
 import { CopyPromptButton } from "@/components/copy-prompt-button";
 
 type HistoryImageActionView = {
@@ -58,16 +58,16 @@ type ActionPayload = {
   job?: unknown;
 };
 
-function buttonClass(tone: "dark" | "light" | "danger" = "light") {
-  if (tone === "dark") {
-    return "inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white";
+function buttonClass(tone: "primary" | "secondary" | "danger" = "secondary") {
+  if (tone === "primary") {
+    return "inline-flex items-center justify-center gap-1.5 rounded-xl bg-brand-500 px-3.5 py-2 text-[13px] font-bold text-white shadow-chip transition hover:bg-brand-600 disabled:opacity-60";
   }
 
   if (tone === "danger") {
-    return "inline-flex items-center justify-center gap-2 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-black text-rose-600";
+    return "inline-flex items-center justify-center gap-1.5 rounded-xl border border-rose-100 dark:border-rose-500/20 bg-rose-50 dark:bg-rose-500/10 px-3.5 py-2 text-[13px] font-semibold text-rose-500 dark:text-rose-300 transition hover:bg-rose-100 disabled:opacity-60";
   }
 
-  return "inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-600";
+  return "inline-flex items-center justify-center gap-1.5 rounded-xl border border-line bg-panel px-3.5 py-2 text-[13px] font-semibold text-ink-secondary transition hover:bg-page disabled:opacity-60";
 }
 
 function formatSize(bytes?: number | null) {
@@ -185,24 +185,56 @@ export function HistoryJobActions(props: HistoryJobActionsProps) {
     }
   }
 
+  async function remixImage(imageId: string) {
+    setPending(`remix:${imageId}`);
+    setMessage("");
+    try {
+      const payload = await requestJson(`/api/images/${imageId}/remix`, { method: "POST" });
+      const reference = payload.image;
+      if (!reference?.id) {
+        throw new Error("生成变体失败");
+      }
+      const params = new URLSearchParams();
+      if (promptZh) params.set("prompt", promptZh);
+      if (promptEn) params.set("promptEn", promptEn);
+      if (negativePrompt) params.set("negativePrompt", negativePrompt);
+      params.set("ratio", ratio);
+      params.set("quality", quality);
+      params.set("imageCount", String(imageCount));
+      params.append("referenceImageIds", reference.id);
+      params.append("referenceImageUrls", reference.thumbnailUrl || reference.url);
+      window.location.href = `/generate?${params.toString()}`;
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "生成变体失败");
+      setPending("");
+    }
+  }
+
   const retryable = status === "FAILED" || status === "CANCELED";
   const visibleImages = images.filter((image) => !image.isDeleted);
 
   return (
     <div className="space-y-3">
       {referenceImages.length > 0 ? (
-        <div className="rounded-[20px] border border-slate-200 bg-white/80 p-3 shadow-card">
-          <div className="mb-3 flex items-center justify-between">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Reference Images</p>
-            <span className="text-xs font-black text-slate-400">{referenceImages.length} 张</span>
+        <div className="rounded-xl border border-line bg-page/50 p-3">
+          <div className="mb-2.5 flex items-center justify-between">
+            <p className="text-xs font-semibold text-ink-faint">参考图</p>
+            <span className="text-xs font-medium text-ink-faint">{referenceImages.length} 张</span>
           </div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {referenceImages.map((image) => (
-              <a key={image.id} href={image.url} target="_blank" rel="noreferrer" className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
-                <img src={image.thumbnailUrl || image.url} alt="参考图" className="h-24 w-full object-cover" />
-                <div className="p-2">
-                  <p className="truncate text-xs font-black text-slate-700">{image.mimeType || "参考图"}</p>
-                  <p className="mt-1 text-xs font-bold text-slate-400">{formatSize(image.fileSize)}</p>
+              <a
+                key={image.id}
+                href={image.url}
+                target="_blank"
+                rel="noreferrer"
+                className="overflow-hidden rounded-lg border border-line bg-panel transition hover:border-brand-300"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={image.thumbnailUrl || image.url} alt="参考图" className="h-20 w-full object-cover" />
+                <div className="px-2 py-1.5">
+                  <p className="truncate text-xs font-semibold text-ink-secondary">{image.mimeType || "参考图"}</p>
+                  <p className="mt-0.5 text-[11px] font-medium text-ink-faint">{formatSize(image.fileSize)}</p>
                 </div>
               </a>
             ))}
@@ -211,14 +243,14 @@ export function HistoryJobActions(props: HistoryJobActionsProps) {
       ) : null}
 
       <div className="flex flex-wrap gap-2">
-        {promptZh ? <CopyPromptButton text={promptZh} label="复制提示词" className={buttonClass("light")} /> : null}
-        <Link href={generateHref} className={buttonClass("light")}>
-          <Send className="h-4 w-4" />
+        {promptZh ? <CopyPromptButton text={promptZh} label="复制提示词" className={buttonClass("secondary")} /> : null}
+        <Link href={generateHref} className={buttonClass("secondary")}>
+          <Send className="h-3.5 w-3.5" />
           再次生成
         </Link>
         {retryable ? (
-          <button type="button" onClick={retryJob} disabled={pending === "retry"} className={buttonClass("dark")}>
-            <RefreshCcw className="h-4 w-4" />
+          <button type="button" onClick={retryJob} disabled={pending === "retry"} className={buttonClass("primary")}>
+            <RefreshCcw className="h-3.5 w-3.5" />
             {pending === "retry" ? "重试中" : "重试失败任务"}
           </button>
         ) : null}
@@ -231,31 +263,47 @@ export function HistoryJobActions(props: HistoryJobActionsProps) {
             const disabledByTakeDown = Boolean(image.takenDownAt);
 
             return (
-              <div key={image.id} className="rounded-[20px] border border-slate-200 bg-white/80 p-3 shadow-card">
+              <div key={image.id} className="rounded-xl border border-line bg-page/40 p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Image</p>
-                    <p className="mt-1 truncate text-sm font-bold text-slate-600">{image.id}</p>
-                    {disabledByTakeDown ? <p className="mt-1 text-xs font-bold text-rose-500">已被后台下架：{image.takenDownReason || "管理员下架"}</p> : null}
+                    <p className="text-xs font-medium text-ink-faint">图片 ID</p>
+                    <p className="mt-0.5 truncate text-[13px] font-semibold text-ink-secondary">{image.id}</p>
+                    {disabledByTakeDown ? (
+                      <p className="mt-1 text-xs font-semibold text-rose-500 dark:text-rose-300">已被后台下架：{image.takenDownReason || "管理员下架"}</p>
+                    ) : null}
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <a href={image.url} download className={buttonClass("light")}>
-                      <Download className="h-4 w-4" />
+                  <div className="flex flex-wrap gap-1.5">
+                    <a href={image.url} download className={buttonClass("secondary")}>
+                      <Download className="h-3.5 w-3.5" />
                       下载
                     </a>
+                    <button
+                      type="button"
+                      disabled={imagePending}
+                      onClick={() => remixImage(image.id)}
+                      className={buttonClass("secondary")}
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      {pending === `remix:${image.id}` ? "处理中" : "生成变体"}
+                    </button>
                     {image.isPublic ? (
-                      <button type="button" disabled={imagePending} onClick={() => updateImage(image.id, "unpublish")} className={buttonClass("light")}>
-                        <EyeOff className="h-4 w-4" />
+                      <button type="button" disabled={imagePending} onClick={() => updateImage(image.id, "unpublish")} className={buttonClass("secondary")}>
+                        <EyeOff className="h-3.5 w-3.5" />
                         取消发布
                       </button>
                     ) : (
-                      <button type="button" disabled={imagePending || disabledByTakeDown} onClick={() => updateImage(image.id, "publish")} className={buttonClass("dark")}>
-                        <Globe2 className="h-4 w-4" />
+                      <button
+                        type="button"
+                        disabled={imagePending || disabledByTakeDown}
+                        onClick={() => updateImage(image.id, "publish")}
+                        className={buttonClass("primary")}
+                      >
+                        <Globe2 className="h-3.5 w-3.5" />
                         发布广场
                       </button>
                     )}
                     <button type="button" disabled={imagePending} onClick={() => updateImage(image.id, "delete")} className={buttonClass("danger")}>
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3.5 w-3.5" />
                       删除
                     </button>
                   </div>
@@ -266,7 +314,9 @@ export function HistoryJobActions(props: HistoryJobActionsProps) {
         </div>
       ) : null}
 
-      {message ? <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-600">{message}</p> : null}
+      {message ? (
+        <p className="rounded-xl border border-line bg-page px-3.5 py-2.5 text-sm font-medium text-ink-secondary">{message}</p>
+      ) : null}
     </div>
   );
 }

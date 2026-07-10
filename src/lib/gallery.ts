@@ -695,6 +695,64 @@ export async function softDeleteGeneratedImage(userId: string, imageId: string) 
   return toGalleryImageView(updated);
 }
 
+export type GalleryImageRef = {
+  sourceType: GallerySourceType;
+  imageId: string;
+};
+
+// 依据收藏引用批量取回仍然可见的画廊作品，保持传入顺序，已下架/删除的记录会被自动剔除。
+export async function resolveGalleryImages(refs: GalleryImageRef[]): Promise<GalleryImageView[]> {
+  const generatedIds = refs.filter((ref) => ref.sourceType === "generated").map((ref) => ref.imageId);
+  const curatedIds = refs.filter((ref) => ref.sourceType === "curated").map((ref) => ref.imageId);
+
+  const [generatedImages, curatedImages] = await Promise.all([
+    generatedIds.length
+      ? prisma.generatedImage.findMany({
+          where: {
+            id: { in: generatedIds },
+            isPublic: true,
+            isDeleted: false,
+            takenDownAt: null,
+            job: {
+              is: {
+                status: "COMPLETED",
+              },
+            },
+          },
+          include: galleryInclude,
+        })
+      : Promise.resolve([]),
+    curatedIds.length
+      ? prisma.curatedGalleryImage.findMany({
+          where: {
+            id: { in: curatedIds },
+            isActive: true,
+            isDeleted: false,
+            takenDownAt: null,
+          },
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const byKey = new Map<string, GalleryImageView>();
+  for (const image of generatedImages) {
+    byKey.set(`generated:${image.id}`, toGalleryImageView(image));
+  }
+  for (const image of curatedImages) {
+    byKey.set(`curated:${image.id}`, toCuratedGalleryImageView(image));
+  }
+
+  const resolved: GalleryImageView[] = [];
+  for (const ref of refs) {
+    const view = byKey.get(`${ref.sourceType}:${ref.imageId}`);
+    if (view) {
+      resolved.push(view);
+    }
+  }
+
+  return resolved;
+}
+
 export async function takeDownGalleryImageByAdmin(imageId: string, reason?: string) {
   const image = await prisma.generatedImage.findUnique({
     where: {

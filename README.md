@@ -46,23 +46,21 @@ docker compose --env-file .env.production up -d --build
 
 ## 功能特性
 
-- 中文拟 App 风格首页，包含浅色、蓝白、毛玻璃和液态玻璃视觉风格。
-- 首页作品瀑布流展示，支持公开作品和运营精选作品。
-- 提示词库，支持分类、标签、详情页、复制提示词和收藏关系。
+- 浅色蓝白侧边栏应用式前台：画廊广场（推广位 + 应用广场 + 作品瀑布流）、专业绘画创作台、生成历史，移动端底部导航。
 - DeepSeek 提示词润色 API，可把用户输入优化为更适合生图的提示词。
-- 生图工作台，支持比例、质量、数量、参考图上传和任务创建。
-- Provider 抽象层，默认接入 OpenAI 官方图像 API。
+- 生图工作台，支持风格方向、比例、质量、数量和任务创建，2 秒轮询任务进度。
+- Provider 抽象层，默认接入 OpenAI 官方图像 API，支持多个 OpenAI 兼容中转通道故障转移。
 - `chatgpt_web` Provider 作为实验性预留，未配置时会返回明确的 disabled 错误。
+- 控制台（基于 Vben Admin 5 / Vue 3 / Ant Design Vue）：用户中心（积分总览、在线充值、订单、流水、账号安全）+ 管理后台（运营概览、系统设置、用户、任务、图片、上传、账单、支付诊断、系统自检），与前台账号 Cookie 互通、按角色出菜单。
 - 用户登录、管理员登录、会话 Cookie 签名和基础权限区分。
-- 积分账户、积分流水、生成扣费、订单和充值相关模型。
-- 管理后台，包含系统自检、后台配置、用户、任务、图片、上传和账单管理入口。
+- 积分账户、积分流水、生成扣费、订单和充值相关模型；易支付 / 支付宝当面付 / 微信支付 / PayPal 四渠道。
 - StorageService 统一图片保存入口，当前正式实现 `local` 本地存储，并预留 OSS、COS、S3 配置。
-- Docker Compose 部署文件，包含 Next.js Web 服务和 PostgreSQL。
+- Docker Compose 部署文件，包含 Next.js Web 服务和 PostgreSQL，控制台静态产物随镜像一起构建。
 
 ## 技术栈
 
-- Next.js 15
-- React 19
+- Next.js 15 + React 19（前台与 API）
+- Vben Admin 5 + Vue 3 + Ant Design Vue（控制台：用户中心 / 管理后台）
 - TypeScript
 - Tailwind CSS
 - Prisma
@@ -316,16 +314,17 @@ bash scripts/update.sh   # 自部署升级辅助脚本
 ## 重要页面
 
 ```text
-/                       # 首页作品流
-/generate               # 生图工作台
-/prompts                # 提示词库
+/                       # 画廊广场（作品流 + 应用广场）
+/generate               # 专业绘画（生图工作台）
 /history                # 生成历史
-/account                # 用户账户
 /signin                 # 用户登录
-/admin                  # 管理后台
-/admin/settings         # 后台配置
-/admin/health           # 上线自检
+/console                # 控制台（用户中心 + 管理后台，统一登录）
+/console#/account/...   # 积分总览 / 充值 / 订单 / 流水 / 账号安全
+/console#/admin-center/... # 系统设置 / 用户 / 任务 / 图片 / 账单 / 自检等
+/account /admin         # 旧地址，自动跳转控制台
 ```
+
+控制台开发模式：`cd console && pnpm install && pnpm run dev:antd`（端口 5666，/api 自动代理到 Next.js:3000，需 Node >= 22 与 pnpm >= 11）。生产构建：仓库根目录执行 `npm run build:console`，产物输出到 `public/console` 由 Next.js 直接托管。
 
 ## Provider 说明
 

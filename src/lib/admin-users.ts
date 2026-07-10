@@ -73,31 +73,55 @@ async function ensureCreditAccount(userId: string) {
   });
 }
 
-async function serializeUser(user: any): Promise<AdminUserView> {
-  const [generationJobCount, rechargeOrderCount, paidRechargeOrderCount, uploadedImageCount] = await Promise.all([
-    prisma.generationJob.count({
-      where: {
-        userId: user.id,
-      },
-    }),
-    prisma.rechargeOrder.count({
-      where: {
-        userId: user.id,
-      },
-    }),
-    prisma.rechargeOrder.count({
-      where: {
-        userId: user.id,
-        status: "PAID",
-      },
-    }),
-    prisma.uploadedImage.count({
-      where: {
-        userId: user.id,
-      },
-    }),
+type UserStats = {
+  generationJobCount: number;
+  rechargeOrderCount: number;
+  paidRechargeOrderCount: number;
+  uploadedImageCount: number;
+};
+
+const emptyUserStats: UserStats = {
+  generationJobCount: 0,
+  rechargeOrderCount: 0,
+  paidRechargeOrderCount: 0,
+  uploadedImageCount: 0,
+};
+
+// 批量聚合各用户的任务/订单/上传计数，避免每个用户单独发 4 条 count（N+1）。
+async function loadUserStats(userIds: string[]): Promise<Map<string, UserStats>> {
+  const stats = new Map<string, UserStats>(userIds.map((id) => [id, { ...emptyUserStats }]));
+  if (!userIds.length) {
+    return stats;
+  }
+
+  const [jobs, orders, paidOrders, uploads] = await Promise.all([
+    prisma.generationJob.groupBy({ by: ["userId"], where: { userId: { in: userIds } }, _count: { _all: true } }),
+    prisma.rechargeOrder.groupBy({ by: ["userId"], where: { userId: { in: userIds } }, _count: { _all: true } }),
+    prisma.rechargeOrder.groupBy({ by: ["userId"], where: { userId: { in: userIds }, status: "PAID" }, _count: { _all: true } }),
+    prisma.uploadedImage.groupBy({ by: ["userId"], where: { userId: { in: userIds } }, _count: { _all: true } }),
   ]);
 
+  for (const row of jobs) {
+    const entry = stats.get(row.userId);
+    if (entry) entry.generationJobCount = row._count._all;
+  }
+  for (const row of orders) {
+    const entry = stats.get(row.userId);
+    if (entry) entry.rechargeOrderCount = row._count._all;
+  }
+  for (const row of paidOrders) {
+    const entry = stats.get(row.userId);
+    if (entry) entry.paidRechargeOrderCount = row._count._all;
+  }
+  for (const row of uploads) {
+    const entry = stats.get(row.userId);
+    if (entry) entry.uploadedImageCount = row._count._all;
+  }
+
+  return stats;
+}
+
+function serializeUser(user: any, stats: UserStats = emptyUserStats): AdminUserView {
   return {
     id: user.id,
     email: user.email,
@@ -105,10 +129,10 @@ async function serializeUser(user: any): Promise<AdminUserView> {
     role: user.role,
     availableCredits: user.creditAccount?.available || 0,
     frozenCredits: user.creditAccount?.frozen || 0,
-    generationJobCount,
-    rechargeOrderCount,
-    paidRechargeOrderCount,
-    uploadedImageCount,
+    generationJobCount: stats.generationJobCount,
+    rechargeOrderCount: stats.rechargeOrderCount,
+    paidRechargeOrderCount: stats.paidRechargeOrderCount,
+    uploadedImageCount: stats.uploadedImageCount,
     lastLoginAt: serializeDate(user.lastLoginAt),
     createdAt: serializeDate(user.createdAt) || new Date().toISOString(),
     updatedAt: serializeDate(user.updatedAt) || new Date().toISOString(),
@@ -159,7 +183,8 @@ export async function listAdminUsers({
     take: cleanLimit,
   });
 
-  return Promise.all(users.map(serializeUser));
+  const stats = await loadUserStats(users.map((user) => user.id));
+  return users.map((user) => serializeUser(user, stats.get(user.id)));
 }
 
 export async function getAdminUser(userId: string) {
@@ -172,7 +197,12 @@ export async function getAdminUser(userId: string) {
     },
   });
 
-  return user ? serializeUser(user) : null;
+  if (!user) {
+    return null;
+  }
+
+  const stats = await loadUserStats([userId]);
+  return serializeUser(user, stats.get(userId));
 }
 
 export async function adjustUserCreditsByAdmin({
@@ -352,7 +382,8 @@ export async function updateUserByAdmin({
     },
   });
 
-  return serializeUser(updated);
+  const stats = await loadUserStats([userId]);
+  return serializeUser(updated, stats.get(userId));
 }
 
 export async function deleteUserByAdmin({

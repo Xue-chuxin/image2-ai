@@ -4,6 +4,7 @@ import { jsonError } from "@/lib/app-error";
 import { loginOrCreateUser, setUserSessionCookie } from "@/lib/auth";
 import { getUserCreditBalance } from "@/lib/credits";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { enforceLoginTwoFactor } from "@/lib/two-factor";
 
 export const runtime = "nodejs";
 
@@ -19,7 +20,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const payload = (await request.json().catch(() => null)) as { email?: string; password?: string; verificationCode?: string; intent?: string } | null;
+  const payload = (await request.json().catch(() => null)) as { email?: string; password?: string; verificationCode?: string; twoFactorCode?: string; intent?: string; referralCode?: string } | null;
   const email = payload?.email?.trim().toLowerCase();
   const password = payload?.password || "";
   const intent = payload?.intent === "login" || payload?.intent === "register" ? payload.intent : "auto";
@@ -29,7 +30,18 @@ export async function POST(request: Request) {
   }
 
   try {
-    const user = await loginOrCreateUser(email, password, payload?.verificationCode, intent);
+    const user = await loginOrCreateUser(email, password, payload?.verificationCode, intent, payload?.referralCode);
+
+    // 密码校验通过后进入二步验证闸门：已开启则需邮箱验证码，未开启直接放行。
+    const gate = await enforceLoginTwoFactor({
+      email: user.email || email,
+      enabled: user.twoFactorEnabled,
+      code: payload?.twoFactorCode,
+    });
+    if (gate.required) {
+      return NextResponse.json({ ok: false, twoFactorRequired: true, message: "验证码已发送至你的邮箱，请输入验证码完成登录。" });
+    }
+
     const credits = await getUserCreditBalance(user.id);
     const response = NextResponse.json({
       ok: true,

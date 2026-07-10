@@ -1,9 +1,20 @@
+import sharp from "sharp";
+
+import { AppError } from "@/lib/app-error";
 import { prisma } from "@/lib/db";
-import { saveReferenceImage } from "@/lib/storage";
+import { deleteReferenceImageFiles, saveReferenceImage } from "@/lib/storage";
 
 export const MAX_REFERENCE_IMAGE_BYTES = 8 * 1024 * 1024;
 export const MAX_REFERENCE_IMAGES_PER_JOB = 4;
 const ALLOWED_REFERENCE_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
+
+// sharp 探测出的真实格式 → 白名单 MIME。用于以文件内容为准，而非客户端声明的 Content-Type。
+const SHARP_FORMAT_TO_MIME: Record<string, string> = {
+  png: "image/png",
+  jpeg: "image/jpeg",
+  jpg: "image/jpeg",
+  webp: "image/webp",
+};
 
 export type UploadedReferenceImageView = {
   id: string;
@@ -74,15 +85,43 @@ export function assertReferenceImageUploadAllowed(mimeType: string, fileSize: nu
   }
 }
 
+/**
+ * 读取 buffer 的真实图片格式（magic bytes），映射回白名单 MIME。
+ * 与客户端声明的 Content-Type 无关：伪造 Content-Type 的非图片文件在此被拒。
+ */
+export async function detectReferenceImageMimeType(buffer: Buffer): Promise<string> {
+  let format: string | undefined;
+  try {
+    format = (await sharp(buffer).metadata()).format;
+  } catch {
+    throw new Error("无法识别的图片文件，请上传有效的 PNG、JPG、WEBP 图片。");
+  }
+
+  const mimeType = format ? SHARP_FORMAT_TO_MIME[format] : undefined;
+  if (!mimeType) {
+    throw new Error("只支持 PNG、JPG、WEBP 图片。");
+  }
+
+  return mimeType;
+}
+
 export async function createUploadedReferenceImage({
   userId,
   buffer,
-  mimeType,
 }: {
   userId: string;
   buffer: Buffer;
-  mimeType: string;
 }) {
+  if (buffer.byteLength <= 0) {
+    throw new Error("图片文件为空。");
+  }
+
+  if (buffer.byteLength > MAX_REFERENCE_IMAGE_BYTES) {
+    throw new Error("参考图不能超过 8MB。");
+  }
+
+  // 以文件真实内容为准，忽略客户端声明的 MIME，避免伪造 Content-Type 上传非图片。
+  const mimeType = await detectReferenceImageMimeType(buffer);
   assertReferenceImageUploadAllowed(mimeType, buffer.byteLength);
 
   const stored = await saveReferenceImage(userId, buffer, mimeType);
@@ -100,6 +139,135 @@ export async function createUploadedReferenceImage({
   });
 
   return serializeUploadedImage(image);
+}
+
+/** 把存储 URL 解析为可 server 端抓取的绝对地址；相对路径按站点 origin 拼接。 */
+function toAbsoluteStoredUrl(sourceUrl: string, origin: string): string {
+  if (/^https?:\/\//i.test(sourceUrl)) {
+    return sourceUrl;
+  }
+  return `${origin.replace(/\/+$/, "")}/${sourceUrl.replace(/^\/+/, "")}`;
+}
+
+/**
+ * 把一张已存在的存储图片（generated 输出图）复刻为当前用户的参考图，用于「生成变体/二创」。
+ * sourceUrl 由服务端根据图片记录取出（用户仅提供 imageId），因此不存在任意 URL 抓取（SSRF）风险。
+ * 复用 createUploadedReferenceImage 的体积/真实类型校验与落库。
+ */
+export async function createReferenceImageFromSourceUrl({
+  userId,
+  sourceUrl,
+  origin,
+}: {
+  userId: string;
+  sourceUrl: string;
+  origin: string;
+}): Promise<UploadedReferenceImageView> {
+  const absoluteUrl = toAbsoluteStoredUrl(sourceUrl, origin);
+  let response: Response;
+  try {
+    response = await fetch(absoluteUrl);
+  } catch {
+    throw new AppError("BAD_REQUEST", "无法读取原图，请稍后再试。", 400);
+  }
+  if (!response.ok) {
+    throw new AppError("BAD_REQUEST", "无法读取原图，请稍后再试。", 400);
+  }
+  const buffer = Buffer.from(await response.arrayBuffer());
+  return createUploadedReferenceImage({ userId, buffer });
+}
+
+/**
+ * 校验用户可复刻该生成图（本人历史图，或仍公开可见的广场图），并复刻为其参考图。
+ * 图片不存在/已删除 → NOT_FOUND；非本人且未公开可见 → FORBIDDEN。
+ */
+export async function createReferenceFromGeneratedImage({
+  userId,
+  imageId,
+  origin,
+}: {
+  userId: string;
+  imageId: string;
+  origin: string;
+}): Promise<UploadedReferenceImageView> {
+  const cleanId = typeof imageId === "string" ? imageId.trim() : "";
+  if (!cleanId) {
+    throw new AppError("BAD_REQUEST", "图片标识无效。", 400);
+  }
+
+  const image = await prisma.generatedImage.findUnique({
+    where: { id: cleanId },
+    select: {
+      url: true,
+      isPublic: true,
+      isDeleted: true,
+      takenDownAt: true,
+      job: { select: { userId: true } },
+    },
+  });
+
+  if (!image || image.isDeleted) {
+    throw new AppError("NOT_FOUND", "图片不存在或已删除。", 404);
+  }
+
+  const isOwner = image.job.userId === userId;
+  const isPublicVisible = image.isPublic && !image.takenDownAt;
+  if (!isOwner && !isPublicVisible) {
+    throw new AppError("FORBIDDEN", "无权使用该图片作为参考图。", 403);
+  }
+
+  return createReferenceImageFromSourceUrl({ userId, sourceUrl: image.url, origin });
+}
+
+const REFERENCE_IMAGE_PURGE_BATCH = 200;
+const PURGE_THROTTLE_MS = 60 * 60 * 1000;
+let lastPurgeAt = 0;
+
+/**
+ * 软删除超过 retentionDays 天、且未被任何生成任务引用的参考图，并删除其磁盘文件。
+ * 被任务引用的参考图不会被清理（保留可追溯的「再次生成」回填能力）。
+ */
+export async function purgeExpiredReferenceImages(retentionDays: number): Promise<{ removed: number }> {
+  const days = Number.isFinite(retentionDays) ? Math.max(Math.floor(retentionDays), 1) : 30;
+  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+  const candidates = await prisma.uploadedImage.findMany({
+    where: {
+      purpose: "reference",
+      isDeleted: false,
+      createdAt: { lt: cutoff },
+      jobReferences: { none: {} },
+    },
+    take: REFERENCE_IMAGE_PURGE_BATCH,
+  });
+
+  let removed = 0;
+  for (const image of candidates) {
+    await deleteReferenceImageFiles(image.url, image.thumbnailUrl);
+    await prisma.uploadedImage.update({
+      where: { id: image.id },
+      data: { isDeleted: true },
+    });
+    removed += 1;
+  }
+
+  return { removed };
+}
+
+/**
+ * 惰性触发一次过期参考图清理，带进程内节流（默认 1 小时最多一次），fire-and-forget。
+ * 适合在上传接口成功后调用，无需额外后台进程；多实例部署可另配 cron 调用 purge。
+ */
+export function maybePurgeExpiredReferenceImages(retentionDays: number): void {
+  const now = Date.now();
+  if (now - lastPurgeAt < PURGE_THROTTLE_MS) {
+    return;
+  }
+  lastPurgeAt = now;
+
+  purgeExpiredReferenceImages(retentionDays).catch((error) => {
+    console.error("[uploads] 清理过期参考图失败", error);
+  });
 }
 
 export async function resolveReferenceImagesForJob(userId: string, imageIds?: string[]) {

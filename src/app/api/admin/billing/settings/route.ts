@@ -1,3 +1,4 @@
+import { getAppErrorMessage } from "@/lib/app-error";
 import { NextResponse } from "next/server";
 
 import { getAdminSession } from "@/lib/auth";
@@ -19,7 +20,7 @@ export async function GET() {
     return NextResponse.json(
       {
         ok: false,
-        error: error instanceof Error ? error.message : "读取支付配置失败",
+        error: getAppErrorMessage(error, "读取支付配置失败"),
       },
       {
         status: 500,
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         ok: false,
-        error: error instanceof Error ? error.message : "保存支付配置失败",
+        error: getAppErrorMessage(error, "保存支付配置失败"),
       },
       {
         status: 400,

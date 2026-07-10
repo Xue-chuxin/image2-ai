@@ -1,3 +1,4 @@
+import { getAppErrorMessage } from "@/lib/app-error";
 import { NextResponse } from "next/server";
 
 import { getUserSession } from "@/lib/auth";
@@ -27,7 +28,7 @@ export async function POST(_request: Request, context: RouteContext) {
     return NextResponse.json(
       {
         ok: false,
-        error: error instanceof Error ? error.message : "取消发布作品失败",
+        error: getAppErrorMessage(error, "取消发布作品失败"),
       },
       {
         status: 400,

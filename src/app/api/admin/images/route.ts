@@ -1,3 +1,4 @@
+import { getAppErrorMessage } from "@/lib/app-error";
 import { NextResponse } from "next/server";
 
 import { getAdminSession } from "@/lib/auth";
@@ -29,7 +30,7 @@ export async function GET(request: Request) {
     return NextResponse.json(
       {
         ok: false,
-        error: error instanceof Error ? error.message : "读取后台作品失败",
+        error: getAppErrorMessage(error, "读取后台作品失败"),
       },
       {
         status: 500,

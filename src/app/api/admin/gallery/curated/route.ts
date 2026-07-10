@@ -1,3 +1,4 @@
+import { getAppErrorMessage } from "@/lib/app-error";
 import { NextResponse } from "next/server";
 
 import { getAdminSession } from "@/lib/auth";
@@ -29,7 +30,7 @@ export async function GET(request: Request) {
     return NextResponse.json(
       {
         ok: false,
-        error: error instanceof Error ? error.message : "读取运营精选失败",
+        error: getAppErrorMessage(error, "读取运营精选失败"),
       },
       {
         status: 500,
@@ -56,7 +57,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         ok: false,
-        error: error instanceof Error ? error.message : "保存运营精选失败",
+        error: getAppErrorMessage(error, "保存运营精选失败"),
       },
       {
         status: 400,

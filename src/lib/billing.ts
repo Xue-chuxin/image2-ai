@@ -1,8 +1,11 @@
 import { createHash, randomBytes } from "crypto";
 import type { RechargeOrderStatus } from "@prisma/client";
 
+import { AppError } from "@/lib/app-error";
 import { prisma } from "@/lib/db";
 import { getUserCreditBalance } from "@/lib/credits";
+import { maybeSendMembershipReminders } from "@/lib/membership-reminders";
+import { getMembershipRuntimeConfig } from "@/lib/settings";
 import {
   createPaymentForOrder,
   getPaymentProviderSettings,
@@ -41,6 +44,8 @@ const defaultPackages = [
 
 export type BillingPaymentSettings = PaymentProviderSettings;
 
+export type CreditPackageType = "RECHARGE" | "SUBSCRIPTION";
+
 export type CreditPackageView = {
   id: string;
   name: string;
@@ -50,10 +55,20 @@ export type CreditPackageView = {
   totalCredits: number;
   priceCents: number;
   currency: string;
+  packageType: CreditPackageType;
+  durationDays: number;
   sortOrder: number;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+};
+
+export type SubscriptionView = {
+  packageName: string;
+  startedAt: string;
+  expiresAt: string;
+  active: boolean;
+  daysRemaining: number;
 };
 
 export type RechargeOrderView = {
@@ -66,6 +81,8 @@ export type RechargeOrderView = {
   credits: number;
   bonusCredits: number;
   totalCredits: number;
+  packageType: CreditPackageType;
+  durationDays: number;
   amountCents: number;
   currency: string;
   status: RechargeOrderStatus;
@@ -99,7 +116,39 @@ export type BillingOverview = {
   packages: CreditPackageView[];
   orders: RechargeOrderView[];
   channels: PaymentChannelView[];
+  subscription: SubscriptionView | null;
+  membershipBenefits: MembershipBenefitsView;
 };
+
+export type MembershipBenefitsView = {
+  discountPercent: number;
+  dailyCredits: number;
+  generationRateLimit: number;
+};
+
+function normalizePackageType(value: unknown): CreditPackageType {
+  return value === "SUBSCRIPTION" ? "SUBSCRIPTION" : "RECHARGE";
+}
+
+function serializeSubscription(sub: any): SubscriptionView | null {
+  if (!sub) {
+    return null;
+  }
+  const expiresAt: Date = sub.expiresAt;
+  const remainingMs = expiresAt.getTime() - Date.now();
+  return {
+    packageName: sub.packageName,
+    startedAt: sub.startedAt.toISOString(),
+    expiresAt: expiresAt.toISOString(),
+    active: remainingMs > 0,
+    daysRemaining: remainingMs > 0 ? Math.ceil(remainingMs / (1000 * 60 * 60 * 24)) : 0,
+  };
+}
+
+export async function getUserSubscription(userId: string): Promise<SubscriptionView | null> {
+  const sub = await prisma.subscription.findUnique({ where: { userId } });
+  return serializeSubscription(sub);
+}
 
 function serializePackage(pkg: any): CreditPackageView {
   return {
@@ -111,6 +160,8 @@ function serializePackage(pkg: any): CreditPackageView {
     totalCredits: pkg.credits + pkg.bonusCredits,
     priceCents: pkg.priceCents,
     currency: pkg.currency,
+    packageType: normalizePackageType(pkg.packageType),
+    durationDays: pkg.durationDays ?? 0,
     sortOrder: pkg.sortOrder,
     isActive: Boolean(pkg.isActive),
     createdAt: pkg.createdAt.toISOString(),
@@ -129,6 +180,8 @@ function serializeOrder(order: any): RechargeOrderView {
     credits: order.credits,
     bonusCredits: order.bonusCredits,
     totalCredits: order.credits + order.bonusCredits,
+    packageType: normalizePackageType(order.packageType),
+    durationDays: order.durationDays ?? 0,
     amountCents: order.amountCents,
     currency: order.currency,
     status: order.status,
@@ -234,6 +287,8 @@ export async function upsertCreditPackage(input: {
   bonusCredits?: number;
   priceCents: number;
   currency?: string;
+  packageType?: string;
+  durationDays?: number;
   sortOrder?: number;
   isActive?: boolean;
 }) {
@@ -241,17 +296,23 @@ export async function upsertCreditPackage(input: {
   const credits = Math.floor(Number(input.credits));
   const bonusCredits = Math.max(0, Math.floor(Number(input.bonusCredits || 0)));
   const priceCents = Math.floor(Number(input.priceCents));
+  const packageType = normalizePackageType(input.packageType);
+  const durationDays = Math.max(0, Math.floor(Number(input.durationDays || 0)));
 
   if (!name) {
-    throw new Error("请输入套餐名称。");
+    throw new AppError("BAD_REQUEST", "请输入套餐名称。", 400);
   }
 
   if (!Number.isFinite(credits) || credits <= 0) {
-    throw new Error("套餐积分必须大于 0。");
+    throw new AppError("BAD_REQUEST", "套餐积分必须大于 0。", 400);
   }
 
   if (!Number.isFinite(priceCents) || priceCents <= 0) {
-    throw new Error("套餐价格必须大于 0。");
+    throw new AppError("BAD_REQUEST", "套餐价格必须大于 0。", 400);
+  }
+
+  if (packageType === "SUBSCRIPTION" && durationDays <= 0) {
+    throw new AppError("BAD_REQUEST", "会员套餐的有效天数必须大于 0。", 400);
   }
 
   const data = {
@@ -261,6 +322,8 @@ export async function upsertCreditPackage(input: {
     bonusCredits,
     priceCents,
     currency: normalizeText(input.currency, 12) || "CNY",
+    packageType,
+    durationDays: packageType === "SUBSCRIPTION" ? durationDays : 0,
     sortOrder: Math.floor(Number(input.sortOrder || 0)),
     isActive: input.isActive ?? true,
   };
@@ -284,7 +347,7 @@ export async function createRechargeOrder(userId: string, packageId: string, pro
 
   const channels = await listPublicPaymentChannels();
   if (!channels.some((channel) => channel.provider === provider)) {
-    throw new Error("该支付渠道未启用或尚未配置完整。");
+    throw new AppError("BAD_REQUEST", "该支付渠道未启用或尚未配置完整。", 400);
   }
 
   const pkg = await prisma.creditPackage.findFirst({
@@ -295,7 +358,7 @@ export async function createRechargeOrder(userId: string, packageId: string, pro
   });
 
   if (!pkg) {
-    throw new Error("套餐不存在或已下架。");
+    throw new AppError("NOT_FOUND", "套餐不存在或已下架。", 404);
   }
 
   const order = await prisma.rechargeOrder.create({
@@ -306,6 +369,8 @@ export async function createRechargeOrder(userId: string, packageId: string, pro
       packageNameSnapshot: pkg.name,
       credits: pkg.credits,
       bonusCredits: pkg.bonusCredits,
+      packageType: pkg.packageType,
+      durationDays: pkg.durationDays,
       amountCents: pkg.priceCents,
       currency: pkg.currency,
       status: "PENDING",
@@ -415,11 +480,16 @@ export async function listUserRechargeOrders(userId: string, limit = 20, options
 }
 
 export async function getUserBillingOverview(userId: string, options: ListUserRechargeOrdersOptions = {}): Promise<BillingOverview> {
-  const [balance, packages, orders, channels] = await Promise.all([
+  // 惰性触发到期提醒扫描（进程内节流，每小时至多一次），无需常驻进程。
+  maybeSendMembershipReminders();
+
+  const [balance, packages, orders, channels, subscription, membershipConfig] = await Promise.all([
     getUserCreditBalance(userId),
     listActiveCreditPackages(),
     listUserRechargeOrders(userId, 20, options),
     listPublicPaymentChannels(),
+    getUserSubscription(userId),
+    getMembershipRuntimeConfig(),
   ]);
 
   return {
@@ -427,6 +497,12 @@ export async function getUserBillingOverview(userId: string, options: ListUserRe
     packages,
     orders,
     channels,
+    subscription,
+    membershipBenefits: {
+      discountPercent: membershipConfig.discountPercent,
+      dailyCredits: membershipConfig.dailyCredits,
+      generationRateLimit: membershipConfig.generationRateLimit,
+    },
   };
 }
 
@@ -536,23 +612,34 @@ export async function markRechargeOrderPaidByPayment(input: {
   });
 
   if (!order) {
-    throw new Error("订单不存在。");
+    throw new AppError("NOT_FOUND", "订单不存在。", 404);
   }
 
   if (order.status === "PAID") {
     return serializeOrder(order);
   }
 
-  if (order.status !== "PENDING") {
-    throw new Error("订单不是待支付状态。");
+  if (order.status === "CANCELED") {
+    // 用户已主动取消却又收到成功支付：不自动入账（避免与退款流程冲突），
+    // 抛错让调用方（notify / payment-sync）落一条支付诊断事件，由管理员人工核对退款或补发。
+    throw new AppError(
+      "CONFLICT",
+      `订单 ${order.orderNo} 已被用户取消，但收到成功支付，请在支付事件中人工核对并退款或补发积分。`,
+      409,
+    );
+  }
+
+  // 允许 PENDING 或 EXPIRED（超时过期）入账——迟到支付不能"钱付了积分不发"。
+  if (order.status !== "PENDING" && order.status !== "EXPIRED") {
+    throw new AppError("CONFLICT", "订单不是待支付状态。", 409);
   }
 
   if (order.amountCents !== input.amountCents) {
-    throw new Error("支付金额与订单金额不一致。");
+    throw new AppError("BAD_REQUEST", "支付金额与订单金额不一致。", 400);
   }
 
   if (input.currency && order.currency !== input.currency) {
-    throw new Error("支付币种与订单币种不一致。");
+    throw new AppError("BAD_REQUEST", "支付币种与订单币种不一致。", 400);
   }
 
   const totalCredits = order.credits + order.bonusCredits;
@@ -561,7 +648,9 @@ export async function markRechargeOrderPaidByPayment(input: {
     const updatedOrder = await tx.rechargeOrder.updateMany({
       where: {
         id: order.id,
-        status: "PENDING",
+        status: {
+          in: ["PENDING", "EXPIRED"],
+        },
       },
       data: {
         status: "PAID",
@@ -622,6 +711,29 @@ export async function markRechargeOrderPaidByPayment(input: {
       },
     });
 
+    // 会员套餐：在充值到账的同时续期会员有效期（从当前有效期与现在的较晚者往后顺延）。
+    if (order.packageType === "SUBSCRIPTION" && order.durationDays > 0) {
+      const existing = await tx.subscription.findUnique({ where: { userId: order.userId } });
+      const base = existing && existing.expiresAt.getTime() > Date.now() ? existing.expiresAt.getTime() : Date.now();
+      const expiresAt = new Date(base + order.durationDays * 24 * 60 * 60 * 1000);
+      await tx.subscription.upsert({
+        where: { userId: order.userId },
+        update: {
+          packageId: order.packageId,
+          packageName: order.packageNameSnapshot,
+          expiresAt,
+          lastOrderId: order.id,
+        },
+        create: {
+          userId: order.userId,
+          packageId: order.packageId,
+          packageName: order.packageNameSnapshot,
+          expiresAt,
+          lastOrderId: order.id,
+        },
+      });
+    }
+
     return tx.rechargeOrder.findUniqueOrThrow({
       where: {
         id: order.id,
@@ -640,6 +752,18 @@ export async function markRechargeOrderPaidByPayment(input: {
 }
 
 export async function cancelRechargeOrderForUser(userId: string, orderId: string) {
+  // 原子取消：只翻转仍为 PENDING 的订单，避免与支付回调竞态时把刚 PAID 的订单误改为 CANCELED。
+  const result = await prisma.rechargeOrder.updateMany({
+    where: {
+      id: orderId,
+      userId,
+      status: "PENDING",
+    },
+    data: {
+      status: "CANCELED",
+    },
+  });
+
   const order = await prisma.rechargeOrder.findFirst({
     where: {
       id: orderId,
@@ -655,28 +779,18 @@ export async function cancelRechargeOrderForUser(userId: string, orderId: string
   });
 
   if (!order) {
-    throw new Error("订单不存在。");
+    throw new AppError("NOT_FOUND", "订单不存在。", 404);
   }
 
-  if (order.status !== "PENDING") {
-    throw new Error("只有待支付订单可以取消。");
+  if (result.count === 0) {
+    if (order.status === "CANCELED") {
+      return serializeOrder(order); // 幂等：已取消
+    }
+    if (order.status === "PAID") {
+      throw new AppError("CONFLICT", "订单已支付成功，积分已到账，无法取消。", 409);
+    }
+    throw new AppError("CONFLICT", "只有待支付订单可以取消。", 409);
   }
 
-  const updated = await prisma.rechargeOrder.update({
-    where: {
-      id: orderId,
-    },
-    data: {
-      status: "CANCELED",
-    },
-    include: {
-      user: {
-        select: {
-          email: true,
-        },
-      },
-    },
-  });
-
-  return serializeOrder(updated);
+  return serializeOrder(order);
 }

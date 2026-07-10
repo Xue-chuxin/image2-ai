@@ -1,6 +1,6 @@
 {
     "name": "image2-app-webui",
-    "version": "0.1.4",
+    "version": "0.2.0",
     "private": true,
     "scripts": {
         "predev": "prisma generate",
@@ -10,29 +10,30 @@
         "start:prod": "next start --hostname 0.0.0.0 --port 3000",
         "db:migrate": "prisma migrate deploy",
         "lint": "next lint",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "test:db": "vitest run --config vitest.db.config.ts",
+        "test:db:setup": "prisma migrate deploy",
+        "test:all": "vitest run && vitest run --config vitest.db.config.ts",
         "postinstall": "prisma generate",
         "prisma:generate": "prisma generate",
         "prisma:seed": "tsx prisma/seed.ts",
         "chatgpt:login": "tsx scripts/chatgpt-login.ts",
         "chatgpt:check": "tsx scripts/chatgpt-check.ts",
-        "chatgpt:generate": "tsx scripts/chatgpt-generate.ts"
+        "chatgpt:generate": "tsx scripts/chatgpt-generate.ts",
+        "build:console": "cd console && npx -y pnpm@11.10.0 install --frozen-lockfile && npx -y pnpm@11.10.0 run build:antd && rm -rf ../public/console && cp -R apps/web-antd/dist ../public/console"
     },
     "dependencies": {
-        "@gsap/react": "^2.1.2",
+        "@aws-sdk/client-s3": "^3.1084.0",
         "@prisma/client": "^5.22.0",
         "clsx": "^2.1.1",
-        "gsap": "^3.15.0",
         "lucide-react": "^0.468.0",
-        "motion": "^12.40.0",
         "next": "^15.0.0",
-        "ogl": "^1.0.11",
         "playwright": "^1.49.1",
         "react": "^19.0.0",
         "react-dom": "^19.0.0",
         "sharp": "^0.34.5",
-        "tailwind-merge": "^2.5.5",
-        "tdesign-icons-react": "^0.6.4",
-        "tdesign-react": "^1.17.1"
+        "tailwind-merge": "^2.5.5"
     },
     "devDependencies": {
         "@types/node": "^22.10.1",
@@ -45,6 +46,7 @@
         "prisma": "^5.22.0",
         "tailwindcss": "^3.4.16",
         "tsx": "^4.19.2",
-        "typescript": "^5.7.2"
+        "typescript": "^5.7.2",
+        "vitest": "^4.1.10"
     }
 }
