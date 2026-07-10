@@ -61,12 +61,19 @@ export interface SubscriptionView {
   daysRemaining: number;
 }
 
+export interface MembershipBenefitsView {
+  discountPercent: number;
+  dailyCredits: number;
+  generationRateLimit: number;
+}
+
 export interface BillingOverview {
   balance: CreditBalance;
   packages: CreditPackageView[];
   orders: RechargeOrderView[];
   channels: PaymentChannelView[];
   subscription: SubscriptionView | null;
+  membershipBenefits: MembershipBenefitsView;
 }
 
 export interface CreditTransactionView {

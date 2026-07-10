@@ -98,6 +98,9 @@ interface AdminAppSettings {
   homePopup: HomePopupSettings;
   icpNumber: string;
   legacyOpenaiApiKeyConfigured: boolean;
+  membershipDailyCredits: number;
+  membershipDiscountPercent: number;
+  membershipGenerationRateLimit: number;
   moderationBlockMessage: string;
   moderationEnabled: boolean;
   moderationForbiddenWords: string;
@@ -171,6 +174,9 @@ interface SaveSettingsPayload {
   frontTemplate: FrontTemplateName;
   homePopup: HomePopupSettings;
   icpNumber: string;
+  membershipDailyCredits: number;
+  membershipDiscountPercent: number;
+  membershipGenerationRateLimit: number;
   moderationBlockMessage: string;
   moderationEnabled: boolean;
   moderationForbiddenWords: string;
@@ -299,6 +305,9 @@ function createDefaultSettings(): AdminAppSettings {
     homePopup: { content: '', contentFormat: 'markdown', enabled: false, title: '' },
     icpNumber: '',
     legacyOpenaiApiKeyConfigured: false,
+    membershipDailyCredits: 0,
+    membershipDiscountPercent: 0,
+    membershipGenerationRateLimit: 30,
     moderationBlockMessage: '',
     moderationEnabled: false,
     moderationForbiddenWords: '',
@@ -615,6 +624,9 @@ function buildPayload(friendLinks: FooterFriendLink[]): SaveSettingsPayload {
     frontTemplate: form.frontTemplate,
     homePopup: { ...form.homePopup },
     icpNumber: form.icpNumber,
+    membershipDailyCredits: Number(form.membershipDailyCredits || 0),
+    membershipDiscountPercent: Number(form.membershipDiscountPercent || 0),
+    membershipGenerationRateLimit: Number(form.membershipGenerationRateLimit || 0),
     moderationBlockMessage: form.moderationBlockMessage,
     moderationEnabled: form.moderationEnabled,
     moderationForbiddenWords: form.moderationForbiddenWords,
@@ -1265,6 +1277,45 @@ onMounted(() => {
                     /api/auth/oauth/google/callback，需在第三方应用后台登记。站点地址取
                     NEXT_PUBLIC_SITE_URL，未配置时按请求域名推断。管理员账号不支持第三方登录。
                   </p>
+                </Form>
+              </Card>
+
+              <Card size="small" title="会员权益">
+                <Form layout="vertical">
+                  <FormItem label="出图积分折扣（% off）">
+                    <InputNumber
+                      v-model:value="form.membershipDiscountPercent"
+                      :max="90"
+                      :min="0"
+                      :precision="0"
+                      class="w-full"
+                    />
+                    <p class="mt-1 text-xs text-gray-400">
+                      有效会员出图时按此百分比减免积分，0 表示不打折，最高 90%，最低仍收 1 积分。
+                    </p>
+                  </FormItem>
+                  <FormItem label="每日赠送积分">
+                    <InputNumber
+                      v-model:value="form.membershipDailyCredits"
+                      :min="0"
+                      :precision="0"
+                      class="w-full"
+                    />
+                    <p class="mt-1 text-xs text-gray-400">
+                      有效会员每天首次出图时自动发放一次，0 表示不赠送。
+                    </p>
+                  </FormItem>
+                  <FormItem label="会员每 10 分钟出图上限">
+                    <InputNumber
+                      v-model:value="form.membershipGenerationRateLimit"
+                      :min="0"
+                      :precision="0"
+                      class="w-full"
+                    />
+                    <p class="mt-1 text-xs text-gray-400">
+                      有效会员的出图频率上限（普通用户固定为 10）。设置为低于 10 时按 10 生效。
+                    </p>
+                  </FormItem>
                 </Form>
               </Card>
             </div>

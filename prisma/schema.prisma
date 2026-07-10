@@ -360,6 +360,7 @@ model Subscription {
   startedAt   DateTime @default(now())
   expiresAt   DateTime
   lastOrderId String?
+  lastDailyGrantAt DateTime?
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

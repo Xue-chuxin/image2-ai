@@ -4,6 +4,7 @@ import type { RechargeOrderStatus } from "@prisma/client";
 import { AppError } from "@/lib/app-error";
 import { prisma } from "@/lib/db";
 import { getUserCreditBalance } from "@/lib/credits";
+import { getMembershipRuntimeConfig } from "@/lib/settings";
 import {
   createPaymentForOrder,
   getPaymentProviderSettings,
@@ -115,6 +116,13 @@ export type BillingOverview = {
   orders: RechargeOrderView[];
   channels: PaymentChannelView[];
   subscription: SubscriptionView | null;
+  membershipBenefits: MembershipBenefitsView;
+};
+
+export type MembershipBenefitsView = {
+  discountPercent: number;
+  dailyCredits: number;
+  generationRateLimit: number;
 };
 
 function normalizePackageType(value: unknown): CreditPackageType {
@@ -471,12 +479,13 @@ export async function listUserRechargeOrders(userId: string, limit = 20, options
 }
 
 export async function getUserBillingOverview(userId: string, options: ListUserRechargeOrdersOptions = {}): Promise<BillingOverview> {
-  const [balance, packages, orders, channels, subscription] = await Promise.all([
+  const [balance, packages, orders, channels, subscription, membershipConfig] = await Promise.all([
     getUserCreditBalance(userId),
     listActiveCreditPackages(),
     listUserRechargeOrders(userId, 20, options),
     listPublicPaymentChannels(),
     getUserSubscription(userId),
+    getMembershipRuntimeConfig(),
   ]);
 
   return {
@@ -485,6 +494,11 @@ export async function getUserBillingOverview(userId: string, options: ListUserRe
     orders,
     channels,
     subscription,
+    membershipBenefits: {
+      discountPercent: membershipConfig.discountPercent,
+      dailyCredits: membershipConfig.dailyCredits,
+      generationRateLimit: membershipConfig.generationRateLimit,
+    },
   };
 }
 

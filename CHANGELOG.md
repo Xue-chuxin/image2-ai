@@ -4,6 +4,8 @@
 
 ## 未发布
 
+- 会员权益落地：有效会员可享三项权益，均在控制台「安全与存储 → 会员权益」配置——① 出图积分折扣（按 % off 减免，最低仍收 1 积分）；② 每日赠送积分（每天首次出图时自动发放一次，幂等不重复）；③ 出图频率上限提升（普通用户固定每 10 分钟 10 次，会员按配置值）。折扣在下单估价时生效，冻结/结算/退款全链路一致；充值页展示「会员专享权益」清单。`Subscription` 表新增 `lastDailyGrantAt` 字段（需执行数据库迁移）。
+
 - 会员卡（月卡/年卡）：积分套餐新增「套餐类型」，可设为「会员卡（周期）」并配置有效天数（月卡填 30、年卡填 365）。用户购买会员卡后即时发放套餐积分，同时按天数续期会员有效期（未到期时叠加顺延）；充值页展示当前会员状态与到期提醒（剩余 7 天内或已到期高亮提示），到期后手动购买续费。管理沿用现有在线支付渠道，无自动代扣。新增数据表 `Subscription`，`CreditPackage`/`RechargeOrder` 新增 `packageType`/`durationDays` 字段（需执行数据库迁移）。
 
 - 第三方登录（OAuth）：登录/注册页新增「使用 GitHub / Google 登录」入口（控制台「安全与存储 → 第三方登录」配置，默认关闭）。已验证邮箱会自动关联到同邮箱的既有账号，否则创建新用户并发放新用户积分；管理员账号不支持第三方登录。回调地址为 `{站点地址}/api/auth/oauth/{github|google}/callback`，站点地址取 `NEXT_PUBLIC_SITE_URL`。新增数据表 `OAuthAccount`（需执行数据库迁移）。相关环境变量：`OAUTH_GITHUB_CLIENT_ID`、`OAUTH_GITHUB_CLIENT_SECRET`、`OAUTH_GOOGLE_CLIENT_ID`、`OAUTH_GOOGLE_CLIENT_SECRET`。

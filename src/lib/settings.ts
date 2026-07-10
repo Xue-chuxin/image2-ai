@@ -86,6 +86,9 @@ export type AdminAppSettings = PublicAppSettings & {
   moderationBlockMessage: string;
   moderationSemanticEnabled: boolean;
   moderationSemanticModel: string;
+  membershipDiscountPercent: number;
+  membershipDailyCredits: number;
+  membershipGenerationRateLimit: number;
   oauthGithubEnabled: boolean;
   oauthGithubClientId: string;
   oauthGithubClientSecretConfigured: boolean;
@@ -119,6 +122,9 @@ export type SaveAdminSettingsInput = Partial<PublicAppSettings> & {
   moderationBlockMessage?: string;
   moderationSemanticEnabled?: boolean | string;
   moderationSemanticModel?: string;
+  membershipDiscountPercent?: number | string;
+  membershipDailyCredits?: number | string;
+  membershipGenerationRateLimit?: number | string;
   oauthGithubEnabled?: boolean | string;
   oauthGithubClientId?: string;
   oauthGithubClientSecret?: string;
@@ -170,6 +176,12 @@ export type ModerationRuntimeConfig = {
   blockMessage: string;
   semanticEnabled: boolean;
   semanticModel: string;
+};
+
+export type MembershipRuntimeConfig = {
+  discountPercent: number;
+  dailyCredits: number;
+  generationRateLimit: number;
 };
 
 export type OAuthProviderName = "github" | "google";
@@ -265,6 +277,12 @@ const defaultModerationSettings: ModerationRuntimeConfig = {
   blockMessage: "内容包含不适合生成的词语，请调整后再试。",
   semanticEnabled: false,
   semanticModel: "",
+};
+
+const defaultMembershipSettings: MembershipRuntimeConfig = {
+  discountPercent: 0,
+  dailyCredits: 0,
+  generationRateLimit: 30,
 };
 
 const defaultEmailSettings: Omit<EmailRuntimeConfig, "password"> = {
@@ -585,6 +603,23 @@ function normalizeRetentionDays(value: unknown, fallback: number) {
   return Math.min(Math.max(Math.floor(numeric), 1), 3650);
 }
 
+function normalizeMembershipDiscount(value: unknown, fallback: number) {
+  const numeric = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(numeric)) {
+    return fallback;
+  }
+  // 折扣百分比 0-90，避免免费出图或负值。
+  return Math.min(Math.max(Math.floor(numeric), 0), 90);
+}
+
+function normalizeNonNegativeInt(value: unknown, fallback: number, max: number) {
+  const numeric = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(numeric)) {
+    return fallback;
+  }
+  return Math.min(Math.max(Math.floor(numeric), 0), max);
+}
+
 function normalizePort(value: unknown, fallback: number) {
   const numeric = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(numeric)) {
@@ -796,6 +831,14 @@ function getModerationSettings(map: Map<string, SettingRow>): ModerationRuntimeC
     ),
     semanticEnabled: normalizeBoolean(map.get("moderationSemanticEnabled")?.value, defaultModerationSettings.semanticEnabled),
     semanticModel: normalizeOptionalText(map.get("moderationSemanticModel")?.value, defaultModerationSettings.semanticModel, 120),
+  };
+}
+
+function getMembershipSettings(map: Map<string, SettingRow>): MembershipRuntimeConfig {
+  return {
+    discountPercent: normalizeMembershipDiscount(map.get("membershipDiscountPercent")?.value, defaultMembershipSettings.discountPercent),
+    dailyCredits: normalizeNonNegativeInt(map.get("membershipDailyCredits")?.value, defaultMembershipSettings.dailyCredits, 100000),
+    generationRateLimit: normalizeNonNegativeInt(map.get("membershipGenerationRateLimit")?.value, defaultMembershipSettings.generationRateLimit, 100000),
   };
 }
 
@@ -1107,6 +1150,7 @@ export async function getAdminAppSettings(options?: { includeDiagnostics?: boole
   const publicSettings = await getPublicAppSettings();
   const openaiCompatibleChannels = toPublicOpenAICompatibleChannels(map, { openaiImageModel: publicSettings.openaiImageModel });
   const moderationSettings = getModerationSettings(map);
+  const membershipSettings = getMembershipSettings(map);
   const emailSettings = getEmailAdminSettings(map);
   const deepseekApiKeyConfigured = Boolean(map.get("deepseekApiKey")?.value || process.env.DEEPSEEK_API_KEY);
   const legacyOpenaiApiKeyConfigured = Boolean(map.get("openaiApiKey")?.value || process.env.OPENAI_API_KEY);
@@ -1124,6 +1168,9 @@ export async function getAdminAppSettings(options?: { includeDiagnostics?: boole
     moderationBlockMessage: moderationSettings.blockMessage,
     moderationSemanticEnabled: moderationSettings.semanticEnabled,
     moderationSemanticModel: moderationSettings.semanticModel,
+    membershipDiscountPercent: membershipSettings.discountPercent,
+    membershipDailyCredits: membershipSettings.dailyCredits,
+    membershipGenerationRateLimit: membershipSettings.generationRateLimit,
     oauthGithubEnabled: normalizeBoolean(map.get("oauthGithubEnabled")?.value, false),
     oauthGithubClientId: normalizeOptionalText(map.get("oauthGithubClientId")?.value ?? process.env.OAUTH_GITHUB_CLIENT_ID, "", 200),
     oauthGithubClientSecretConfigured: Boolean(map.get("oauthGithubClientSecret")?.value || process.env.OAUTH_GITHUB_CLIENT_SECRET),
@@ -1151,6 +1198,7 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
   const canReadStoredOpenAICompatibleChannels = canDecryptSetting(openAICompatibleChannelsRow);
   const currentPublicSettings = await getPublicAppSettings();
   const currentModerationSettings = getModerationSettings(settingsMap);
+  const currentMembershipSettings = getMembershipSettings(settingsMap);
   const currentEmailSettings = getEmailAdminSettings(settingsMap);
   const browserTitle = normalizeText(input.browserTitle, currentPublicSettings.browserTitle);
   const siteTitle = normalizeText(input.siteTitle, currentPublicSettings.siteTitle);
@@ -1181,6 +1229,9 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
   );
   const moderationSemanticEnabled = normalizeBoolean(input.moderationSemanticEnabled, currentModerationSettings.semanticEnabled);
   const moderationSemanticModel = normalizeOptionalText(input.moderationSemanticModel, currentModerationSettings.semanticModel, 120);
+  const membershipDiscountPercent = normalizeMembershipDiscount(input.membershipDiscountPercent, currentMembershipSettings.discountPercent);
+  const membershipDailyCredits = normalizeNonNegativeInt(input.membershipDailyCredits, currentMembershipSettings.dailyCredits, 100000);
+  const membershipGenerationRateLimit = normalizeNonNegativeInt(input.membershipGenerationRateLimit, currentMembershipSettings.generationRateLimit, 100000);
   const oauthGithubEnabled = normalizeBoolean(input.oauthGithubEnabled, normalizeBoolean(settingsMap.get("oauthGithubEnabled")?.value, false));
   const oauthGithubClientId = normalizeOptionalText(input.oauthGithubClientId, settingsMap.get("oauthGithubClientId")?.value ?? "", 200);
   const oauthGoogleEnabled = normalizeBoolean(input.oauthGoogleEnabled, normalizeBoolean(settingsMap.get("oauthGoogleEnabled")?.value, false));
@@ -1271,6 +1322,9 @@ export async function saveAdminAppSettings(input: SaveAdminSettingsInput) {
     { key: "moderationBlockMessage", value: moderationBlockMessage },
     { key: "moderationSemanticEnabled", value: String(moderationSemanticEnabled) },
     { key: "moderationSemanticModel", value: moderationSemanticModel },
+    { key: "membershipDiscountPercent", value: String(membershipDiscountPercent) },
+    { key: "membershipDailyCredits", value: String(membershipDailyCredits) },
+    { key: "membershipGenerationRateLimit", value: String(membershipGenerationRateLimit) },
     { key: "oauthGithubEnabled", value: String(oauthGithubEnabled) },
     { key: "oauthGithubClientId", value: oauthGithubClientId },
     { key: "oauthGoogleEnabled", value: String(oauthGoogleEnabled) },
@@ -1494,4 +1548,8 @@ export async function getEmailRuntimeConfig(): Promise<EmailRuntimeConfig> {
 
 export async function getModerationRuntimeConfig(): Promise<ModerationRuntimeConfig> {
   return getModerationSettings(toMap(await readSettingRows()));
+}
+
+export async function getMembershipRuntimeConfig(): Promise<MembershipRuntimeConfig> {
+  return getMembershipSettings(toMap(await readSettingRows()));
 }

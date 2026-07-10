@@ -15,6 +15,7 @@ import {
 } from "./credits";
 import { saveGeneratedImage } from "./storage";
 import { getPublicAppSettings, type GenerationProviderName } from "./settings";
+import { computeMembershipCost, getMembershipContext } from "./membership";
 import { resolveReferenceImagesForJob } from "./uploads";
 
 const generationJobInclude = {
@@ -616,7 +617,8 @@ export async function createAndQueueGenerationJob(userId: string, input: CreateG
   const imageCount = normalizeImageCount(input.imageCount);
   const quality = normalizeQuality(input.quality);
   const ratio = input.ratio || "1:1";
-  const creditCost = estimateGenerationCreditCost(quality, imageCount);
+  const membership = await getMembershipContext(userId);
+  const creditCost = computeMembershipCost(estimateGenerationCreditCost(quality, imageCount), membership);
   const referenceImages = await resolveReferenceImagesForJob(userId, input.referenceImageIds);
 
   const job = await prisma.generationJob.create({

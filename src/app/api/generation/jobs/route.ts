@@ -8,6 +8,11 @@ import {
 import { jsonError } from "@/lib/app-error";
 import { getUserSession } from "@/lib/auth";
 import { checkModerationText } from "@/lib/moderation";
+import {
+  getMembershipContext,
+  grantDailyMembershipCreditsIfDue,
+  resolveMembershipRateLimit,
+} from "@/lib/membership";
 import { checkRateLimit } from "@/lib/rate-limit";
 import type { GenerationProviderName } from "@/lib/settings";
 
@@ -72,8 +77,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "请先登录普通用户账号再生成图片。" }, { status: 401 });
   }
 
+  const membership = await getMembershipContext(session.userId);
   const rateLimit = checkRateLimit(request, `generation:create:${session.userId}`, {
-    limit: 10,
+    limit: resolveMembershipRateLimit(10, membership),
     windowMs: 10 * 60 * 1000,
   });
   if (!rateLimit.ok) {
@@ -131,6 +137,9 @@ export async function POST(request: Request) {
       provider: normalizeProvider(body.provider),
       referenceImageIds,
     };
+
+    // 会员每日赠送积分：出图前惰性发放一次，让本次生成即可使用当天赠送额度。
+    await grantDailyMembershipCreditsIfDue(session.userId, membership);
 
     const job = await createAndRunGenerationJob(session.userId, input);
     if (!job) {

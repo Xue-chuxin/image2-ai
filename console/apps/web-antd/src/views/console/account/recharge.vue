@@ -52,6 +52,26 @@ const availableBalance = computed(() => overview.value?.balance.available ?? 0);
 
 const subscription = computed(() => overview.value?.subscription ?? null);
 
+const membershipBenefits = computed(() => overview.value?.membershipBenefits ?? null);
+
+const benefitItems = computed<string[]>(() => {
+  const benefits = membershipBenefits.value;
+  if (!benefits) {
+    return [];
+  }
+  const items: string[] = [];
+  if (benefits.discountPercent > 0) {
+    items.push(`出图积分 ${benefits.discountPercent}% 折扣`);
+  }
+  if (benefits.dailyCredits > 0) {
+    items.push(`每日赠送 ${benefits.dailyCredits} 积分`);
+  }
+  if (benefits.generationRateLimit > 10) {
+    items.push(`出图频率上限提升至每 10 分钟 ${benefits.generationRateLimit} 次`);
+  }
+  return items;
+});
+
 const membershipMessage = computed(() => {
   const sub = subscription.value;
   if (!sub) {
@@ -286,6 +306,20 @@ onUnmounted(stopPolling);
         :type="membershipType"
         show-icon
       />
+
+      <Card
+        v-if="benefitItems.length > 0"
+        :bordered="false"
+        class="mt-4"
+        title="会员专享权益"
+      >
+        <ul class="list-disc space-y-1 pl-5 text-sm text-gray-600">
+          <li v-for="item in benefitItems" :key="item">{{ item }}</li>
+        </ul>
+        <p v-if="!subscription || !subscription.active" class="mt-2 text-xs text-gray-400">
+          购买会员卡开通后即可享受以上权益。
+        </p>
+      </Card>
 
       <Alert
         v-if="!loading && !hasChannel"
