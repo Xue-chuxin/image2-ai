@@ -5,89 +5,15 @@ import Link from "next/link";
 import { ArrowRight, Lightbulb } from "lucide-react";
 import { clsx } from "clsx";
 
-type ToolCategory = "全部" | "图片处理" | "电商设计" | "模特商拍";
+import { CREATION_TOOLS, buildToolGenerateHref, type CreationToolCategory } from "@/lib/creation-tools";
 
-const categories: ToolCategory[] = ["全部", "图片处理", "电商设计", "模特商拍"];
+type FilterCategory = "全部" | CreationToolCategory;
 
-type ToolCard = {
-  name: string;
-  tagline: string;
-  description: string;
-  category: Exclude<ToolCategory, "全部">;
-  gradient: string;
-  accent: string;
-};
-
-const tools: ToolCard[] = [
-  {
-    name: "图片复刻",
-    tagline: "一张图，还原同款风格",
-    description: "上传参考图即可复刻构图与质感，快速产出同风格新图。",
-    category: "图片处理",
-    gradient: "from-blue-50 via-white to-brand-50",
-    accent: "text-brand-600",
-  },
-  {
-    name: "穿戴商拍",
-    tagline: "饰品服配上身实拍感",
-    description: "手表、首饰、包袋自动匹配模特佩戴场景，省去实拍成本。",
-    category: "模特商拍",
-    gradient: "from-violet-50 via-white to-purple-50",
-    accent: "text-violet-600",
-  },
-  {
-    name: "商品抠图",
-    tagline: "一键去底，边缘干净",
-    description: "自动识别商品主体并抠出透明底，支持批量处理。",
-    category: "图片处理",
-    gradient: "from-emerald-50 via-white to-teal-50",
-    accent: "text-emerald-600 dark:text-emerald-300",
-  },
-  {
-    name: "生图修图",
-    tagline: "局部重绘，细节可控",
-    description: "对生成结果进行局部擦除与重绘，修正瑕疵不改整体。",
-    category: "图片处理",
-    gradient: "from-cyan-50 via-white to-sky-50",
-    accent: "text-cyan-600",
-  },
-  {
-    name: "电商主图",
-    tagline: "白底图秒变场景主图",
-    description: "按平台规范生成电商主图，自动搭配背景与光影。",
-    category: "电商设计",
-    gradient: "from-amber-50 via-white to-orange-50",
-    accent: "text-amber-600 dark:text-amber-300",
-  },
-  {
-    name: "图文编辑",
-    tagline: "海报文案排版一体",
-    description: "在生成图上叠加标题与卖点文字，直接输出成品海报。",
-    category: "电商设计",
-    gradient: "from-rose-50 via-white to-pink-50",
-    accent: "text-rose-500 dark:text-rose-300",
-  },
-  {
-    name: "SKU 换色",
-    tagline: "一款多色，批量出图",
-    description: "保持商品结构不变，一键生成全色系 SKU 展示图。",
-    category: "电商设计",
-    gradient: "from-indigo-50 via-white to-blue-50",
-    accent: "text-indigo-600",
-  },
-  {
-    name: "模特生成",
-    tagline: "虚拟模特，风格随选",
-    description: "生成不同风格与肤色的虚拟模特，配合服装展示使用。",
-    category: "模特商拍",
-    gradient: "from-fuchsia-50 via-white to-violet-50",
-    accent: "text-fuchsia-600",
-  },
-];
+const categories: FilterCategory[] = ["全部", "图片处理", "电商设计", "模特商拍"];
 
 export default function ToolsPage() {
-  const [activeCategory, setActiveCategory] = useState<ToolCategory>("全部");
-  const visibleTools = activeCategory === "全部" ? tools : tools.filter((tool) => tool.category === activeCategory);
+  const [activeCategory, setActiveCategory] = useState<FilterCategory>("全部");
+  const visibleTools = activeCategory === "全部" ? CREATION_TOOLS : CREATION_TOOLS.filter((tool) => tool.category === activeCategory);
 
   return (
     <main className="mx-auto w-full max-w-[1200px] space-y-5">
@@ -97,8 +23,8 @@ export default function ToolsPage() {
             <Lightbulb size={19} />
           </span>
           <div>
-            <p className="text-[15px] font-bold text-ink">更多工具正在规划中</p>
-            <p className="mt-0.5 text-sm text-ink-secondary">以下工具将陆续上线，当前可先使用「专业绘画」完成创作。</p>
+            <p className="text-[15px] font-bold text-ink">创作工具箱</p>
+            <p className="mt-0.5 text-sm text-ink-secondary">面向电商与商拍的快捷工具，点击即带着专属提示词进入创作页出图。</p>
           </div>
         </div>
         <Link
@@ -122,9 +48,7 @@ export default function ToolsPage() {
               onClick={() => setActiveCategory(category)}
               className={clsx(
                 "rounded-lg border px-3.5 py-2 text-[13px] font-semibold transition",
-                active
-                  ? "border-brand-500 bg-brand-500 text-white shadow-chip"
-                  : "border-line bg-panel text-ink-secondary hover:bg-page",
+                active ? "border-brand-500 bg-brand-500 text-white shadow-chip" : "border-line bg-panel text-ink-secondary hover:bg-page",
               )}
             >
               {category}
@@ -134,27 +58,55 @@ export default function ToolsPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
-        {visibleTools.map((tool) => (
-          <div
-            key={tool.name}
-            className="group relative cursor-default overflow-hidden rounded-2xl border border-line bg-panel shadow-card transition duration-200 hover:-translate-y-1 hover:shadow-pop"
-          >
-            <span className="absolute right-3 top-3 z-10 rounded-full bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 text-xs font-semibold text-amber-600 dark:text-amber-300">
-              敬请期待
-            </span>
-            <div className={clsx("flex h-32 flex-col items-center justify-center gap-1.5 bg-gradient-to-br px-4 dark:bg-none dark:bg-white/[0.04]", tool.gradient)}>
-              <p className={clsx("text-2xl font-extrabold tracking-wide dark:text-ink", tool.accent)}>{tool.name}</p>
-              <p className="text-xs font-medium text-ink-faint">{tool.tagline}</p>
-            </div>
-            <div className="space-y-1.5 p-4">
-              <div className="flex items-center gap-2">
-                <h3 className="text-[15px] font-bold text-ink">{tool.name}</h3>
-                <span className="rounded-md bg-page px-1.5 py-0.5 text-[11px] font-medium text-ink-faint">{tool.category}</span>
+        {visibleTools.map((tool) => {
+          const inner = (
+            <>
+              <span
+                className={clsx(
+                  "absolute right-3 top-3 z-10 rounded-full px-2 py-0.5 text-xs font-semibold",
+                  tool.available ? "bg-brand-50 text-brand-600" : "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-300",
+                )}
+              >
+                {tool.available ? "可用" : "敬请期待"}
+              </span>
+              <div className={clsx("flex h-32 flex-col items-center justify-center gap-1.5 bg-gradient-to-br px-4 dark:bg-none dark:bg-white/[0.04]", tool.gradient)}>
+                <p className={clsx("text-2xl font-extrabold tracking-wide dark:text-ink", tool.accent)}>{tool.name}</p>
+                <p className="text-xs font-medium text-ink-faint">{tool.tagline}</p>
               </div>
-              <p className="text-[13px] leading-5 text-ink-secondary">{tool.description}</p>
+              <div className="space-y-1.5 p-4">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-[15px] font-bold text-ink">{tool.name}</h3>
+                  <span className="rounded-md bg-page px-1.5 py-0.5 text-[11px] font-medium text-ink-faint">{tool.category}</span>
+                </div>
+                <p className="text-[13px] leading-5 text-ink-secondary">{tool.description}</p>
+                {tool.available ? (
+                  <span className="inline-flex items-center gap-1 pt-1 text-[13px] font-semibold text-brand-600">
+                    {tool.needsReference ? "进入创作页并上传参考图" : "去创作"}
+                    <ArrowRight size={13} />
+                  </span>
+                ) : tool.unavailableReason ? (
+                  <p className="pt-1 text-xs text-ink-faint">{tool.unavailableReason}</p>
+                ) : null}
+              </div>
+            </>
+          );
+
+          const baseClass = "group relative overflow-hidden rounded-2xl border border-line bg-panel shadow-card transition duration-200";
+
+          if (tool.available) {
+            return (
+              <Link key={tool.slug} href={buildToolGenerateHref(tool)} className={clsx(baseClass, "hover:-translate-y-1 hover:border-brand-200 hover:shadow-pop")}>
+                {inner}
+              </Link>
+            );
+          }
+
+          return (
+            <div key={tool.slug} className={clsx(baseClass, "cursor-default")}>
+              {inner}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </main>
   );

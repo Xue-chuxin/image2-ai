@@ -59,7 +59,7 @@ const navItems: NavItem[] = [
   { href: "/prompts", label: "提示词库", icon: Sparkles },
   { href: "/prompts/polish", label: "提示词润色", icon: WandSparkles },
   { href: "/leaderboard", label: "排行榜", icon: Trophy },
-  { href: "/tools", label: "更多工具", icon: Wrench, placeholder: true },
+  { href: "/tools", label: "更多工具", icon: Wrench },
   { href: "/favorites", label: "我的收藏", icon: Heart },
   { href: "/history", label: "生成历史", icon: Clock3 },
   { href: "/credits", label: "积分明细", icon: Receipt },
