@@ -395,3 +395,18 @@ model AppSetting {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+// 内容审核命中审计日志：仅记录被拦截（rejected）的请求，便于管理员回溯误伤与滥用。
+// userId 仅做快照关联，不设外键，用户删除后日志仍可留存。
+model ModerationLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  userEmail String?
+  method    String // keyword | semantic
+  field     String? // 命中的输入项标签，如“中文提示词”
+  category  String? // 违规类别（语义审核返回），关键词命中记命中词
+  prompt    String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}

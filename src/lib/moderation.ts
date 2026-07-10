@@ -1,9 +1,12 @@
+import { prisma } from "@/lib/db";
 import { getDeepSeekRuntimeConfig, getModerationRuntimeConfig, type ModerationRuntimeConfig } from "@/lib/settings";
 
 export type ModerationTextInput = {
   value?: string | null;
   label?: string;
 };
+
+export type ModerationMethod = "keyword" | "semantic";
 
 export type ModerationResult =
   | {
@@ -13,7 +16,14 @@ export type ModerationResult =
       ok: false;
       message: string;
       field?: string;
+      method: ModerationMethod;
+      category?: string;
     };
+
+export type ModerationContext = {
+  userId?: string | null;
+  email?: string | null;
+};
 
 function normalizeForMatch(value: string) {
   return value.trim().toLocaleLowerCase();
@@ -48,13 +58,15 @@ function checkForbiddenWords(inputs: ModerationTextInput[], config: ModerationRu
     }
 
     const normalizedValue = normalizeForMatch(value);
-    const matched = forbiddenWords.some((word) => normalizedValue.includes(normalizeForMatch(word)));
+    const matched = forbiddenWords.find((word) => normalizedValue.includes(normalizeForMatch(word)));
 
     if (matched) {
       return {
         ok: false,
         message: config.blockMessage,
         field: input.label,
+        method: "keyword",
+        category: matched,
       };
     }
   }
@@ -78,7 +90,7 @@ type DeepSeekChatResponse = {
   }>;
 };
 
-function parseSemanticVerdict(content: string): { allowed: boolean } {
+function parseSemanticVerdict(content: string): { allowed: boolean; category?: string } {
   const withoutFence = content
     .replace(/^```json\s*/i, "")
     .replace(/^```\s*/i, "")
@@ -91,9 +103,12 @@ function parseSemanticVerdict(content: string): { allowed: boolean } {
     throw new Error("审核模型返回内容不是有效 JSON。");
   }
 
-  const parsed = JSON.parse(withoutFence.slice(start, end + 1)) as { allowed?: unknown };
+  const parsed = JSON.parse(withoutFence.slice(start, end + 1)) as { allowed?: unknown; category?: unknown };
   // 缺字段时按“通过”处理，避免误伤（真正违规时模型会明确给出 allowed=false）。
-  return { allowed: parsed.allowed !== false };
+  const category = typeof parsed.category === "string" && parsed.category.trim() && parsed.category.trim() !== "none"
+    ? parsed.category.trim()
+    : undefined;
+  return { allowed: parsed.allowed !== false, category };
 }
 
 /**
@@ -152,7 +167,7 @@ async function checkSemanticModeration(inputs: ModerationTextInput[], config: Mo
 
     const verdict = parseSemanticVerdict(content);
     if (!verdict.allowed) {
-      return { ok: false, message: config.blockMessage };
+      return { ok: false, message: config.blockMessage, method: "semantic", category: verdict.category };
     }
 
     return { ok: true };
@@ -164,7 +179,40 @@ async function checkSemanticModeration(inputs: ModerationTextInput[], config: Mo
   }
 }
 
-export async function checkModerationText(inputs: ModerationTextInput[]): Promise<ModerationResult> {
+const MODERATION_LOG_PROMPT_MAX = 2000;
+
+// 记录一次被拦截的审核事件。写日志失败不应影响主流程（审核结论已生成）。
+async function recordModerationBlock(
+  inputs: ModerationTextInput[],
+  result: Extract<ModerationResult, { ok: false }>,
+  context?: ModerationContext,
+): Promise<void> {
+  try {
+    const prompt = inputs
+      .map((input) => input.value?.trim())
+      .filter(Boolean)
+      .join("\n")
+      .slice(0, MODERATION_LOG_PROMPT_MAX);
+
+    await prisma.moderationLog.create({
+      data: {
+        userId: context?.userId ?? null,
+        userEmail: context?.email ?? null,
+        method: result.method,
+        field: result.field ?? null,
+        category: result.category ?? null,
+        prompt,
+      },
+    });
+  } catch (error) {
+    console.error("写入内容审核日志失败：", error instanceof Error ? error.message : error);
+  }
+}
+
+export async function checkModerationText(
+  inputs: ModerationTextInput[],
+  context?: ModerationContext,
+): Promise<ModerationResult> {
   const config = await getModerationRuntimeConfig();
 
   if (!config.enabled) {
@@ -173,12 +221,66 @@ export async function checkModerationText(inputs: ModerationTextInput[]): Promis
 
   const keywordResult = checkForbiddenWords(inputs, config);
   if (!keywordResult.ok) {
+    await recordModerationBlock(inputs, keywordResult, context);
     return keywordResult;
   }
 
   if (config.semanticEnabled) {
-    return checkSemanticModeration(inputs, config);
+    const semanticResult = await checkSemanticModeration(inputs, config);
+    if (!semanticResult.ok) {
+      await recordModerationBlock(inputs, semanticResult, context);
+    }
+    return semanticResult;
   }
 
   return { ok: true };
+}
+
+export type ModerationLogView = {
+  id: string;
+  userId: string | null;
+  userEmail: string | null;
+  method: ModerationMethod;
+  field: string | null;
+  category: string | null;
+  prompt: string;
+  createdAt: string;
+};
+
+/** 管理端：内容审核拦截日志查询（按邮箱/类别/命中项模糊搜索，倒序） */
+export async function listModerationLogs({
+  q,
+  limit,
+}: {
+  q?: string | null;
+  limit?: number;
+} = {}): Promise<ModerationLogView[]> {
+  const cleanQuery = q?.trim();
+  const cleanLimit = Math.min(Math.max(Number(limit) || 100, 1), 500);
+
+  const logs = await prisma.moderationLog.findMany({
+    where: cleanQuery
+      ? {
+          OR: [
+            { userEmail: { contains: cleanQuery, mode: "insensitive" } },
+            { category: { contains: cleanQuery, mode: "insensitive" } },
+            { field: { contains: cleanQuery, mode: "insensitive" } },
+            { prompt: { contains: cleanQuery, mode: "insensitive" } },
+          ],
+        }
+      : {},
+    orderBy: { createdAt: "desc" },
+    take: cleanLimit,
+  });
+
+  return logs.map((log) => ({
+    id: log.id,
+    userId: log.userId,
+    userEmail: log.userEmail,
+    method: log.method as ModerationMethod,
+    field: log.field,
+    category: log.category,
+    prompt: log.prompt,
+    createdAt: log.createdAt.toISOString(),
+  }));
 }

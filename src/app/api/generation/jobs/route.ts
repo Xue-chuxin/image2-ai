@@ -109,11 +109,14 @@ export async function POST(request: Request) {
     const negativePrompt = normalizeString(body.negativePrompt);
     const referenceImageIds = normalizeStringArray(body.referenceImageIds);
 
-    const moderation = await checkModerationText([
-      { value: promptZh, label: "中文提示词" },
-      { value: promptEn, label: "英文提示词" },
-      { value: negativePrompt, label: "反向提示词" },
-    ]);
+    const moderation = await checkModerationText(
+      [
+        { value: promptZh, label: "中文提示词" },
+        { value: promptEn, label: "英文提示词" },
+        { value: negativePrompt, label: "反向提示词" },
+      ],
+      { userId: session.userId, email: session.email },
+    );
 
     if (!moderation.ok) {
       return NextResponse.json(

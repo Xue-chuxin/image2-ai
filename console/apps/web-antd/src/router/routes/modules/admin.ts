@@ -68,6 +68,15 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        name: 'AdminModerationLogs',
+        path: 'moderation-logs',
+        component: () => import('#/views/console/admin/moderation-logs.vue'),
+        meta: {
+          icon: 'lucide:shield-alert',
+          title: '审核日志',
+        },
+      },
+      {
         name: 'AdminBilling',
         path: 'billing',
         component: () => import('#/views/console/admin/billing.vue'),
