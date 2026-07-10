@@ -23,6 +23,25 @@ function buildGenerateHref(prompt: PromptCardView) {
   return `/generate?${params.toString()}`;
 }
 
+// 点击「去创作」时以 beacon 记录一次使用，用于热门榜排序（失败不影响跳转）。
+function recordPromptView(promptId: string) {
+  try {
+    const body = JSON.stringify({ promptId });
+    if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
+      navigator.sendBeacon("/api/prompts/view", new Blob([body], { type: "application/json" }));
+      return;
+    }
+    void fetch("/api/prompts/view", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body,
+      keepalive: true,
+    });
+  } catch {
+    // 忽略埋点失败
+  }
+}
+
 export function PromptLibrary({ prompts, categories, initialFavoriteIds, isLoggedIn }: PromptLibraryProps) {
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string>("");
@@ -208,6 +227,7 @@ export function PromptLibrary({ prompts, categories, initialFavoriteIds, isLogge
                 <div className="mt-4 flex items-center gap-2">
                   <Link
                     href={buildGenerateHref(prompt)}
+                    onClick={() => recordPromptView(prompt.id)}
                     className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-brand-500 px-3 py-2 text-sm font-semibold text-white shadow-chip transition hover:bg-brand-600"
                   >
                     <Wand2 className="h-3.5 w-3.5" />

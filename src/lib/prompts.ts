@@ -101,6 +101,42 @@ export async function listPrompts({
   return prompts.map(toCardView);
 }
 
+/**
+ * 热门提示词榜：按「收藏数 → 浏览量 → 创建时间倒序」排序取前 N 条。
+ * 仅纳入至少有一次收藏或浏览的模板，避免全 0 的新模板占据榜单。
+ */
+export async function listTrendingPrompts({ limit = 10 }: { limit?: number } = {}): Promise<PromptCardView[]> {
+  const cleanLimit = Math.min(Math.max(Math.floor(limit), 1), 50);
+  const prompts = await prisma.prompt.findMany({
+    where: {
+      OR: [{ favoriteCount: { gt: 0 } }, { viewCount: { gt: 0 } }],
+    },
+    include: {
+      category: { select: { name: true, slug: true } },
+      tags: { select: { name: true } },
+    },
+    orderBy: [{ favoriteCount: "desc" }, { viewCount: "desc" }, { createdAt: "desc" }],
+    take: cleanLimit,
+  });
+  return prompts.map(toCardView);
+}
+
+/**
+ * 记录一次提示词使用（点击「去创作」时调用），原子自增 viewCount。
+ * 提示词不存在时静默忽略（updateMany 影响 0 行，不抛错），返回是否命中。
+ */
+export async function recordPromptView(promptIdInput: unknown): Promise<{ recorded: boolean }> {
+  const promptId = typeof promptIdInput === "string" ? promptIdInput.trim() : "";
+  if (!promptId) {
+    return { recorded: false };
+  }
+  const result = await prisma.prompt.updateMany({
+    where: { id: promptId },
+    data: { viewCount: { increment: 1 } },
+  });
+  return { recorded: result.count > 0 };
+}
+
 /** 用户收藏的提示词 id 集合，用于前台高亮收藏态。 */
 export async function listUserPromptFavoriteIds(userId: string): Promise<string[]> {
   const favorites = await prisma.promptFavorite.findMany({

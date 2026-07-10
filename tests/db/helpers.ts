@@ -75,6 +75,8 @@ export async function createPrompt(options?: {
   categoryId?: string;
   tags?: string[];
   weight?: number;
+  viewCount?: number;
+  favoriteCount?: number;
 }) {
   seq += 1;
   return prisma.prompt.create({
@@ -87,6 +89,8 @@ export async function createPrompt(options?: {
       negativePrompt: null,
       categoryId: options?.categoryId ?? null,
       weight: options?.weight ?? 0,
+      viewCount: options?.viewCount ?? 0,
+      favoriteCount: options?.favoriteCount ?? 0,
       ...(options?.tags && options.tags.length
         ? { tags: { create: options.tags.map((name) => ({ name })) } }
         : {}),
