@@ -18,6 +18,7 @@ import {
   Search,
   Settings2,
   Sparkles,
+  Star,
   Trophy,
   UserRound,
   Wand2,
@@ -50,6 +51,7 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { href: "/", label: "画廊广场", icon: Images },
+  { href: "/curated", label: "官方精选", icon: Star },
   { href: "/apps", label: "应用中心", icon: LayoutGrid, placeholder: true },
   { href: "/assistant", label: "智能助手", icon: Bot, placeholder: true },
   { href: "/generate", label: "专业绘画", icon: Palette },
@@ -74,6 +76,7 @@ const mobileNavItems = [
 
 const pageMeta: Record<string, { title: string; description: string }> = {
   "/": { title: "画廊广场", description: "AI 创作广场" },
+  "/curated": { title: "官方精选", description: "运营精选高质量作品" },
   "/apps": { title: "应用中心", description: "常用创作应用集合" },
   "/assistant": { title: "智能助手", description: "AI 创作对话助手" },
   "/generate": { title: "专业绘画", description: "AI 商业设计工作台" },

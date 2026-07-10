@@ -432,6 +432,27 @@ export async function listPublicGalleryImages({ q, category, limit }: GalleryQue
   return views.filter((image) => image.category === cleanCategory).slice(0, cleanLimit);
 }
 
+/** 官方精选（运营维护）公开列表：仅返回启用、未删除、未下架的精选作品，按运营排序在前。 */
+export async function listCuratedGalleryImages({ q, category, limit }: GalleryQuery = {}): Promise<GalleryImageView[]> {
+  const cleanLimit = normalizeLimit(limit);
+  const cleanQuery = normalizeText(q);
+  const cleanCategory = normalizeText(category);
+
+  const images = await prisma.curatedGalleryImage.findMany({
+    where: {
+      isActive: true,
+      isDeleted: false,
+      takenDownAt: null,
+      ...(cleanCategory && cleanCategory !== "全部" ? { category: cleanCategory } : {}),
+      ...(cleanQuery ? { OR: buildCuratedSearchWhere(cleanQuery) } : {}),
+    },
+    orderBy: [{ sortOrder: "asc" }, { publishedAt: "desc" }, { createdAt: "desc" }],
+    take: cleanLimit,
+  });
+
+  return images.map(toCuratedGalleryImageView);
+}
+
 export async function listAdminGalleryImages({ q, status, limit }: GalleryQuery = {}): Promise<AdminGalleryImageView[]> {
   const cleanLimit = normalizeLimit(limit);
   const cleanQuery = normalizeText(q);
