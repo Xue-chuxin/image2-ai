@@ -13,6 +13,7 @@ import {
   Info,
   LayoutGrid,
   Palette,
+  Receipt,
   Search,
   Settings2,
   Sparkles,
@@ -53,6 +54,7 @@ const navItems: NavItem[] = [
   { href: "/tools", label: "更多工具", icon: Wrench, placeholder: true },
   { href: "/favorites", label: "我的收藏", icon: Heart },
   { href: "/history", label: "生成历史", icon: Clock3 },
+  { href: "/credits", label: "积分明细", icon: Receipt },
   { href: "/console", label: "后台管理", icon: Settings2, external: true },
 ];
 
@@ -72,6 +74,7 @@ const pageMeta: Record<string, { title: string; description: string }> = {
   "/tools": { title: "更多工具", description: "实用创作工具集合" },
   "/favorites": { title: "我的收藏", description: "收藏的公开作品与精选" },
   "/history": { title: "生成历史", description: "我的生成任务与结果" },
+  "/credits": { title: "积分明细", description: "积分余额与收支流水" },
   "/account": { title: "用户中心", description: "积分、充值与订单" },
 };
 

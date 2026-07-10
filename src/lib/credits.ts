@@ -39,6 +39,48 @@ export type CreditTransactionView = {
   createdAt: string;
 };
 
+export const CREDIT_TRANSACTION_LABELS: Record<string, string> = {
+  GRANT: "赠送",
+  FREEZE: "冻结",
+  SPEND: "消费",
+  REFUND: "返还",
+  PURCHASE: "充值",
+  ADJUSTMENT: "调整",
+};
+
+/** 流水类型中文名（未知类型原样返回）。 */
+export function getCreditTransactionLabel(type: string): string {
+  return CREDIT_TRANSACTION_LABELS[type] ?? type;
+}
+
+export type CreditTransactionSummary = {
+  totalIn: number;
+  totalOut: number;
+  count: number;
+};
+
+/**
+ * 汇总一批流水的入账/出账合计：
+ * - 入账 = amount>0 的合计（充值/赠送/返还/正向调整）；
+ * - 出账 = amount<0 的绝对值合计（消费/负向调整）；
+ * - FREEZE（下单前临时冻结）仅为占用、随后会被 SPEND 或 REFUND 结算，故不计入收支合计，避免与结算流水重复计数。
+ */
+export function summarizeCreditTransactions(transactions: { type: string; amount: number }[]): CreditTransactionSummary {
+  let totalIn = 0;
+  let totalOut = 0;
+  for (const tx of transactions) {
+    if (tx.type === "FREEZE") {
+      continue;
+    }
+    if (tx.amount > 0) {
+      totalIn += tx.amount;
+    } else if (tx.amount < 0) {
+      totalOut += -tx.amount;
+    }
+  }
+  return { totalIn, totalOut, count: transactions.length };
+}
+
 export async function listUserCreditTransactions(userId: string, limit = 50): Promise<CreditTransactionView[]> {
   const normalizedLimit = Math.min(Math.max(Math.floor(limit) || 50, 1), 200);
   const rows = await prisma.creditTransaction.findMany({
