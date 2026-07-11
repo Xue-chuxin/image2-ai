@@ -4,7 +4,11 @@
 
 ## 未发布
 
-## v0.3.0 - 2026-07-11
+## v0.3.1 - 2026-07-11
+
+修复自部署构建后**控制台 `/console` 打不开**的关键问题（后台所有 JS 资源 404、页面标题显示 `%VITE_APP_TITLE%`）。均无需数据库迁移。
+
+- 控制台构建配置纳入版本管理：`console/apps/web-antd/.env`（`VITE_APP_TITLE` 等）与 `console/apps/web-antd/.env.production`（含 **`VITE_BASE=/console/`**）此前被根 `.gitignore` 的 `.env` / `.env.production` 通配规则**误伤忽略**，从未进入仓库。自部署用户 clone 后缺失这两个文件，Docker 构建 console 时 Vite 用默认 `base=/`，导致 `index.html` 把所有资源指向 `/js/…`、`/jse/…`（而实际部署在 `/console/` 下），浏览器请求全部 404、后台白屏进不去；标题变量也因缺 `.env` 未被注入。现于 `.gitignore` 为这两个文件加白名单例外并强制入库（二者仅含 `VITE_` 前端构建变量、会被打进客户端 bundle，本就无密钥，安全可提交）。升级后重新 `docker compose ... up -d --build` 重建即可，`/console` 资源路径与页面标题恢复正常。
 
 本版本汇总 v0.2.0 之后累积的一批新应用/工具与自部署体验改进：应用中心/工具箱整理为完整可用目录，上线智能助手、官方精选、提示词润色独立页、批量多风格生成、作品/创作者排行榜、积分明细页与四个文本类应用；新增一键交互式 Docker 安装脚本 `install.sh`；并修复海外/弱网 Docker 构建与升级脚本的若干问题。均无需数据库迁移。
 

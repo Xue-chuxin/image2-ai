@@ -10,6 +10,10 @@ docs/
 .env.local
 .env.production
 .env.*.local
+# 例外：控制台（vben）构建配置只含 VITE_ 前端构建变量、无密钥，必须入库，
+# 否则自部署 clone 后缺失 VITE_BASE 会导致 /console 资源指向错误路径而 404。
+!console/apps/web-antd/.env
+!console/apps/web-antd/.env.production
 public/generated/
 public/uploads/
 public/storage/*
