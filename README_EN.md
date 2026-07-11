@@ -4,7 +4,7 @@
 
 Image2 AI is an open-source, self-hostable AI image generation WebUI for Chinese users. It includes a prompt library, DeepSeek prompt polishing, OpenAI-compatible image providers, generation history, credit accounting, admin settings, local image storage, and Docker Compose deployment.
 
-![Image2 AI open-source preview](public/readme/image2-ai-github-promo.png)
+![Image2 AI open-source preview](public/readme/image2-ai-readme-1280x640.png)
 
 ## Why This Project
 
