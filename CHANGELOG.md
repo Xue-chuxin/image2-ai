@@ -4,6 +4,12 @@
 
 ## 未发布
 
+- 安全加固批次（支付与接口鉴权，含一处数据库迁移）：
+  - 支付回调强制校验渠道「已启用且完整配置」：`parsePaymentNotify` 处理前先判定对应渠道是否启用且必填项齐全，未配置时直接拒绝，避免密钥为空时易支付回调签名可被伪造而伪造到账；易支付验签由普通字符串比较改为时序安全比较（`timingSafeEqual`）。
+  - 已取消订单收到有效支付时补发积分：`markRechargeOrderPaidByPayment` 允许 `CANCELED` 状态在金额/币种一致的成功支付下正常入账（取消仅将 `PENDING` 翻为 `CANCELED`、并无任何退款动作，迟到或并发的成功支付说明用户确已付款），避免「钱付了积分不发」的静默吞钱；原有 CAS 幂等与金额、币种校验保持不变。
+  - 付费 LLM 接口强制登录：智能助手对话（`/api/assistant/chat`）、提示词整理（`/api/prompts/polish`）、文本工具（`/api/text-tools/[slug]`）三个会消耗第三方额度的接口在处理前校验登录会话，未登录返回 401，并将限流键改为按用户维度计数。
+  - 支付唯一约束兜底（**需数据库迁移**）：为 `RechargeOrder(provider, providerTradeNo)` 增加唯一索引，从数据库层拦截重复回调造成的重复入账。`providerTradeNo` 为空的待支付订单在 Postgres 默认语义下互不相同，不受影响。升级后需执行 `npm run db:migrate`（Docker 部署会在容器启动时自动迁移）。
+
 ## v0.3.1 - 2026-07-11
 
 修复自部署构建后**控制台 `/console` 打不开**的关键问题（后台所有 JS 资源 404、页面标题显示 `%VITE_APP_TITLE%`）。均无需数据库迁移。

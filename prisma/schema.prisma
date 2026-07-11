@@ -428,6 +428,7 @@ model RechargeOrder {
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
 
+  @@unique([provider, providerTradeNo])
   @@index([userId, createdAt])
   @@index([status, createdAt])
   @@index([packageId])
