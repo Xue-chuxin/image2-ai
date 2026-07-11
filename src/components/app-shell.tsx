@@ -39,7 +39,6 @@ type NavItem = {
   label: string;
   icon: typeof Images;
   placeholder?: boolean;
-  external?: boolean;
 };
 
 const navItems: NavItem[] = [
@@ -144,7 +143,7 @@ function WorkspaceShell({
   // 取最长匹配的导航项，避免 /generate/batch 命中父级 /generate。
   const activeHref =
     navItems
-      .filter((item) => !item.external && isActivePath(pathname, item.href))
+      .filter((item) => isActivePath(pathname, item.href))
       .sort((a, b) => b.href.length - a.href.length)[0]?.href || "";
   const metaKey = activeHref || (pathname.startsWith("/account") ? "/account" : "/");
   const meta = pageMeta[metaKey] || { title: settings.siteTitle, description: settings.siteSubtitle };
@@ -164,21 +163,12 @@ function WorkspaceShell({
         <nav className="mt-6 flex flex-1 flex-col gap-1" aria-label="主导航">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const active = !item.external && item.href === activeHref;
+            const active = item.href === activeHref;
             const itemClass = clsx(
               "group flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-[14.5px] font-semibold transition",
               active ? "bg-brand-500 text-white shadow-chip" : "text-ink-secondary hover:bg-brand-50 hover:text-brand-600",
             );
             const iconClass = clsx(active ? "text-white" : "text-ink-faint group-hover:text-brand-500");
-
-            if (item.external) {
-              return (
-                <a key={item.href} href={item.href} className={itemClass}>
-                  <Icon size={18} className={iconClass} />
-                  {item.label}
-                </a>
-              );
-            }
 
             return (
               <Link key={item.href} href={item.href} className={itemClass}>
@@ -218,6 +208,8 @@ function WorkspaceShell({
               <label className="flex w-full max-w-xl items-center gap-2.5 rounded-full border border-line bg-page px-4 py-2.5 transition focus-within:border-brand-300 focus-within:bg-panel focus-within:ring-2 focus-within:ring-brand-100">
                 <Search size={15} className="shrink-0 text-ink-faint" />
                 <input
+                  type="search"
+                  aria-label="搜索作品、风格或提示词"
                   value={searchValue}
                   onChange={(event) => setSearchValue(event.target.value)}
                   placeholder="搜索作品、风格或提示词"

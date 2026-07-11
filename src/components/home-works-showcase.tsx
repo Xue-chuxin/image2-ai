@@ -295,6 +295,20 @@ export function HomeWorksShowcase({
     return () => controller.abort();
   }, [selectedItem]);
 
+  // 打开详情弹窗时支持 Esc 关闭。
+  useEffect(() => {
+    if (!selectedItem) {
+      return;
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setSelectedItem(null);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [selectedItem]);
+
   useEffect(() => {
     if (usingFallback || hasGalleryError || !enableRemoteSearch) {
       return;
@@ -510,6 +524,8 @@ export function HomeWorksShowcase({
           <label className="flex w-full items-center gap-2.5 rounded-xl border border-line bg-page/60 px-3.5 py-2.5 transition focus-within:border-brand-400 focus-within:bg-panel focus-within:ring-2 focus-within:ring-brand-100 md:w-64 md:shrink-0">
             <Search size={15} className="shrink-0 text-ink-faint" />
             <input
+              type="search"
+              aria-label="搜索作品"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               className="w-full bg-transparent text-sm text-ink outline-none placeholder:text-ink-faint"

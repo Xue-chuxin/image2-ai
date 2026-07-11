@@ -70,6 +70,7 @@ export function PromptPolishStudio() {
   const [ratio, setRatio] = useState<(typeof ratios)[number]>("自动");
   const [isPolishing, setIsPolishing] = useState(false);
   const [error, setError] = useState("");
+  const [needLogin, setNeedLogin] = useState(false);
   const [source, setSource] = useState<"deepseek" | "local" | null>(null);
   const [warning, setWarning] = useState("");
   const [result, setResult] = useState<PolishResult | null>(null);
@@ -83,6 +84,7 @@ export function PromptPolishStudio() {
 
     setIsPolishing(true);
     setError("");
+    setNeedLogin(false);
     setWarning("");
 
     try {
@@ -96,6 +98,11 @@ export function PromptPolishStudio() {
         }),
       });
       const payload = (await response.json()) as PolishApiResponse;
+
+      if (response.status === 401) {
+        setNeedLogin(true);
+        throw new Error(payload.error || "请先登录后再使用提示词润色。");
+      }
 
       if (!response.ok || payload.ok === false) {
         throw new Error(payload.error || "润色失败，请稍后再试。");
@@ -168,7 +175,14 @@ export function PromptPolishStudio() {
         </div>
 
         {error ? (
-          <div className="rounded-xl bg-rose-50 dark:bg-rose-500/10 px-3.5 py-2.5 text-sm font-medium text-rose-500 dark:text-rose-300">{error}</div>
+          <div className="flex flex-wrap items-center gap-2 rounded-xl bg-rose-50 dark:bg-rose-500/10 px-3.5 py-2.5 text-sm font-medium text-rose-500 dark:text-rose-300">
+            <span>{error}</span>
+            {needLogin ? (
+              <Link href="/signin?next=/prompts/polish" className="font-bold underline underline-offset-2 hover:text-rose-600">
+                去登录
+              </Link>
+            ) : null}
+          </div>
         ) : null}
 
         <button

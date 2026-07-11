@@ -252,8 +252,8 @@ export function GenerateWorkbench({
             <section className="rounded-2xl border border-line bg-panel p-5 shadow-card">
               <h2 className="text-[17px] font-bold text-ink">参考图</h2>
               <div className="mt-4 grid grid-cols-2 gap-2.5">
-                {references.map((image) => (
-                  <img key={image.id} src={image.thumbnailUrl || image.url} alt="参考图" className="h-24 w-full rounded-xl border border-line object-cover" />
+                {references.map((image, index) => (
+                  <img key={image.id} src={image.thumbnailUrl || image.url} alt={`参考图 ${index + 1}`} className="h-24 w-full rounded-xl border border-line object-cover" />
                 ))}
               </div>
               <p className="mt-3 text-xs leading-5 text-ink-faint">参考图会保存在任务记录里，便于后续复用。</p>

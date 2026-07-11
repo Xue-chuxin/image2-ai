@@ -33,6 +33,7 @@ export function AssistantChat() {
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState("");
+  const [needLogin, setNeedLogin] = useState(false);
   const [suggestedPrompt, setSuggestedPrompt] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -50,6 +51,7 @@ export function AssistantChat() {
     setMessages(nextMessages);
     setInput("");
     setError("");
+    setNeedLogin(false);
     setSuggestedPrompt(null);
     setIsSending(true);
 
@@ -61,6 +63,11 @@ export function AssistantChat() {
         body: JSON.stringify({ messages: nextMessages.filter((m) => m !== GREETING) }),
       });
       const payload = (await response.json()) as ChatApiResponse;
+
+      if (response.status === 401) {
+        setNeedLogin(true);
+        throw new Error(payload.error || "请先登录后再使用智能助手。");
+      }
 
       if (!response.ok || payload.ok === false || !payload.reply) {
         throw new Error(payload.error || "助手暂时无法回复，请稍后再试。");
@@ -150,7 +157,16 @@ export function AssistantChat() {
 
       {/* 输入区 */}
       <div className="border-t border-line p-3.5">
-        {error ? <div className="mb-2 rounded-lg bg-rose-50 dark:bg-rose-500/10 px-3 py-2 text-xs font-medium text-rose-500 dark:text-rose-300">{error}</div> : null}
+        {error ? (
+          <div className="mb-2 flex flex-wrap items-center gap-2 rounded-lg bg-rose-50 dark:bg-rose-500/10 px-3 py-2 text-xs font-medium text-rose-500 dark:text-rose-300">
+            <span>{error}</span>
+            {needLogin ? (
+              <Link href="/signin?next=/assistant" className="font-bold underline underline-offset-2 hover:text-rose-600">
+                去登录
+              </Link>
+            ) : null}
+          </div>
+        ) : null}
         <form
           onSubmit={(event) => {
             event.preventDefault();

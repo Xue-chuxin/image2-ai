@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import clsx from "clsx";
 import { Check, Copy, Loader2, Sparkles } from "lucide-react";
 
@@ -50,6 +51,7 @@ export function TextToolStudio({ tool }: { tool: TextToolClientView }) {
   const [option, setOption] = useState<string>(tool.option?.choices[0]?.value ?? "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [needLogin, setNeedLogin] = useState(false);
   const [source, setSource] = useState<"deepseek" | "local" | null>(null);
   const [warning, setWarning] = useState("");
   const [items, setItems] = useState<TextToolItem[]>([]);
@@ -63,6 +65,7 @@ export function TextToolStudio({ tool }: { tool: TextToolClientView }) {
 
     setLoading(true);
     setError("");
+    setNeedLogin(false);
     setWarning("");
 
     try {
@@ -72,6 +75,11 @@ export function TextToolStudio({ tool }: { tool: TextToolClientView }) {
         body: JSON.stringify({ input: trimmed, option: option || undefined }),
       });
       const payload = (await response.json()) as TextToolApiResponse;
+
+      if (response.status === 401) {
+        setNeedLogin(true);
+        throw new Error(payload.error || "请先登录后再使用文本工具。");
+      }
 
       if (!response.ok || payload.ok === false) {
         throw new Error(payload.error || "生成失败，请稍后再试。");
@@ -121,7 +129,14 @@ export function TextToolStudio({ tool }: { tool: TextToolClientView }) {
         ) : null}
 
         {error ? (
-          <div className="rounded-xl bg-rose-50 dark:bg-rose-500/10 px-3.5 py-2.5 text-sm font-medium text-rose-500 dark:text-rose-300">{error}</div>
+          <div className="flex flex-wrap items-center gap-2 rounded-xl bg-rose-50 dark:bg-rose-500/10 px-3.5 py-2.5 text-sm font-medium text-rose-500 dark:text-rose-300">
+            <span>{error}</span>
+            {needLogin ? (
+              <Link href={`/signin?next=/apps/${tool.slug}`} className="font-bold underline underline-offset-2 hover:text-rose-600">
+                去登录
+              </Link>
+            ) : null}
+          </div>
         ) : null}
 
         <button

@@ -1,6 +1,7 @@
 "use client";
 
 import { type ChangeEvent, type DragEvent, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { Check, Loader2, Palette, RotateCcw, Send, UploadCloud, Wand2, X } from "lucide-react";
@@ -197,6 +198,7 @@ export function GenerateComposer({
   const [isGenerating, setIsGenerating] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const [needLogin, setNeedLogin] = useState(false);
   const [appliedPresetIds, setAppliedPresetIds] = useState<Set<string>>(() => new Set());
 
   const canGenerate = useMemo(() => prompt.trim().length > 0 && !isGenerating && !isUploadingReference, [prompt, isGenerating, isUploadingReference]);
@@ -394,6 +396,7 @@ export function GenerateComposer({
 
     setIsPolishing(true);
     setError("");
+    setNeedLogin(false);
     setNotice("");
 
     try {
@@ -409,6 +412,11 @@ export function GenerateComposer({
         }),
       });
       const result = await readApiJson<PolishResult>(response);
+
+      if (response.status === 401) {
+        setNeedLogin(true);
+        throw new Error(result.error || "请先登录后再使用一键润色。");
+      }
 
       if (!response.ok || result.ok === false) {
         throw new Error(result.error || "润色失败");
@@ -443,6 +451,7 @@ export function GenerateComposer({
 
     setIsGenerating(true);
     setError("");
+    setNeedLogin(false);
     setNotice("");
     updateJob(null);
 
@@ -464,6 +473,11 @@ export function GenerateComposer({
         }),
       });
       const result = await readApiJson<GenerationResult>(response);
+
+      if (response.status === 401) {
+        setNeedLogin(true);
+        throw new Error(result.error || "请先登录后再开始生成。");
+      }
 
       if (result.job) {
         updateJob(result.job);
@@ -615,9 +629,9 @@ export function GenerateComposer({
 
       {referenceImages.length > 0 ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {referenceImages.map((image) => (
+          {referenceImages.map((image, index) => (
             <div key={image.id} className="relative overflow-hidden rounded-xl border border-line bg-panel shadow-card">
-              <img src={image.thumbnailUrl || image.url} alt="参考图" className="h-24 w-full object-cover" />
+              <img src={image.thumbnailUrl || image.url} alt={`参考图 ${index + 1}`} className="h-24 w-full object-cover" />
               <button
                 type="button"
                 onClick={() => removeReferenceImage(image.id)}
@@ -728,7 +742,16 @@ export function GenerateComposer({
       ) : null}
 
       {notice ? <div className="rounded-xl bg-emerald-50 dark:bg-emerald-500/10 px-3.5 py-2.5 text-sm font-medium text-emerald-600 dark:text-emerald-300">{notice}</div> : null}
-      {error ? <div className="rounded-xl bg-rose-50 dark:bg-rose-500/10 px-3.5 py-2.5 text-sm font-medium text-rose-500 dark:text-rose-300">{error}</div> : null}
+      {error ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl bg-rose-50 dark:bg-rose-500/10 px-3.5 py-2.5 text-sm font-medium text-rose-500 dark:text-rose-300">
+          <span>{error}</span>
+          {needLogin ? (
+            <Link href="/signin?next=/generate" className="font-bold underline underline-offset-2 hover:text-rose-600">
+              去登录
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
 
       {/* 操作行 */}
       <div className="flex items-center gap-2.5">

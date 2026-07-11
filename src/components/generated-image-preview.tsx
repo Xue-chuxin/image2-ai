@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import { Loader2 } from "lucide-react";
 
@@ -36,8 +36,7 @@ export function GeneratedImagePreview({
   const [useOriginal, setUseOriginal] = useState(false);
   const [failed, setFailed] = useState(false);
   const hasThumbnail = Boolean(image.thumbnailUrl && image.thumbnailUrl !== image.url);
-  const displayUrl = !preferOriginal && !useOriginal && image.thumbnailUrl ? image.thumbnailUrl : image.url;
-  const imageSrc = useMemo(() => displayUrl, [displayUrl]);
+  const imageSrc = !preferOriginal && !useOriginal && image.thumbnailUrl ? image.thumbnailUrl : image.url;
 
   const syncLoadedFromElement = useCallback(() => {
     if (isLoadedImageElement(imageRef.current)) {
