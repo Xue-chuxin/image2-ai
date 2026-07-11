@@ -371,6 +371,7 @@ model CreditTransaction {
   createdAt DateTime              @default(now())
 
   @@index([userId, createdAt])
+  @@index([orderId])
 }
 
 model CreditPackage {
@@ -473,6 +474,7 @@ model PaymentEvent {
 
   @@index([provider, createdAt])
   @@index([orderNo])
+  @@index([providerTradeNo])
   @@index([status, createdAt])
 }
 
