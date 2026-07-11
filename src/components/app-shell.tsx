@@ -13,7 +13,6 @@ import {
   LayoutGrid,
   Palette,
   Search,
-  Settings2,
   Sparkles,
   UserRound,
   Wand2,
@@ -49,7 +48,7 @@ const navItems: NavItem[] = [
   { href: "/apps", label: "应用中心", icon: LayoutGrid },
   { href: "/history", label: "生成历史", icon: Clock3 },
   { href: "/favorites", label: "我的收藏", icon: Heart },
-  { href: "/console", label: "后台管理", icon: Settings2, external: true },
+  { href: "/account", label: "用户中心", icon: UserRound },
 ];
 
 const mobileNavItems = [
@@ -247,15 +246,15 @@ function WorkspaceShell({
               </button>
 
               {user ? (
-                <a
-                  href="/console#/account/recharge"
+                <Link
+                  href="/account"
                   className="flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1.5 text-[13px] font-bold text-brand-600 transition hover:bg-brand-100"
                 >
                   <Zap size={14} className="text-brand-500" />
                   {typeof user.credits === "number" ? user.credits : "--"}
-                  <span className="text-ink-faint">·</span>
-                  充值
-                </a>
+                  <span className="hidden text-ink-faint sm:inline">·</span>
+                  <span className="hidden sm:inline">充值</span>
+                </Link>
               ) : null}
 
               <Link
