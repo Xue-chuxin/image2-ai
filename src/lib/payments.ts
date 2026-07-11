@@ -1,4 +1,4 @@
-import { createDecipheriv, createHash, createSign, createVerify, randomBytes } from "crypto";
+import { createDecipheriv, createHash, createSign, createVerify, randomBytes, timingSafeEqual } from "crypto";
 
 import { decryptSecret, encryptSecret } from "@/lib/app-crypto";
 import { prisma } from "@/lib/db";
@@ -485,6 +485,50 @@ function createReturnUrl(origin: string, provider: PaymentProviderName, orderNo:
   return `${origin}/api/payments/return/${provider}?orderNo=${encodeURIComponent(orderNo)}`;
 }
 
+function timingSafeEqualStr(a: string, b: string) {
+  const bufA = Buffer.from(a, "utf8");
+  const bufB = Buffer.from(b, "utf8");
+  if (bufA.length !== bufB.length) {
+    return false;
+  }
+  return timingSafeEqual(bufA, bufB);
+}
+
+// 回调只应被“已启用且完整配置”的渠道受理，否则密钥可能为空导致签名可被伪造。
+function assertNotifyProviderReady(provider: PaymentProviderName, settings: PaymentProviderSettings) {
+  let ready = false;
+  switch (provider) {
+    case "epay":
+      ready = Boolean(settings.epay.enabled && settings.epay.gatewayUrl && settings.epay.pid && settings.epay.keyConfigured);
+      break;
+    case "alipay_f2f":
+      ready = Boolean(
+        settings.alipayF2f.enabled &&
+          settings.alipayF2f.appId &&
+          settings.alipayF2f.privateKeyConfigured &&
+          settings.alipayF2f.alipayPublicKeyConfigured,
+      );
+      break;
+    case "wechat_pay":
+      ready = Boolean(
+        settings.wechatPay.enabled &&
+          settings.wechatPay.mchId &&
+          settings.wechatPay.appId &&
+          settings.wechatPay.serialNo &&
+          settings.wechatPay.privateKeyConfigured &&
+          settings.wechatPay.apiV3KeyConfigured &&
+          settings.wechatPay.platformPublicKeyConfigured,
+      );
+      break;
+    case "paypal":
+      ready = Boolean(settings.paypal.enabled && settings.paypal.clientId && settings.paypal.secretConfigured);
+      break;
+  }
+  if (!ready) {
+    throw new Error("支付渠道未启用或未完成配置，拒绝回调。");
+  }
+}
+
 function createEpaySign(params: Record<string, string>, key: string) {
   const source = Object.keys(params)
     .filter((name) => name !== "sign" && name !== "sign_type" && params[name])
@@ -853,6 +897,7 @@ export async function queryPaymentOrder(provider: PaymentProviderName, orderNo: 
 
 export async function parsePaymentNotify(provider: PaymentProviderName, request: Request): Promise<PaymentNotifyResult> {
   const settings = await getPaymentRuntimeSettings();
+  assertNotifyProviderReady(provider, settings);
   if (provider === "epay") {
     const url = new URL(request.url);
     const params = new URLSearchParams(url.search);
@@ -862,7 +907,7 @@ export async function parsePaymentNotify(provider: PaymentProviderName, request:
     }
     const values = Object.fromEntries(params.entries());
     const sign = createEpaySign(values, settings.epay.key || "");
-    if (sign !== values.sign) {
+    if (!timingSafeEqualStr(sign, values.sign || "")) {
       throw new Error("易支付回调签名错误。");
     }
     if (!["TRADE_SUCCESS", "1"].includes(values.trade_status || values.status || "")) {
