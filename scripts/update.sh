@@ -158,10 +158,8 @@ run_source_update() {
   pull_latest
 
   echo "安装依赖..."
+  # npm ci 会触发 postinstall（prisma generate），无需再单独生成 Prisma Client。
   npm ci
-
-  echo "生成 Prisma Client..."
-  npm run prisma:generate
 
   echo "执行数据库迁移..."
   npm run db:migrate
