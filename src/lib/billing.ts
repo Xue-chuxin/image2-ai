@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "crypto";
-import type { RechargeOrderStatus } from "@prisma/client";
+import { Prisma, type RechargeOrderStatus } from "@prisma/client";
 
 import { AppError } from "@/lib/app-error";
 import { prisma } from "@/lib/db";
@@ -223,7 +223,7 @@ function normalizeText(value: unknown, maxLength = 800) {
 function createOrderNo() {
   const date = new Date();
   const ymd = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}`;
-  return `RC${ymd}${randomBytes(5).toString("hex").toUpperCase()}`;
+  return `RC${ymd}${randomBytes(8).toString("hex").toUpperCase()}`;
 }
 
 export function formatCurrency(priceCents: number, currency = "CNY") {
@@ -587,29 +587,35 @@ export async function markRechargeOrderPaidByPayment(input: {
   rawPayload?: unknown;
   captured?: boolean;
 }) {
-  const order = await prisma.rechargeOrder.findFirst({
-    where: {
-      OR: [
-        {
-          orderNo: input.orderNo,
-          provider: input.provider,
-        },
-        input.providerTradeNo
-          ? {
-              provider: input.provider,
-              providerTradeNo: input.providerTradeNo,
-            }
-          : undefined,
-      ].filter(Boolean) as any,
-    },
-    include: {
-      user: {
-        select: {
-          email: true,
-        },
+  const orderInclude = {
+    user: {
+      select: {
+        email: true,
       },
     },
-  });
+  };
+
+  // 优先按 orderNo + provider 精确定位；命中失败再用 providerTradeNo 兜底，
+  // 避免 OR 查询在两个分支各匹配到不同订单时由数据库非确定地返回错误订单。
+  const order = await (async () => {
+    const primary = await prisma.rechargeOrder.findFirst({
+      where: {
+        orderNo: input.orderNo,
+        provider: input.provider,
+      },
+      include: orderInclude,
+    });
+    if (primary || !input.providerTradeNo) {
+      return primary;
+    }
+    return prisma.rechargeOrder.findFirst({
+      where: {
+        provider: input.provider,
+        providerTradeNo: input.providerTradeNo,
+      },
+      include: orderInclude,
+    });
+  })();
 
   if (!order) {
     throw new AppError("NOT_FOUND", "订单不存在。", 404);
@@ -636,109 +642,114 @@ export async function markRechargeOrderPaidByPayment(input: {
 
   const totalCredits = order.credits + order.bonusCredits;
   const digest = createHash("sha256").update(JSON.stringify(input.rawPayload || {})).digest("hex");
-  const paidOrder = await prisma.$transaction(async (tx) => {
-    const updatedOrder = await tx.rechargeOrder.updateMany({
-      where: {
-        id: order.id,
-        status: {
-          in: ["PENDING", "EXPIRED", "CANCELED"],
-        },
-      },
-      data: {
-        status: "PAID",
-        paidAt: new Date(),
-        capturedAt: input.captured ? new Date() : order.capturedAt,
-        notifiedAt: new Date(),
-        providerTradeNo: input.providerTradeNo || order.providerTradeNo,
-        notifyPayloadDigest: digest,
-      },
-    });
 
-    if (updatedOrder.count === 0) {
-      const current = await tx.rechargeOrder.findUniqueOrThrow({
+  let paidOrder;
+  try {
+    paidOrder = await prisma.$transaction(async (tx) => {
+      const updatedOrder = await tx.rechargeOrder.updateMany({
         where: {
           id: order.id,
-        },
-        include: {
-          user: {
-            select: {
-              email: true,
-            },
+          status: {
+            in: ["PENDING", "EXPIRED", "CANCELED"],
           },
         },
-      });
-      return current;
-    }
-
-    await tx.creditAccount.upsert({
-      where: {
-        userId: order.userId,
-      },
-      update: {
-        available: {
-          increment: totalCredits,
+        data: {
+          status: "PAID",
+          paidAt: new Date(),
+          capturedAt: input.captured ? new Date() : order.capturedAt,
+          notifiedAt: new Date(),
+          providerTradeNo: input.providerTradeNo || order.providerTradeNo,
+          notifyPayloadDigest: digest,
         },
-      },
-      create: {
-        userId: order.userId,
-        available: totalCredits,
-        frozen: 0,
-      },
-    });
+      });
 
-    const account = await tx.creditAccount.findUniqueOrThrow({
-      where: {
-        userId: order.userId,
-      },
-    });
+      if (updatedOrder.count === 0) {
+        return tx.rechargeOrder.findUniqueOrThrow({
+          where: {
+            id: order.id,
+          },
+          include: orderInclude,
+        });
+      }
 
-    await tx.creditTransaction.create({
-      data: {
-        userId: order.userId,
-        type: "PURCHASE",
-        amount: totalCredits,
-        balance: account.available,
-        orderId: order.id,
-        memo: `在线支付订单 ${order.orderNo} 到账`,
-      },
-    });
-
-    // 会员套餐：在充值到账的同时续期会员有效期（从当前有效期与现在的较晚者往后顺延）。
-    if (order.packageType === "SUBSCRIPTION" && order.durationDays > 0) {
-      const existing = await tx.subscription.findUnique({ where: { userId: order.userId } });
-      const base = existing && existing.expiresAt.getTime() > Date.now() ? existing.expiresAt.getTime() : Date.now();
-      const expiresAt = new Date(base + order.durationDays * 24 * 60 * 60 * 1000);
-      await tx.subscription.upsert({
-        where: { userId: order.userId },
+      await tx.creditAccount.upsert({
+        where: {
+          userId: order.userId,
+        },
         update: {
-          packageId: order.packageId,
-          packageName: order.packageNameSnapshot,
-          expiresAt,
-          lastOrderId: order.id,
+          available: {
+            increment: totalCredits,
+          },
         },
         create: {
           userId: order.userId,
-          packageId: order.packageId,
-          packageName: order.packageNameSnapshot,
-          expiresAt,
-          lastOrderId: order.id,
+          available: totalCredits,
+          frozen: 0,
         },
       });
-    }
 
-    return tx.rechargeOrder.findUniqueOrThrow({
-      where: {
-        id: order.id,
-      },
-      include: {
-        user: {
-          select: {
-            email: true,
-          },
+      const account = await tx.creditAccount.findUniqueOrThrow({
+        where: {
+          userId: order.userId,
         },
-      },
+      });
+
+      await tx.creditTransaction.create({
+        data: {
+          userId: order.userId,
+          type: "PURCHASE",
+          amount: totalCredits,
+          balance: account.available,
+          orderId: order.id,
+          memo: `在线支付订单 ${order.orderNo} 到账`,
+        },
+      });
+
+      // 会员套餐：在充值到账的同时续期会员有效期（从当前有效期与现在的较晚者往后顺延）。
+      if (order.packageType === "SUBSCRIPTION" && order.durationDays > 0) {
+        const existing = await tx.subscription.findUnique({ where: { userId: order.userId } });
+        const base = existing && existing.expiresAt.getTime() > Date.now() ? existing.expiresAt.getTime() : Date.now();
+        const expiresAt = new Date(base + order.durationDays * 24 * 60 * 60 * 1000);
+        await tx.subscription.upsert({
+          where: { userId: order.userId },
+          update: {
+            packageId: order.packageId,
+            packageName: order.packageNameSnapshot,
+            expiresAt,
+            lastOrderId: order.id,
+          },
+          create: {
+            userId: order.userId,
+            packageId: order.packageId,
+            packageName: order.packageNameSnapshot,
+            expiresAt,
+            lastOrderId: order.id,
+          },
+        });
+      }
+
+      return tx.rechargeOrder.findUniqueOrThrow({
+        where: {
+          id: order.id,
+        },
+        include: orderInclude,
+      });
     });
-  });
+  } catch (error) {
+    // 唯一约束 (provider, providerTradeNo) 命中：说明该第三方交易号已被另一笔订单入账，
+    // 属重复/串号回调，按幂等处理——若本单已 PAID 直接返回，否则抛冲突交由上层记录诊断事件。
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      const current = await prisma.rechargeOrder.findUnique({
+        where: { id: order.id },
+        include: orderInclude,
+      });
+      if (current?.status === "PAID") {
+        return serializeOrder(current);
+      }
+      throw new AppError("CONFLICT", "该支付交易号已被其他订单入账，拒绝重复处理。", 409);
+    }
+    throw error;
+  }
 
   return serializeOrder(paidOrder);
 }

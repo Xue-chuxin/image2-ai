@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getAppErrorMessage, isAppError } from "@/lib/app-error";
+import { isAppError } from "@/lib/app-error";
 import { markRechargeOrderPaidByPayment } from "@/lib/billing";
 import { recordPaymentEvent } from "@/lib/payment-diagnostics";
 import { normalizePaymentProvider, parsePaymentNotify } from "@/lib/payments";
@@ -70,7 +70,6 @@ async function handle(request: Request, context: RouteContext) {
       console.error("[payment-notify]", error);
     }
     const diagnosticMessage = error instanceof Error ? error.message : "支付回调处理失败";
-    const clientMessage = getAppErrorMessage(error, "支付回调处理失败");
     if (provider) {
       await recordPaymentEvent({
         provider,
@@ -82,7 +81,8 @@ async function handle(request: Request, context: RouteContext) {
         message: diagnosticMessage,
       });
     }
-    return new Response(`fail:${clientMessage}`, { status: 400 });
+    // 只回一个固定的失败标记给支付平台，内部错误详情仅落在诊断事件里，避免向外泄露配置/状态。
+    return new Response("fail", { status: 400 });
   }
 }
 

@@ -985,10 +985,16 @@ export async function capturePayPalOrder(orderNo: string, paypalOrderId: string)
 
   const unit = payload.purchase_units?.[0];
   const capture = unit?.payments?.captures?.[0];
+  // 以捕获结果里 PayPal 回填的 reference_id/custom_id（创建订单时写入的本地订单号）为准，
+  // 避免调用方用 A 单的 token 配 B 单的 orderNo 把款项记到别的订单上。
+  const boundOrderNo = unit?.reference_id || unit?.custom_id || capture?.custom_id;
+  if (boundOrderNo && boundOrderNo !== orderNo) {
+    throw new Error("PayPal 订单与本地订单不匹配。");
+  }
   return {
     ok: true,
     provider: "paypal" as const,
-    orderNo,
+    orderNo: boundOrderNo || orderNo,
     providerTradeNo: payload.id,
     amountCents: centsFromYuan(capture?.amount?.value),
     currency: capture?.amount?.currency_code || unit?.amount?.currency_code || "USD",
