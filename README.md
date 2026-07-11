@@ -21,7 +21,6 @@
 - 版本记录：[CHANGELOG.md](CHANGELOG.md)
 - 升级说明：[UPGRADE.md](UPGRADE.md)
 - 贡献指南：[CONTRIBUTING.md](CONTRIBUTING.md)
-- 开源发布清单：[docs/open-source-checklist.md](docs/open-source-checklist.md)
 
 ## 适合谁
 
@@ -395,7 +394,6 @@ Docker Compose 默认会把生成图和上传图分别持久化到 `/app/public/
 - 安全问题见 [SECURITY.md](SECURITY.md)。
 - 社区行为准则见 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)。
 - 常见部署问题见 [docs/faq.md](docs/faq.md)。
-- 开源质量、Release 和传播清单见 [docs/open-source-checklist.md](docs/open-source-checklist.md)。
 
 如果你想参与但不知道从哪里开始，可以优先关注文档、部署兼容、移动端布局和 Provider 配置说明，这些方向最容易帮助到自部署用户。
 

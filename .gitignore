@@ -1,5 +1,6 @@
 node_modules/
 AGENTS.md
+.claude/
 docs/
 .next/
 .npm-cache/
