@@ -2,6 +2,7 @@ import { createHmac, randomInt } from "crypto";
 
 import { AppError } from "@/lib/app-error";
 import { safeEqual } from "@/lib/app-crypto";
+import { getAuthSecret } from "@/lib/auth-secret";
 import { prisma } from "@/lib/db";
 import { sendSystemEmail } from "@/lib/email";
 import { buildTwoFactorCodeEmail, getEmailBrand } from "@/lib/email-templates";
@@ -17,12 +18,8 @@ const CODE_TTL_MS = 10 * 60 * 1000;
 const SEND_COOLDOWN_MS = 60 * 1000;
 const MAX_VERIFY_ATTEMPTS = 5;
 
-function twoFactorSecret() {
-  return process.env.AUTH_SECRET || "change-me";
-}
-
 function hashCode(email: string, code: string) {
-  return createHmac("sha256", twoFactorSecret()).update(`${TWO_FACTOR_PURPOSE}:${email}:${code}`).digest("hex");
+  return createHmac("sha256", getAuthSecret()).update(`${TWO_FACTOR_PURPOSE}:${email}:${code}`).digest("hex");
 }
 
 function generateCode() {

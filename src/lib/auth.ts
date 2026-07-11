@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { AppError } from "@/lib/app-error";
 import { isUsableSecret, safeEqual } from "@/lib/app-crypto";
+import { getAuthSecret } from "@/lib/auth-secret";
 import { verifyEmailCodeForRegistration } from "@/lib/email-verification";
 
 export const ADMIN_SESSION_COOKIE = "image2_admin_session";
@@ -37,15 +38,6 @@ export type UserSession = BaseSession & {
 
 function createId(prefix: string) {
   return `${prefix}_${randomBytes(12).toString("hex")}`;
-}
-
-function getAuthSecret() {
-  const secret = process.env.AUTH_SECRET || "";
-  if (process.env.NODE_ENV === "production" && !isUsableSecret(secret)) {
-    throw new AppError("PROVIDER_CONFIG", "AUTH_SECRET 缺失或仍为示例值，生产环境必须配置至少 32 位随机密钥。", 500);
-  }
-
-  return secret || "change-me";
 }
 
 function assertDatabaseConfigured() {

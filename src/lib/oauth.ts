@@ -1,6 +1,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 
 import { AppError } from "@/lib/app-error";
+import { getAuthSecret } from "@/lib/auth-secret";
 import { getOAuthRuntimeConfig, type OAuthProviderName, type OAuthProviderRuntimeConfig } from "@/lib/settings";
 
 export const OAUTH_STATE_COOKIE = "image2_oauth_state";
@@ -143,10 +144,6 @@ export function buildOAuthRedirectUri(baseUrl: string, provider: OAuthProviderNa
 
 export function getOAuthProviderLabel(provider: OAuthProviderName) {
   return providers[provider].label;
-}
-
-function getAuthSecret() {
-  return process.env.AUTH_SECRET || "change-me";
 }
 
 /** state = `${nonce}.${provider}.${exp}`，用 HMAC 防篡改；同时写入 cookie 做双重校验（CSRF）。 */

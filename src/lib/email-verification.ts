@@ -2,6 +2,7 @@ import { createHmac, randomInt } from "crypto";
 
 import { AppError } from "@/lib/app-error";
 import { safeEqual } from "@/lib/app-crypto";
+import { getAuthSecret } from "@/lib/auth-secret";
 import { prisma } from "@/lib/db";
 import { sendSystemEmail } from "@/lib/email";
 import { buildVerificationCodeEmail, getEmailBrand } from "@/lib/email-templates";
@@ -31,12 +32,8 @@ function normalizeCode(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function verificationSecret() {
-  return process.env.AUTH_SECRET || "change-me";
-}
-
 function hashVerificationCode(email: string, purpose: EmailVerificationPurpose, code: string) {
-  return createHmac("sha256", verificationSecret()).update(`${purpose}:${email}:${code}`).digest("hex");
+  return createHmac("sha256", getAuthSecret()).update(`${purpose}:${email}:${code}`).digest("hex");
 }
 
 function generateCode() {

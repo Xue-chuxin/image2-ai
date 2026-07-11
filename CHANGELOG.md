@@ -10,6 +10,8 @@
   - 付费 LLM 接口强制登录：智能助手对话（`/api/assistant/chat`）、提示词整理（`/api/prompts/polish`）、文本工具（`/api/text-tools/[slug]`）三个会消耗第三方额度的接口在处理前校验登录会话，未登录返回 401，并将限流键改为按用户维度计数。
   - 支付唯一约束兜底（**需数据库迁移**）：为 `RechargeOrder(provider, providerTradeNo)` 增加唯一索引，从数据库层拦截重复回调造成的重复入账。`providerTradeNo` 为空的待支付订单在 Postgres 默认语义下互不相同，不受影响。升级后需执行 `npm run db:migrate`（Docker 部署会在容器启动时自动迁移）。
 
+- 统一 `AUTH_SECRET` 缺失保护：邮箱验证码（`email-verification.ts`）、OAuth state 签名（`oauth.ts`）、登录二步验证（`two-factor.ts`）此前在 `AUTH_SECRET` 未配置时会静默回退到硬编码的 `"change-me"`，导致生产环境下这些基于 HMAC 的 token 可被伪造。现三处与 `auth.ts` 统一改用共享的 `getAuthSecret()`（新增 `src/lib/auth-secret.ts`）：生产环境缺失或仍为示例值时直接抛错拒绝服务，仅非生产环境保留占位回退以方便本地开发。无需数据库迁移，但**生产部署务必配置至少 32 位随机的 `AUTH_SECRET`**（一键安装脚本会自动生成）。
+
 - 前端交互与无障碍改进：付费 LLM 接口未登录返回 401 时，智能助手、提示词润色、文本工具与创作页（一键润色/开始生成）会在错误提示旁给出「去登录」引导并带 `next` 回跳；画廊详情弹窗支持 Esc 关闭；参考图 `alt` 文案带序号、搜索框补 `aria-label` 与 `type=search`；清理侧边栏无用的 `external` 导航分支与一处冗余 `useMemo`。纯前端调整，无需数据库迁移。
 
 - 自部署体验与配置补全：`.env.example` 补齐代码实际读取但此前缺失的环境变量（`AUTH_COOKIE_SECURE`、`DEEPSEEK_API_KEY`、`DEEPSEEK_TIMEOUT_MS`、`OPENAI_VISION_MODEL`、`STABILITY_AI_API_KEY`/`STABILITY_AI_MODEL`、`REFERENCE_IMAGES_ENABLED`/`REFERENCE_IMAGE_RETENTION_DAYS`，默认值与应用内置默认一致）；Docker 入口脚本 `docker-entrypoint.sh` 对 `prisma migrate deploy` 增加有限次重试（默认 10 次、每次间隔 3 秒，可用 `PRISMA_MIGRATE_MAX_ATTEMPTS`/`PRISMA_MIGRATE_RETRY_DELAY` 调整），避免数据库容器尚未就绪时容器直接崩溃退出；`scripts/update.sh` 源码升级去掉多余的 `npm run prisma:generate`（`npm ci` 的 `postinstall` 已自动生成 Prisma Client）。仅配置与脚本调整，无需数据库迁移。
