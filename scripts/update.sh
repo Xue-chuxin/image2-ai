@@ -38,12 +38,14 @@ fi
 
 ensure_clean_worktree() {
   local status
-  status="$(git status --porcelain --untracked-files=all)"
+  # 只检测已跟踪文件的改动（二开风险点）。未跟踪的本地笔记/临时文件不应阻止升级；
+  # 即便某个未跟踪文件会被拉取覆盖，git pull --ff-only 自身也会安全中止。
+  status="$(git status --porcelain --untracked-files=no)"
 
   if [ -n "$status" ]; then
-    echo "当前工作区存在未提交改动，升级已停止。"
+    echo "当前工作区存在未提交改动（已跟踪文件），升级已停止。"
     echo "请先提交、合并或备份自己的二开改动后再执行升级。"
-    git status --short
+    git status --short --untracked-files=no
     exit 1
   fi
 }

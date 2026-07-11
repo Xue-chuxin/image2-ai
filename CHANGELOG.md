@@ -4,6 +4,14 @@
 
 ## 未发布
 
+## v0.3.0 - 2026-07-11
+
+本版本汇总 v0.2.0 之后累积的一批新应用/工具与自部署体验改进：应用中心/工具箱整理为完整可用目录，上线智能助手、官方精选、提示词润色独立页、批量多风格生成、作品/创作者排行榜、积分明细页与四个文本类应用；新增一键交互式 Docker 安装脚本 `install.sh`；并修复海外/弱网 Docker 构建与升级脚本的若干问题。均无需数据库迁移。
+
+- Docker 构建对海外/弱网更稳（自部署用户反馈）：① 移除 `console/.npmrc` 里硬编码的 `registry=https://registry.npmmirror.com`——海外主机访问该镜像超时会导致控制台依赖（约 1550 个包）始终装不完，且项目级 `.npmrc` 优先级高于 Dockerfile 里的 `pnpm config set` 无法覆盖；现默认走官方源，国内用户可用环境变量 `npm_config_registry` 或全局 `.npmrc` 自行切镜像（`pnpm-lock.yaml` 只存 integrity 哈希、不锁 registry，换源不影响校验）。② Dockerfile 为 `pnpm install` 与 `npm ci` 挂载 BuildKit 持久化缓存（pnpm store / npm cache），某次下载超时后重试可复用已下载的包、不再从零开始，弱网下基本一次即可装完（顶部已加 `# syntax=docker/dockerfile:1`，需 Docker BuildKit）。仅构建配置调整，运行时与镜像内容不变。
+
+- 升级脚本不再因本地笔记被拦：`scripts/update.sh` 的工作区检查改为只看**已跟踪文件**的改动（`--untracked-files=no`）。此前用 `--untracked-files=all`，用户自建的本地笔记/临时文件（如 `BUILD_FIXES.md`、`凭据说明.txt`）也会被判为「工作区不干净」而中止升级；现未跟踪文件不再阻止升级，真正的二开改动（已跟踪文件的修改）仍会被拦并提示先提交/备份。
+
 - 一键交互式安装脚本：仓库根目录新增 `./install.sh`（Linux / macOS，bash），把此前最繁琐的手工编辑 `.env.production` 变成问答式向导——检查 Docker/Compose 环境后，依次询问站点地址、管理员邮箱/密码、数据库模式（内置 Postgres 或已有数据库），自动生成 `AUTH_SECRET`/`SETTINGS_ENCRYPTION_KEY`（`openssl rand -hex`，缺失时回退）与数据库密码，正确拼接 `DATABASE_URL`（避免密码在 `POSTGRES_PASSWORD` 与连接串里漏改其一），写好 `.env.production` 并按模式选对 `docker-compose.yml` / `docker-compose.web.yml` 一键起服务，结尾明示自动生成的管理员密码与查看日志/停止命令。支持 `--config-only`（只生成配置、打印将执行的 compose 命令、不真正构建）、`--yes`（非交互，配合环境变量自动化）、`--help`；已存在 `.env.production` 时先备份为 `.env.production.bak.<时间戳>` 再覆盖。纯新增脚本 + 文档，未改任何应用代码、`.env.example`、compose 文件或数据库 schema。
 
 - 侧边栏精简：此前侧边栏堆了 14 项、大量与「应用中心」重复。现精简为 6 个真正的顶层入口——画廊广场、专业绘画、应用中心、生成历史、我的收藏、后台管理。被移出的智能助手、批量生成、提示词库、提示词润色、排行榜、更多工具、官方精选仍可从「应用中心」一处进入，功能不丢失；「积分明细」与控制台「用户中心 → 积分流水」重复，故从侧边栏移除（页面仍保留）。同时把专业绘画里原有的「整理描述」按钮更名为「一键润色」，让它与被下线的独立润色页对应——在创作页输入框旁即可一键润色并回填中/英文提示词与负向词。仅为导航与文案调整，无功能删除、无需数据库迁移。

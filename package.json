@@ -1,6 +1,6 @@
 {
     "name": "image2-app-webui",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "private": true,
     "scripts": {
         "predev": "prisma generate",

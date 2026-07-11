@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM node:20-bookworm-slim AS deps
 
 WORKDIR /app
@@ -5,7 +6,8 @@ WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY package.json package-lock.json ./
-RUN npm ci --ignore-scripts
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --ignore-scripts
 
 FROM node:22-bookworm-slim AS console-builder
 
@@ -15,7 +17,10 @@ WORKDIR /console
 RUN corepack enable pnpm
 
 COPY console/ ./
-RUN pnpm install --frozen-lockfile
+# 挂载持久化 pnpm store：网络波动导致某次安装超时后，重试可复用已下载的包，
+# 不必从零开始（对海外主机与国内增量构建都有益）。
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
 RUN pnpm run build:antd
 
 FROM node:20-bookworm-slim AS builder
