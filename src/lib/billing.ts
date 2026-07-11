@@ -619,18 +619,10 @@ export async function markRechargeOrderPaidByPayment(input: {
     return serializeOrder(order);
   }
 
-  if (order.status === "CANCELED") {
-    // 用户已主动取消却又收到成功支付：不自动入账（避免与退款流程冲突），
-    // 抛错让调用方（notify / payment-sync）落一条支付诊断事件，由管理员人工核对退款或补发。
-    throw new AppError(
-      "CONFLICT",
-      `订单 ${order.orderNo} 已被用户取消，但收到成功支付，请在支付事件中人工核对并退款或补发积分。`,
-      409,
-    );
-  }
-
-  // 允许 PENDING 或 EXPIRED（超时过期）入账——迟到支付不能"钱付了积分不发"。
-  if (order.status !== "PENDING" && order.status !== "EXPIRED") {
+  // 允许 PENDING / EXPIRED（超时过期）/ CANCELED（用户取消但仍完成支付）入账。
+  // 取消仅是把 PENDING 翻成 CANCELED、并未发生任何退款动作，若之后收到金额/币种一致的成功支付，
+  // 说明用户确实付了钱，必须补发积分而非抛错——否则会“钱付了积分不发”静默吞钱。
+  if (order.status !== "PENDING" && order.status !== "EXPIRED" && order.status !== "CANCELED") {
     throw new AppError("CONFLICT", "订单不是待支付状态。", 409);
   }
 
@@ -649,7 +641,7 @@ export async function markRechargeOrderPaidByPayment(input: {
       where: {
         id: order.id,
         status: {
-          in: ["PENDING", "EXPIRED"],
+          in: ["PENDING", "EXPIRED", "CANCELED"],
         },
       },
       data: {
