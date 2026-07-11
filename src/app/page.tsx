@@ -71,18 +71,21 @@ const appEntries: AppEntry[] = [
     description: "AI 创作对话助手，答疑解惑与灵感脑暴",
     icon: Bot,
     iconClass: "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-300",
+    href: "/assistant",
   },
   {
     title: "小红书爆款文案",
     description: "按主题生成种草笔记文案与标签组合",
     icon: Flame,
     iconClass: "bg-rose-50 dark:bg-rose-500/10 text-rose-500 dark:text-rose-300",
+    href: "/apps/xhs-copy",
   },
   {
     title: "公众号标题生成",
     description: "一键产出高点击率标题备选方案",
     icon: Newspaper,
     iconClass: "bg-cyan-50 text-cyan-600",
+    href: "/apps/wechat-title",
   },
 ];
 
