@@ -8,7 +8,7 @@
 
 面向中文用户的开源 AI 生图 WebUI，支持提示词库、DeepSeek 提示词润色、OpenAI 官方 / 兼容图像接口、生图历史、积分账户、管理后台和 Docker Compose 自部署。
 
-![Image2 AI 生图系统开源预览](public/readme/image2-ai-github-promo.png)
+![造图台 Image2 AI 开源 AI 生图系统预览](public/readme/image2-ai-readme-1280x640.png)
 
 ## 快速入口
 
@@ -399,7 +399,7 @@ Docker Compose 默认会把生成图和上传图分别持久化到 `/app/public/
 
 ## 仓库展示素材
 
-- README 和文章配图：`public/readme/image2-ai-github-promo.png`
+- README 头图与文章配图：`public/readme/image2-ai-readme-1280x640.png`（源文件 `image2-ai-readme-1280x640.svg`）
 - GitHub Social Preview：`public/readme/image2-ai-social-preview.png`
 
 建议在 GitHub 仓库设置中上传 Social Preview 图片，并添加 `ai-image-generation`、`self-hosted`、`nextjs`、`openai`、`deepseek`、`docker`、`tdesign` 等 Topics，提升搜索和分享时的可见度。
