@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { getUserSession } from "@/lib/auth";
 import { checkModerationText } from "@/lib/moderation";
 import { polishPrompt } from "@/lib/prompt-polish";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -13,7 +14,12 @@ type PolishPayload = {
 };
 
 export async function POST(request: Request) {
-  const rateLimit = checkRateLimit(request, "prompt:polish", {
+  const session = await getUserSession();
+  if (!session) {
+    return NextResponse.json({ ok: false, error: "请先登录后再使用提示词整理。" }, { status: 401 });
+  }
+
+  const rateLimit = checkRateLimit(request, `prompt:polish:${session.userId}`, {
     limit: 20,
     windowMs: 10 * 60 * 1000,
   });

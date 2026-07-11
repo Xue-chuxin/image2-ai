@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { runAssistantChat, sanitizeAssistantMessages } from "@/lib/assistant";
+import { getUserSession } from "@/lib/auth";
 import { checkModerationText } from "@/lib/moderation";
 import { checkRateLimit } from "@/lib/rate-limit";
 
@@ -11,7 +12,12 @@ type ChatPayload = {
 };
 
 export async function POST(request: Request) {
-  const rateLimit = checkRateLimit(request, "assistant:chat", {
+  const session = await getUserSession();
+  if (!session) {
+    return NextResponse.json({ ok: false, error: "请先登录后再使用智能助手。" }, { status: 401 });
+  }
+
+  const rateLimit = checkRateLimit(request, `assistant:chat:${session.userId}`, {
     limit: 30,
     windowMs: 10 * 60 * 1000,
   });

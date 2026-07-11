@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { getUserSession } from "@/lib/auth";
 import { checkModerationText } from "@/lib/moderation";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getTextTool, normalizeTextToolOption, runTextTool, sanitizeTextToolInput } from "@/lib/text-tools";
@@ -12,13 +13,18 @@ type TextToolPayload = {
 };
 
 export async function POST(request: Request, context: { params: Promise<{ slug: string }> }) {
+  const session = await getUserSession();
+  if (!session) {
+    return NextResponse.json({ ok: false, error: "请先登录后再使用该应用。" }, { status: 401 });
+  }
+
   const { slug } = await context.params;
   const tool = getTextTool(slug);
   if (!tool) {
     return NextResponse.json({ ok: false, error: "该应用不存在。" }, { status: 404 });
   }
 
-  const rateLimit = checkRateLimit(request, `text-tool:${tool.slug}`, {
+  const rateLimit = checkRateLimit(request, `text-tool:${tool.slug}:${session.userId}`, {
     limit: 20,
     windowMs: 10 * 60 * 1000,
   });
